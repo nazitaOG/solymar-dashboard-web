@@ -1,0 +1,15 @@
+{
+	"dependencies": {
+		"@tanstack/react-query": "^5.90.2",
+		"axios": "^1.12.2",
+		"react-router-dom": "^7.9.3",
+		"zod": "^4.1.11",
+		"zustand": "^5.0.8"
+	},
+	"devDependencies": {
+		"@types/node": "^24.6.2",
+		"@types/react-router-dom": "^5.3.3",
+		"eslint": "^9.36.0",
+		"prettier": "^3.6.2"
+	}
+}
