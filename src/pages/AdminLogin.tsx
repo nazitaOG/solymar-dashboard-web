@@ -8,12 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Globe, Mail, Lock, Eye, EyeOff } from "lucide-react"
 
 const travelImages = [
-  { url: "/santorini-sunset.png", location: "Santorini, Greece" },
-  { url: "/paris-eiffel.png", location: "Paris, France" },
-  { url: "/tokyo-city.png", location: "Tokyo, Japan" },
-  { url: "/maldives-overwater.png", location: "Maldives" },
-  { url: "/newyork-skyline.png", location: "New York, USA" },
-  { url: "/bali-rice-terraces.png", location: "Bali, Indonesia" },
+  { url: "./images/santorini-sunset.png", location: "Santorini, Greece" },
+  { url: "./images/paris-eiffel-golden-hour.png", location: "Paris, France" },
+  { url: "./images/tokyo-fuji-cherry.png", location: "Tokyo, Japan" },
+  { url: "./images/newyork-skyline.jpg", location: "New York, USA" },
+  { url: "./images/bali-rice-terraces.png", location: "Bali, Indonesia" },
 ]
 
 export default function AdminLogin() {
@@ -31,12 +30,14 @@ export default function AdminLogin() {
   }, [])
 
   return (
-    <div className="min-h-screen grid md:grid-cols-2 bg-[#17151f] text-white">
+    <div className="flex justify-center h-screen bg-[#17151f]/96 items-center">
+      {/* panel completo */}
+     <div className="h-[80vh] rounded-xs w-[80vw] grid md:grid-cols-2 bg-[#17151f] text-white">
       {/* Panel izquierdo con slideshow */}
-      <div className="relative hidden md:block overflow-hidden">
+      <div className=" m-3 relative hidden md:block overflow-hidden">
         <div className="absolute top-6 left-6 flex items-center gap-2 text-white/90 z-10">
           <Globe className="w-6 h-6" />
-          <span className="font-semibold">Solymar Travel</span>
+          <span className="font-semibold">Sol y Mar Viajes y Turismo</span>
         </div>
 
         <div className="absolute inset-0">
@@ -51,7 +52,7 @@ export default function AdminLogin() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-6 right-6 text-white">
                 <p className="text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
-                  Now showing: {image.location}
+                  Ahora mostrando: {image.location}
                 </p>
               </div>
             </div>
@@ -62,21 +63,21 @@ export default function AdminLogin() {
       {/* Panel derecho: formulario */}
       <div className="p-8 md:p-12 flex items-center">
         <div className="w-full max-w-md mx-auto">
-          <h1 className="text-3xl font-semibold mb-2">Crea tu cuenta de viajero</h1>
+          <h1 className="text-3xl font-semibold mb-2">Inicia sesión</h1>
           <p className="text-sm text-white/70 mb-6">
-            ¿Ya tienes cuenta? <a className="underline" href="/login">Inicia sesión</a>
+            ¿No tienes cuenta? <a className="underline" href="/login">Contacta con nosotros</a>
           </p>
 
           <div className="grid gap-4">
             <div>
-              <Label htmlFor="email" className="text-white/80">Email</Label>
+              <Label htmlFor="email" className="text-white/80 mb-1">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="tu@email.com"
-                  className="pl-9"
+                  className="pl-9 rounded-xs border-none bg-white/5"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -84,14 +85,14 @@ export default function AdminLogin() {
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-white/80">Contraseña</Label>
+              <Label htmlFor="password" className="text-white/80 mb-1">Contraseña</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pl-9 pr-10"
+                  className="pl-9 pr-10 rounded-xs border-none bg-white/5"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -106,26 +107,17 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={rememberMe} onCheckedChange={(v) => setRememberMe(!!v)} />
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox className="rounded-xs border-none bg-white/5 cursor-pointer" checked={rememberMe} onCheckedChange={(v) => setRememberMe(!!v)} />
               <span>Recordarme en este dispositivo</span>
             </label>
 
-            <Button className="w-full">Crear cuenta</Button>
-
-            <div className="flex items-center gap-3 my-2">
-              <div className="h-px flex-1 bg-white/15" />
-              <span className="text-xs text-white/60">o regístrate con</span>
-              <div className="h-px flex-1 bg-white/15" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="bg-white text-black">Google</Button>
-              <Button variant="outline" className="bg-white text-black">Apple</Button>
-            </div>
+            <Button className="w-full cursor-pointer hover:bg-white/10 transition-all duration-300 rounded-xs border-none bg-white/5">Iniciar sesión</Button>
           </div>
         </div>
       </div>
     </div>
+  </div>
+    
   )
 }
