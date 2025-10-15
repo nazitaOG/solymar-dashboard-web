@@ -9,6 +9,7 @@ import NotFound from "@/pages/NotFound";
 interface AppRoute {
   path: string;
   element: ReactNode;
+  name?: string;
 }
 
 export const routes: AppRoute[] = [
@@ -19,10 +20,12 @@ export const routes: AppRoute[] = [
   {
     path: '/login',
     element: <AdminLogin />,
+    name: 'Login',
   },
   {
     path: '/reservas',
     element: <Reservas />,
+    name: 'Reservas',
   },
   {
     path: '/reservas/:id',
@@ -31,6 +34,7 @@ export const routes: AppRoute[] = [
   {
     path: '/pasajeros',
     element: <Pasajeros />,
+    name: 'Pasajeros',
   },
   {
     path: '*',

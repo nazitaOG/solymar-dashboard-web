@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Calendar, Users, BarChart3, Settings, Plane, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { routes } from "@/router/routes";
 
 type NavItem = {
   name: string;
@@ -10,12 +11,27 @@ type NavItem = {
   active: boolean;
 };
 
-const navigation: NavItem[] = [
-  { name: "Reservas", href: "/reservas", icon: Calendar, active: true },
-  { name: "Pasajeros", href: "/pasajeros", icon: Users, active: true },
-  { name: "Reportes", href: "/reportes", icon: BarChart3, active: false },
-  { name: "Ajustes", href: "/ajustes", icon: Settings, active: false },
-];
+// Mapeo de rutas a iconos
+const routeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  "/reservas": Calendar,
+  "/pasajeros": Users,
+  "/reportes": BarChart3,
+  "/ajustes": Settings,
+};
+
+// Filtrar y mapear las rutas que necesitamos
+const navigation: NavItem[] = routes
+  .filter(route => route.name && ["Reservas", "Pasajeros"].includes(route.name))
+  .map(route => ({
+    name: route.name!,
+    href: route.path,
+    icon: routeIcons[route.path] || Calendar,
+    active: true,
+  }))
+  .concat([
+    { name: "Reportes", href: "/reportes", icon: BarChart3, active: false },
+    { name: "Ajustes", href: "/ajustes", icon: Settings, active: false },
+  ]);
 
 interface SidebarProps {
   isOpen: boolean;
