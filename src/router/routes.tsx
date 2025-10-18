@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navigate, RouteObject } from "react-router-dom";
+import { Navigate, RouteObject } from "react-router";
 
 interface AppRoute {
   path: string;

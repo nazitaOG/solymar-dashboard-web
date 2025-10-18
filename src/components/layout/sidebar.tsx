@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { Calendar, Users, BarChart3, Settings, Plane, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

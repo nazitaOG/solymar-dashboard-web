@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouteObject } from "react-router-dom";
+import { createBrowserRouter, RouteObject } from "react-router";
 import { routes } from "./routes";
 
 export const router = createBrowserRouter(routes satisfies RouteObject[]);
