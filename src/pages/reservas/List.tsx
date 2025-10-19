@@ -18,6 +18,8 @@ import type {
   Pax,
 } from "@/lib/types";
 
+import { Outlet } from "react-router";
+
 export default function ReservasPage() {
   const navigate = useNavigate();
 
@@ -115,6 +117,7 @@ export default function ReservasPage() {
         availablePassengers={mockPassengers}
         onCreate={handleCreateReservation}
       />
+      <Outlet />
     </DashboardLayout>
   );
 }

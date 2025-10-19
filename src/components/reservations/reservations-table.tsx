@@ -84,7 +84,7 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                 <TableRow
                   key={reservation.id}
                   className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => navigate(`/reservas/${reservation.id}`)}
+                  onClick={() => navigate(`./${reservation.id}`)}
                 >
                   <TableCell className="font-mono font-medium text-sm">{reservation.id}</TableCell>
                   <TableCell>{getStateBadge(reservation.state)}</TableCell>
@@ -120,7 +120,7 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/reservas/${reservation.id}`);
+                          navigate(`./${reservation.id}`);
                         }}
                       >
                         <Eye className="h-4 w-4" />
