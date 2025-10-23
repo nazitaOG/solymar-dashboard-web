@@ -1,10 +1,12 @@
-import { useState, useEffect, FormEvent } from "react"
+import { useState, useEffect, useTransition, FormEvent } from "react"
+import { useNavigate } from "react-router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Globe, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { useNavigate } from "react-router"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { fetchAPI } from "@/lib/api/fetchApi"
 
 const travelImages = [
   { url: "/images/santorini-sunset.png", location: "Santorini, Greece" },
@@ -14,20 +16,56 @@ const travelImages = [
   { url: "/images/bali-rice-terraces.png", location: "Bali, Indonesia" },
 ]
 
+interface LoginResponse {
+  username: string
+  email: string
+  token: string
+  isActive: boolean
+}
+
 export default function AdminLogin() {
+  // 🔹 Estados controlados
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 🔹 Auth y navegación
+  const { setToken } = useAuthStore()
   const navigate = useNavigate()
 
+  // 🔹 React 19 — Transiciones para “loading state”
+  const [isPending, startTransition] = useTransition()
+
+  // 🧭 Handler de login
   const handleLogin = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // Podés guardar "rememberMe" en localStorage si querés
-    navigate("/dashboard", { replace: true })
+    setError(null)
+
+    // ⚙️ Ejecutamos dentro de una transición: mantiene la UI fluida
+    startTransition(async () => {
+      try {
+        const res = await fetchAPI<LoginResponse>("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        })
+
+        setToken(res.token)
+
+        if (rememberMe) localStorage.setItem("rememberEmail", email)
+        else localStorage.removeItem("rememberEmail")
+
+        navigate("/dashboard", { replace: true })
+      } catch (err) {
+        console.error(err)
+        setError("Credenciales inválidas o error de red.")
+      }
+    })
   }
 
+  // 🎞️ Slideshow de imágenes
   useEffect(() => {
     const id = setInterval(() => {
       setCurrentImageIndex((i) => (i + 1) % travelImages.length)
@@ -35,10 +73,19 @@ export default function AdminLogin() {
     return () => clearInterval(id)
   }, [])
 
+  // 🔄 Cargar email recordado
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberEmail")
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
+
   return (
     <div className="flex justify-center h-screen bg-[#17151f]/96 items-center">
-      <div className="h-[80vh] w-[80vw] grid md:grid-cols-2 bg-[#17151f] text-white rounded-md">
-        {/* Izquierda: slideshow */}
+      <div className="h-[80vh] w-[80vw] grid md:grid-cols-2 bg-[#17151f] text-white rounded-md overflow-hidden">
+        {/* 🌅 Izquierda: slideshow */}
         <div className="m-3 relative hidden md:block overflow-hidden rounded-md">
           <div className="absolute top-6 left-6 flex items-center gap-2 text-white/90 z-10">
             <Globe className="w-6 h-6" />
@@ -65,7 +112,7 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {/* Derecha: formulario */}
+        {/* 🔐 Derecha: formulario */}
         <form onSubmit={handleLogin} className="p-8 md:p-12 flex items-center">
           <div className="w-full max-w-md mx-auto">
             <h1 className="text-3xl font-semibold mb-2">Inicia sesión</h1>
@@ -77,8 +124,11 @@ export default function AdminLogin() {
             </p>
 
             <div className="grid gap-4">
+              {/* Email */}
               <div>
-                <Label htmlFor="email" className="text-white/80 mb-1">Email</Label>
+                <Label htmlFor="email" className="text-white/80 mb-1">
+                  Email
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
@@ -94,8 +144,11 @@ export default function AdminLogin() {
                 </div>
               </div>
 
+              {/* Contraseña */}
               <div>
-                <Label htmlFor="password" className="text-white/80 mb-1">Contraseña</Label>
+                <Label htmlFor="password" className="text-white/80 mb-1">
+                  Contraseña
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
@@ -119,6 +172,7 @@ export default function AdminLogin() {
                 </div>
               </div>
 
+              {/* Recordarme */}
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
                   className="rounded-sm border-none bg-white/5 cursor-pointer"
@@ -128,11 +182,18 @@ export default function AdminLogin() {
                 <span>Recordarme en este dispositivo</span>
               </label>
 
+              {/* Error */}
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              {/* Botón */}
               <Button
                 type="submit"
-                className="w-full cursor-pointer hover:bg-white/10 transition-all duration-300 rounded-md border-none bg-white/5"
+                disabled={isPending}
+                className={`w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${
+                  isPending ? "opacity-70 cursor-wait" : "cursor-pointer"
+                }`}
               >
-                Iniciar sesión
+                {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>
             </div>
           </div>

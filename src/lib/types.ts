@@ -15,11 +15,11 @@ export interface Pax {
   nationality: string
   passport?: {
     passportNum: string
-    expirationDate: string
+    expirationDate?: string
   }
   dni?: {
     dniNum: string
-    expirationDate: string
+    expirationDate?: string
   }
 }
 
