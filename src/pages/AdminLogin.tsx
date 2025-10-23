@@ -39,12 +39,12 @@ export default function AdminLogin() {
   // 🔹 React 19 — Transiciones para “loading state”
   const [isPending, startTransition] = useTransition()
 
-  // 🧭 Handler de login
+  // Handler de login
   const handleLogin = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
-    // ⚙️ Ejecutamos dentro de una transición: mantiene la UI fluida
+    // Ejecutamos dentro de una transición: mantiene la UI fluida
     startTransition(async () => {
       try {
         const res = await fetchAPI<LoginResponse>("/auth/login", {
@@ -57,10 +57,13 @@ export default function AdminLogin() {
         if (rememberMe) localStorage.setItem("rememberEmail", email)
         else localStorage.removeItem("rememberEmail")
 
-        navigate("/dashboard", { replace: true })
+        navigate("/reservas", { replace: true })
       } catch (err) {
-        console.error(err)
-        setError("Credenciales inválidas o error de red.")
+        if (err instanceof Error) {
+          setError(err.message)
+        } else {
+          setError("Error inesperado. Contacta con el administrador.")
+        }
       }
     })
   }
