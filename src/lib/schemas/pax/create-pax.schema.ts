@@ -7,11 +7,15 @@ export const CreatePaxSchema = z
   .object({
     name: z.string().trim().min(1, "El nombre no puede estar vacío").max(128),
 
-    birthDate: z.coerce.date().describe("Fecha de nacimiento"),
+    birthDate: z
+      .string()
+      .min(1, "La fecha de nacimiento es obligatoria")
+      .transform((v) => new Date(v)),
 
     nationality: z
       .string()
       .trim()
+      .min(1, "La nacionalidad es obligatoria")
       .max(128, "Máximo 128 caracteres")
       .transform((v) => v.toUpperCase()),
 
@@ -44,6 +48,11 @@ export const CreatePaxSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["passportNum"],
+        message: "Debe ingresar DNI o Pasaporte",
+      });
+      ctx.addIssue({
+        code: "custom",
+        path: ["dniNum"],
         message: "Debe ingresar DNI o Pasaporte",
       });
     }

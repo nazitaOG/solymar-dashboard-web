@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Globe, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { fetchAPI } from "@/lib/api/fetchApi"
+import { loginSchema } from "@/lib/schemas/login/login-schema"
 
 const travelImages = [
   { url: "/images/santorini-sunset.png", location: "Santorini, Greece" },
@@ -44,6 +45,13 @@ export default function AdminLogin() {
     e.preventDefault()
     setError(null)
 
+    const parsed = loginSchema.safeParse({ email, password })
+
+    if (!parsed.success) {
+      setError(parsed.error.issues[0].message)
+      return
+    }
+    
     // Ejecutamos dentro de una transición: mantiene la UI fluida
     startTransition(async () => {
       try {

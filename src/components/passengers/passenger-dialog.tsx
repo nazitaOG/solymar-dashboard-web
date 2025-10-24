@@ -1,36 +1,33 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useTransition } from "react"
+import { Link } from "react-router"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import type { Pax } from "@/lib/types";
-import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema";
-import { paxToRequest } from "@/lib/utils/pax/pax-transform";
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import type { Pax } from "@/lib/types"
+import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
+import { fetchAPI } from "@/lib/api/fetchApi"
+import { paxToRequest } from "@/lib/utils/pax/pax-transform"
+import type { CreatePaxRequest } from "@/lib/types/pax/pax-request"
 
 // ----------------------------------------------------
 
 interface PassengerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  passenger?: Pax;
-  mode: "create" | "edit" | "view";
-  linkedReservations?: Array<{ id: string; state: string }>;
-  onSave: (passenger: Partial<Pax>) => void;
-  onDelete?: (id: string) => void;
-}
-
-// Limpia campos undefined
-function cleanObject<T extends object>(obj: T): T {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  passenger?: Pax
+  mode: "create" | "edit" | "view"
+  linkedReservations?: Array<{ id: string; state: string }>
+  onSave?: (passenger: Pax) => void
+  onDelete?: (id: string) => void
 }
 
 // ----------------------------------------------------
@@ -52,21 +49,28 @@ export function PassengerDialog({
     dniExpiration: "",
     passportNum: "",
     passportExpiration: "",
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
+    const formatDate = (value?: string | Date | null) => {
+      if (!value) return ""
+      const date = typeof value === "string" ? new Date(value) : value
+      if (isNaN(date.getTime())) return ""
+      return date.toISOString().split("T")[0]
+    }
+  
     if (passenger) {
       setFormData({
         name: passenger.name,
-        birthDate: passenger.birthDate,
+        birthDate: formatDate(passenger.birthDate),
         nationality: passenger.nationality,
         dniNum: passenger.dni?.dniNum || "",
-        dniExpiration: passenger.dni?.expirationDate || "",
+        dniExpiration: formatDate(passenger.dni?.expirationDate),
         passportNum: passenger.passport?.passportNum || "",
-        passportExpiration: passenger.passport?.expirationDate || "",
-      });
+        passportExpiration: formatDate(passenger.passport?.expirationDate),
+      })
     } else {
       setFormData({
         name: "",
@@ -76,10 +80,13 @@ export function PassengerDialog({
         dniExpiration: "",
         passportNum: "",
         passportExpiration: "",
-      });
+      })
     }
-  }, [passenger, open]);
+  }, [passenger, open])
 
+  // ----------------------------------------------------
+  // 🧩 Guardar pasajero (crear)
+  // ----------------------------------------------------
   const handleSave = () => {
     const zodData = {
       name: formData.name,
@@ -89,57 +96,111 @@ export function PassengerDialog({
       dniExpirationDate: formData.dniExpiration || undefined,
       passportNum: formData.passportNum || undefined,
       passportExpirationDate: formData.passportExpiration || undefined,
-    };
+    }
 
-    const result = CreatePaxSchema.safeParse(zodData);
-
+    // ✅ Validación con Zod
+    const result = CreatePaxSchema.safeParse(zodData)
     if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
+      const fieldErrors: Record<string, string> = {}
       for (const issue of result.error.issues) {
-        const field = issue.path[0] as string;
-        fieldErrors[field] = issue.message;
+        const field = issue.path[0] as string
+        fieldErrors[field] = issue.message
       }
-      setErrors(fieldErrors);
-      return;
+      setErrors(fieldErrors)
+      return
     }
 
-    setErrors({});
+    setErrors({})
 
-    const data: Partial<Pax> = cleanObject({
-      ...(passenger?.id && { id: passenger.id }),
-      name: result.data.name,
-      birthDate: result.data.birthDate.toISOString(),
-      nationality: result.data.nationality,
-      ...(result.data.dniNum && {
-        dni: cleanObject({
-          dniNum: result.data.dniNum,
-          expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
-        }),
-      }),
-      ...(result.data.passportNum && {
-        passport: cleanObject({
-          passportNum: result.data.passportNum,
-          expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
-        }),
-      }),
-    });
+    startTransition(async () => {
+      try {
+        // 🔹 Normalizamos fechas (Date → ISO string)
+        const normalized: Partial<Pax> = {
+          name: result.data.name,
+          birthDate: result.data.birthDate.toISOString(),
+          nationality: result.data.nationality,
+          dni: result.data.dniNum
+            ? {
+              dniNum: result.data.dniNum,
+              expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
+            }
+            : undefined,
+          passport: result.data.passportNum
+            ? {
+              passportNum: result.data.passportNum,
+              expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
+            }
+            : undefined,
+        }
 
-    onSave(paxToRequest(data));
-    onOpenChange(false);
-  };
+        const requestBody: CreatePaxRequest = paxToRequest(normalized)
 
-  const handleDelete = () => {
-    if (passenger?.id && onDelete) {
-      onDelete(passenger.id);
-      onOpenChange(false);
-    }
-  };
+        if (mode === "create") {
+          const created = await fetchAPI<Pax>("/pax", {
+            method: "POST",
+            body: JSON.stringify(requestBody),
+          })
+          onSave?.(created)
+        }
 
-  const isViewMode = mode === "view";
-  const isCreateMode = mode === "create";
+        if (mode === "edit" && passenger?.id) {
+          const updated = await fetchAPI<Pax>(`/pax/${passenger.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(requestBody),
+          })
+          onSave?.(updated)
+        }
+
+        onOpenChange(false)
+      } catch (error) {
+        console.error("Error guardando pasajero:", error)
+
+        // 🔹 Mostrar mensaje del backend (Prisma, constraint SQL, etc.)
+        const msg =
+          error instanceof Error && error.message
+            ? error.message
+            : "Error al guardar el pasajero. Intenta más tarde."
+        setErrors({ general: msg })
+      }
+    })
+  }
+
 
   // ----------------------------------------------------
+  // 🗑️ Eliminar pasajero
+  // ----------------------------------------------------
+  const handleDelete = () => {
+    if (!passenger?.id) return
 
+    const confirmed = window.confirm(
+      `¿Seguro que querés eliminar a ${passenger.name}?`
+    )
+    if (!confirmed) return
+
+    startTransition(async () => {
+      try {
+        console.log("Eliminando pasajero:", passenger.id)
+        await fetchAPI<void>(`/pax/${passenger.id}`, { method: "DELETE" })
+        if (onDelete) onDelete(passenger.id)
+        onOpenChange(false)
+      } catch (error) {
+        console.error("Error eliminando pasajero:", error)
+        const msg =
+          error instanceof Error && error.message
+            ? error.message
+            : "Error al eliminar el pasajero. Intenta más tarde."
+        setErrors({ general: msg })
+      }
+    })
+  }
+
+
+  const isViewMode = mode === "view"
+  const isCreateMode = mode === "create"
+
+  // ----------------------------------------------------
+  // 🖼️ UI
+  // ----------------------------------------------------
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -148,8 +209,8 @@ export function PassengerDialog({
             {isCreateMode
               ? "Crear Pasajero"
               : isViewMode
-              ? "Ver Pasajero"
-              : "Editar Pasajero"}
+                ? "Ver Pasajero"
+                : "Editar Pasajero"}
           </DialogTitle>
         </DialogHeader>
 
@@ -297,6 +358,11 @@ export function PassengerDialog({
             </div>
           </div>
 
+          {/* Error general */}
+          {errors.general && (
+            <p className="text-red-500 text-sm text-center mt-2">{errors.general}</p>
+          )}
+
           {/* Reservas vinculadas */}
           {!isCreateMode && linkedReservations.length > 0 && (
             <>
@@ -322,9 +388,13 @@ export function PassengerDialog({
 
         <DialogFooter className="flex justify-between">
           <div>
-            {!isCreateMode && !isViewMode && onDelete && (
-              <Button variant="destructive" onClick={handleDelete}>
-                Eliminar
+            {!isCreateMode && !isViewMode && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isPending}
+              >
+                {isPending ? "Eliminando..." : "Eliminar"}
               </Button>
             )}
           </div>
@@ -333,18 +403,18 @@ export function PassengerDialog({
               {isViewMode ? "Cerrar" : "Cancelar"}
             </Button>
             {!isViewMode && (
-              <Button
-                onClick={handleSave}
-                disabled={
-                  !formData.name || !formData.birthDate || !formData.nationality
-                }
-              >
-                {isCreateMode ? "Crear" : "Guardar cambios"}
+              <Button onClick={handleSave} disabled={isPending}>
+                {isPending
+                  ? "Guardando..."
+                  : isCreateMode
+                    ? "Crear"
+                    : "Guardar cambios"}
               </Button>
             )}
           </div>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -1,19 +1,35 @@
-import { useState } from "react";
+import { useState, useTransition, useEffect, Suspense } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PassengerFilters } from "@/components/passengers/passenger-filters";
 import { PassengersTable } from "@/components/passengers/passengers-table";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { mockPassengers, mockReservations } from "@/lib/mock-data";
+import { mockReservations } from "@/lib/mock-data";
+import { fetchAPI } from "@/lib/api/fetchApi"
 import type { Pax } from "@/lib/types";
+import { FullPageLoader } from "@/components/FullPageLoader";
 
 export default function PasajerosPage() {
-  const [passengers, setPassengers] = useState<Pax[]>(mockPassengers);
-  const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>(mockPassengers);
+  const [passengers, setPassengers] = useState<Pax[]>([]);
+  const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
   const [selectedPassenger, setSelectedPassenger] = useState<Pax | undefined>();
+  const [isPending, startTransition] = useTransition();
+
+  // Fetch inicial de pasajeros
+  useEffect(() => {
+    startTransition(async () => {
+      try {
+        const data = await fetchAPI<Pax[]>("/pax")
+        setPassengers(data)
+        setFilteredPassengers(data)
+      } catch (error) {
+        console.error("Error fetching passengers:", error)
+      }
+    })
+  }, [])
 
   // Filtros
   const handleFilterChange = (filters: { search: string; nationality?: string; documentFilter?: string }) => {
@@ -88,37 +104,39 @@ export default function PasajerosPage() {
 
   return (
     <DashboardLayout onCreateReservation={handleCreate}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Pasajeros</h1>
-            <p className="text-muted-foreground">Administra la información de todos los pasajeros</p>
+      <Suspense fallback={<FullPageLoader />}>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Pasajeros</h1>
+              <p className="text-muted-foreground">Administra la información de todos los pasajeros</p>
+            </div>
+            <Button onClick={() => setDialogOpen(true)} className="gap-2" disabled={isPending}>
+                <Plus className="h-4 w-4" />
+                {isPending ? "Cargando..." : "Crear Pasajero"}
+              </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Crear Pasajero
-          </Button>
+
+          <PassengerFilters onFilterChange={handleFilterChange} />
+
+          <PassengersTable
+            passengers={filteredPassengers}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         </div>
 
-        <PassengerFilters onFilterChange={handleFilterChange} />
-
-        <PassengersTable
-          passengers={filteredPassengers}
-          onView={handleView}
-          onEdit={handleEdit}
+        <PassengerDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          passenger={selectedPassenger}
+          mode={dialogMode}
+          linkedReservations={linkedReservations}
+          onSave={handleSave}
           onDelete={handleDelete}
         />
-      </div>
-
-      <PassengerDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        passenger={selectedPassenger}
-        mode={dialogMode}
-        linkedReservations={linkedReservations}
-        onSave={handleSave}
-        onDelete={handleDelete}
-      />
+      </Suspense>
     </DashboardLayout>
   );
 }
