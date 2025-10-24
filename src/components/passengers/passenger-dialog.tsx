@@ -17,6 +17,7 @@ import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
 import { fetchAPI } from "@/lib/api/fetchApi"
 import { paxToRequest } from "@/lib/utils/pax/pax-transform"
 import type { CreatePaxRequest } from "@/lib/types/pax/pax-request"
+import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
 
 // ----------------------------------------------------
 
@@ -53,6 +54,18 @@ export function PassengerDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
 
+  // ✅ Hook reutilizable para eliminar pasajero
+  const { deletePassenger, isPending: isDeleting, error: deleteError } =
+    useDeletePassenger({
+      onDeleteSuccess: (id) => {
+        onDelete?.(id)
+        onOpenChange(false)
+      },
+    })
+
+  // ----------------------------------------------------
+  // 🧭 Efecto para precargar datos cuando se abre el diálogo
+  // ----------------------------------------------------
   useEffect(() => {
     const formatDate = (value?: string | Date | null) => {
       if (!value) return ""
@@ -60,7 +73,7 @@ export function PassengerDialog({
       if (isNaN(date.getTime())) return ""
       return date.toISOString().split("T")[0]
     }
-  
+
     if (passenger) {
       setFormData({
         name: passenger.name,
@@ -85,7 +98,7 @@ export function PassengerDialog({
   }, [passenger, open])
 
   // ----------------------------------------------------
-  // 🧩 Guardar pasajero (crear)
+  // 💾 Guardar (crear / editar)
   // ----------------------------------------------------
   const handleSave = () => {
     const zodData = {
@@ -98,7 +111,6 @@ export function PassengerDialog({
       passportExpirationDate: formData.passportExpiration || undefined,
     }
 
-    // ✅ Validación con Zod
     const result = CreatePaxSchema.safeParse(zodData)
     if (!result.success) {
       const fieldErrors: Record<string, string> = {}
@@ -114,22 +126,22 @@ export function PassengerDialog({
 
     startTransition(async () => {
       try {
-        // 🔹 Normalizamos fechas (Date → ISO string)
+        // 🧠 Normalizamos fechas
         const normalized: Partial<Pax> = {
           name: result.data.name,
           birthDate: result.data.birthDate.toISOString(),
           nationality: result.data.nationality,
           dni: result.data.dniNum
             ? {
-              dniNum: result.data.dniNum,
-              expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
-            }
+                dniNum: result.data.dniNum,
+                expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
+              }
             : undefined,
           passport: result.data.passportNum
             ? {
-              passportNum: result.data.passportNum,
-              expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
-            }
+                passportNum: result.data.passportNum,
+                expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
+              }
             : undefined,
         }
 
@@ -154,8 +166,6 @@ export function PassengerDialog({
         onOpenChange(false)
       } catch (error) {
         console.error("Error guardando pasajero:", error)
-
-        // 🔹 Mostrar mensaje del backend (Prisma, constraint SQL, etc.)
         const msg =
           error instanceof Error && error.message
             ? error.message
@@ -164,36 +174,6 @@ export function PassengerDialog({
       }
     })
   }
-
-
-  // ----------------------------------------------------
-  // 🗑️ Eliminar pasajero
-  // ----------------------------------------------------
-  const handleDelete = () => {
-    if (!passenger?.id) return
-
-    const confirmed = window.confirm(
-      `¿Seguro que querés eliminar a ${passenger.name}?`
-    )
-    if (!confirmed) return
-
-    startTransition(async () => {
-      try {
-        console.log("Eliminando pasajero:", passenger.id)
-        await fetchAPI<void>(`/pax/${passenger.id}`, { method: "DELETE" })
-        if (onDelete) onDelete(passenger.id)
-        onOpenChange(false)
-      } catch (error) {
-        console.error("Error eliminando pasajero:", error)
-        const msg =
-          error instanceof Error && error.message
-            ? error.message
-            : "Error al eliminar el pasajero. Intenta más tarde."
-        setErrors({ general: msg })
-      }
-    })
-  }
-
 
   const isViewMode = mode === "view"
   const isCreateMode = mode === "create"
@@ -209,8 +189,8 @@ export function PassengerDialog({
             {isCreateMode
               ? "Crear Pasajero"
               : isViewMode
-                ? "Ver Pasajero"
-                : "Editar Pasajero"}
+              ? "Ver Pasajero"
+              : "Editar Pasajero"}
           </DialogTitle>
         </DialogHeader>
 
@@ -219,7 +199,6 @@ export function PassengerDialog({
           <div className="space-y-3">
             <h4 className="font-medium">Información básica</h4>
             <div className="grid gap-3 md:grid-cols-2">
-              {/* Nombre */}
               <div className="space-y-1">
                 <Label htmlFor="name">Nombre completo *</Label>
                 <Input
@@ -233,7 +212,6 @@ export function PassengerDialog({
                 {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
               </div>
 
-              {/* Fecha de nacimiento */}
               <div className="space-y-1">
                 <Label htmlFor="birthDate">Fecha de nacimiento *</Label>
                 <Input
@@ -251,7 +229,6 @@ export function PassengerDialog({
                 )}
               </div>
 
-              {/* Nacionalidad */}
               <div className="space-y-1">
                 <Label htmlFor="nationality">Nacionalidad *</Label>
                 <Input
@@ -358,9 +335,11 @@ export function PassengerDialog({
             </div>
           </div>
 
-          {/* Error general */}
-          {errors.general && (
-            <p className="text-red-500 text-sm text-center mt-2">{errors.general}</p>
+          {/* Errores */}
+          {(errors.general || deleteError) && (
+            <p className="text-red-500 text-sm text-center mt-2">
+              {errors.general || deleteError}
+            </p>
           )}
 
           {/* Reservas vinculadas */}
@@ -391,10 +370,12 @@ export function PassengerDialog({
             {!isCreateMode && !isViewMode && (
               <Button
                 variant="destructive"
-                onClick={handleDelete}
-                disabled={isPending}
+                onClick={() =>
+                  passenger?.id && deletePassenger(passenger.id, passenger.name)
+                }
+                disabled={isDeleting}
               >
-                {isPending ? "Eliminando..." : "Eliminar"}
+                {isDeleting ? "Eliminando..." : "Eliminar"}
               </Button>
             )}
           </div>
@@ -407,13 +388,12 @@ export function PassengerDialog({
                 {isPending
                   ? "Guardando..."
                   : isCreateMode
-                    ? "Crear"
-                    : "Guardar cambios"}
+                  ? "Crear"
+                  : "Guardar cambios"}
               </Button>
             )}
           </div>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   )

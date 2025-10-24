@@ -1,46 +1,69 @@
-import { useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import type { Pax } from "@/lib/types";
+import { useState } from "react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import type { Pax } from "@/lib/types"
+import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
 
 interface PassengersTableProps {
-  passengers: Pax[];
-  onView: (passenger: Pax) => void;
-  onEdit: (passenger: Pax) => void;
-  onDelete: (id: string) => void;
+  passengers: Pax[]
+  onView: (passenger: Pax) => void
+  onEdit: (passenger: Pax) => void
+  onDelete: (id: string) => void
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 10
 
-export function PassengersTable({ passengers, onView, onEdit, onDelete }: PassengersTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+export function PassengersTable({
+  passengers,
+  onView,
+  onEdit,
+  onDelete,
+}: PassengersTableProps) {
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const totalPages = Math.ceil(passengers.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentPassengers = passengers.slice(startIndex, endIndex);
+  // hook unificado
+  const { deletePassenger, isPending, error } = useDeletePassenger({
+    onDeleteSuccess: onDelete,
+  })
+
+  const totalPages = Math.ceil(passengers.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const currentPassengers = passengers.slice(startIndex, endIndex)
 
   const getDocumentInfo = (passenger: Pax) => {
     if (passenger.dni && passenger.passport) {
       return (
         <div className="space-y-1">
-          <Badge variant="outline" className="text-xs">DNI: {passenger.dni.dniNum}</Badge>
-          <Badge variant="outline" className="text-xs">Pasaporte: {passenger.passport.passportNum}</Badge>
+          <Badge variant="outline" className="text-xs">
+            DNI: {passenger.dni.dniNum}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            Pasaporte: {passenger.passport.passportNum}
+          </Badge>
         </div>
-      );
+      )
     }
     if (passenger.dni) {
-      return <Badge variant="outline" className="text-xs">DNI: {passenger.dni.dniNum}</Badge>;
+      return (
+        <Badge variant="outline" className="text-xs">
+          DNI: {passenger.dni.dniNum}
+        </Badge>
+      )
     }
     if (passenger.passport) {
-      return <Badge variant="outline" className="text-xs">Pasaporte: {passenger.passport.passportNum}</Badge>;
+      return (
+        <Badge variant="outline" className="text-xs">
+          Pasaporte: {passenger.passport.passportNum}
+        </Badge>
+      )
     }
-    return <span className="text-sm text-muted-foreground">Sin documento</span>;
-  };
+    return <span className="text-sm text-muted-foreground">Sin documento</span>
+  }
 
   return (
     <div className="space-y-4">
@@ -81,8 +104,8 @@ export function PassengersTable({ passengers, onView, onEdit, onDelete }: Passen
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          onView(passenger);
+                          e.stopPropagation()
+                          onView(passenger)
                         }}
                       >
                         <Eye className="h-4 w-4" />
@@ -92,8 +115,8 @@ export function PassengersTable({ passengers, onView, onEdit, onDelete }: Passen
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(passenger);
+                          e.stopPropagation()
+                          onEdit(passenger)
                         }}
                       >
                         <Pencil className="h-4 w-4" />
@@ -103,9 +126,10 @@ export function PassengersTable({ passengers, onView, onEdit, onDelete }: Passen
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(passenger.id);
+                          e.stopPropagation()
+                          deletePassenger(passenger.id, passenger.name)
                         }}
+                        disabled={isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Eliminar</span>
@@ -119,6 +143,14 @@ export function PassengersTable({ passengers, onView, onEdit, onDelete }: Passen
         </Table>
       </div>
 
+      {/* Error visual si falla eliminación */}
+      {error && (
+        <p className="text-sm text-red-500 text-center mt-2">
+          {error}
+        </p>
+      )}
+
+      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -147,5 +179,5 @@ export function PassengersTable({ passengers, onView, onEdit, onDelete }: Passen
         </div>
       )}
     </div>
-  );
+  )
 }
