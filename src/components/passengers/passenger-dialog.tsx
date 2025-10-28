@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 import type { Pax } from "@/lib/types"
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
 import { fetchAPI } from "@/lib/api/fetchApi"
@@ -54,7 +61,7 @@ export function PassengerDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
 
-  // ✅ Hook reutilizable para eliminar pasajero
+  // Hook para eliminar pasajero
   const { deletePassenger, isPending: isDeleting, error: deleteError } =
     useDeletePassenger({
       onDeleteSuccess: (id) => {
@@ -63,9 +70,20 @@ export function PassengerDialog({
       },
     })
 
-  // ----------------------------------------------------
-  // 🧭 Efecto para precargar datos cuando se abre el diálogo
-  // ----------------------------------------------------
+  // ✨ Limpia todo el formulario
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      birthDate: "",
+      nationality: "",
+      dniNum: "",
+      dniExpiration: "",
+      passportNum: "",
+      passportExpiration: "",
+    })
+  }
+
+  // 🧭 Precarga de datos al abrir o cambiar pasajero
   useEffect(() => {
     const formatDate = (value?: string | Date | null) => {
       if (!value) return ""
@@ -75,31 +93,36 @@ export function PassengerDialog({
     }
 
     if (passenger) {
+      const normalizeNationality = (n?: string) => {
+        if (!n) return "Argentina"
+        // capitaliza la primera letra
+        return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
+      }
+    
       setFormData({
         name: passenger.name,
         birthDate: formatDate(passenger.birthDate),
-        nationality: passenger.nationality,
+        nationality: normalizeNationality(passenger.nationality),
         dniNum: passenger.dni?.dniNum || "",
         dniExpiration: formatDate(passenger.dni?.expirationDate),
         passportNum: passenger.passport?.passportNum || "",
         passportExpiration: formatDate(passenger.passport?.expirationDate),
       })
-    } else {
-      setFormData({
-        name: "",
-        birthDate: "",
-        nationality: "",
-        dniNum: "",
-        dniExpiration: "",
-        passportNum: "",
-        passportExpiration: "",
-      })
+    }
+     else {
+      resetForm()
     }
   }, [passenger, open])
 
-  // ----------------------------------------------------
+  // 🔥 Reset automático al cerrar el diálogo
+  useEffect(() => {
+    if (!open) {
+      resetForm()
+      setErrors({})
+    }
+  }, [open])
+
   // 💾 Guardar (crear / editar)
-  // ----------------------------------------------------
   const handleSave = () => {
     const zodData = {
       name: formData.name,
@@ -126,7 +149,6 @@ export function PassengerDialog({
 
     startTransition(async () => {
       try {
-        // 🧠 Normalizamos fechas
         const normalized: Partial<Pax> = {
           name: result.data.name,
           birthDate: result.data.birthDate.toISOString(),
@@ -178,9 +200,7 @@ export function PassengerDialog({
   const isViewMode = mode === "view"
   const isCreateMode = mode === "create"
 
-  // ----------------------------------------------------
   // 🖼️ UI
-  // ----------------------------------------------------
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -199,6 +219,7 @@ export function PassengerDialog({
           <div className="space-y-3">
             <h4 className="font-medium">Información básica</h4>
             <div className="grid gap-3 md:grid-cols-2">
+              {/* Nombre */}
               <div className="space-y-1">
                 <Label htmlFor="name">Nombre completo *</Label>
                 <Input
@@ -212,6 +233,7 @@ export function PassengerDialog({
                 {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
               </div>
 
+              {/* Fecha de nacimiento */}
               <div className="space-y-1">
                 <Label htmlFor="birthDate">Fecha de nacimiento *</Label>
                 <Input
@@ -229,22 +251,41 @@ export function PassengerDialog({
                 )}
               </div>
 
+              {/* 🌎 Nacionalidad */}
               <div className="space-y-1">
                 <Label htmlFor="nationality">Nacionalidad *</Label>
-                <Input
-                  id="nationality"
-                  value={formData.nationality}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nationality: e.target.value })
+                <Select
+                  value={formData.nationality || "Argentina"}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, nationality: value })
                   }
                   disabled={isViewMode}
-                  placeholder="Argentina"
-                  className={errors.nationality ? "border-red-500" : ""}
-                />
+                >
+                  <SelectTrigger
+                    id="nationality"
+                    className={`bg-transparent ${
+                      errors.nationality ? "border-red-500" : ""
+                    }`}
+                  >
+                    <SelectValue placeholder="Argentina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Argentina">Argentina</SelectItem>
+                    <SelectItem value="Uruguay">Uruguay</SelectItem>
+                    <SelectItem value="Chile">Chile</SelectItem>
+                    <SelectItem value="Brasil">Brasil</SelectItem>
+                    <SelectItem value="Paraguay">Paraguay</SelectItem>
+                    <SelectItem value="Perú">Perú</SelectItem>
+                    <SelectItem value="Bolivia">Bolivia</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 {errors.nationality && (
                   <p className="text-red-500 text-sm">{errors.nationality}</p>
                 )}
               </div>
+
             </div>
           </div>
 

@@ -45,8 +45,8 @@ export default function PasajerosPage() {
       filtered = filtered.filter((p) => p.dni);
     } else if (filters.documentFilter === "with-passport") {
       filtered = filtered.filter((p) => p.passport);
-    } else if (filters.documentFilter === "without-documents") {
-      filtered = filtered.filter((p) => !p.dni && !p.passport);
+    }else if (filters.documentFilter === "with-any-document") {
+      filtered = filtered.filter((p) => !!p.dni || !!p.passport);
     }
 
     setFilteredPassengers(filtered);
@@ -98,8 +98,8 @@ export default function PasajerosPage() {
 
   const linkedReservations = selectedPassenger
     ? mockReservations
-        .filter((r) => r.paxReservations.some((pr) => pr.pax.id === selectedPassenger.id))
-        .map((r) => ({ id: r.id, state: r.state }))
+      .filter((r) => r.paxReservations.some((pr) => pr.pax.id === selectedPassenger.id))
+      .map((r) => ({ id: r.id, state: r.state }))
     : [];
 
   return (
@@ -112,9 +112,9 @@ export default function PasajerosPage() {
               <p className="text-muted-foreground">Administra la información de todos los pasajeros</p>
             </div>
             <Button onClick={() => setDialogOpen(true)} className="gap-2" disabled={isPending}>
-                <Plus className="h-4 w-4" />
-                {isPending ? "Cargando..." : "Crear Pasajero"}
-              </Button>
+              <Plus className="h-4 w-4" />
+              {isPending ? "Cargando..." : "Crear Pasajero"}
+            </Button>
           </div>
 
           <PassengerFilters onFilterChange={handleFilterChange} />
@@ -128,8 +128,15 @@ export default function PasajerosPage() {
         </div>
 
         <PassengerDialog
+          key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`} // 🔥 fuerza el remount
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedPassenger(undefined)
+              setDialogMode("create")
+            }
+            setDialogOpen(open)
+          }}
           passenger={selectedPassenger}
           mode={dialogMode}
           linkedReservations={linkedReservations}

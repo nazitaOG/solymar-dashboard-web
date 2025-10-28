@@ -2,26 +2,42 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Filter, Search } from "lucide-react"
 
 interface PassengerFiltersProps {
-  onFilterChange: (filters: { search: string; nationality?: string; documentFilter?: string }) => void
+  onFilterChange: (filters: {
+    search: string
+    nationality?: string
+    documentFilter?: string
+  }) => void
 }
 
 export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
   const [search, setSearch] = useState("")
-  const [nationality, setNationality] = useState<string>()
-  const [documentFilter, setDocumentFilter] = useState<string>()
+  const [nationality, setNationality] = useState<string>("all")
+  const [documentFilter, setDocumentFilter] = useState<string>("all")
 
+  // 🔎 Aplicar filtros
   const handleApplyFilters = () => {
-    onFilterChange({ search, nationality, documentFilter })
+    onFilterChange({
+      search,
+      nationality: nationality === "all" ? undefined : nationality.toUpperCase(),
+      documentFilter: documentFilter === "all" ? undefined : documentFilter,
+    })
   }
 
+  // 🧹 Limpiar filtros
   const handleClearFilters = () => {
     setSearch("")
-    setNationality(undefined)
-    setDocumentFilter(undefined)
+    setNationality("all")
+    setDocumentFilter("all")
     onFilterChange({ search: "" })
   }
 
@@ -33,7 +49,7 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Search */}
+        {/* 🔍 Buscar por nombre */}
         <div className="space-y-2">
           <Label htmlFor="search">Buscar por nombre</Label>
           <div className="relative">
@@ -48,7 +64,7 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
           </div>
         </div>
 
-        {/* Nationality */}
+        {/* 🌎 Nacionalidad */}
         <div className="space-y-2">
           <Label>Nacionalidad</Label>
           <Select value={nationality} onValueChange={setNationality}>
@@ -56,15 +72,20 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
               <SelectValue placeholder="Todas las nacionalidades" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todas las nacionalidades</SelectItem>
               <SelectItem value="Argentina">Argentina</SelectItem>
               <SelectItem value="Uruguay">Uruguay</SelectItem>
               <SelectItem value="Chile">Chile</SelectItem>
               <SelectItem value="Brasil">Brasil</SelectItem>
+              <SelectItem value="Paraguay">Paraguay</SelectItem>
+              <SelectItem value="Perú">Perú</SelectItem>
+              <SelectItem value="Bolivia">Bolivia</SelectItem>
+              <SelectItem value="Otro">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Document Filter */}
+        {/* 🪪 Documento */}
         <div className="space-y-2">
           <Label>Documento</Label>
           <Select value={documentFilter} onValueChange={setDocumentFilter}>
@@ -72,8 +93,12 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="with-dni">Con DNI</SelectItem>
               <SelectItem value="with-passport">Con Pasaporte</SelectItem>
+              <SelectItem value="with-any-document">
+                Con cualquier documento
+              </SelectItem>
               <SelectItem value="without-documents">Sin documentos</SelectItem>
             </SelectContent>
           </Select>
