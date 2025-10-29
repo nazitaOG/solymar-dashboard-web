@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -11,22 +11,24 @@ import { FlightDialog } from "@/components/entities/flight-dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart } from "lucide-react";
+import { FullPageLoader } from "@/components/FullPageLoader";
 
-import { mockReservationDetails, mockPassengers } from "@/lib/mock-data";
-import type { ReservationDetail, ReservationState } from "@/lib/interfaces/reservation/reservation.interface"
-import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface"
-import type { Plane as PlaneType } from "@/lib/interfaces/plane/plane.interface"
-import type { Pax } from "@/lib/interfaces/pax/pax.interface"
+import { fetchAPI } from "@/lib/api/fetchApi";
+import type { ReservationDetail, ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
+import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface";
+import type { Plane as PlaneType } from "@/lib/interfaces/plane/plane.interface";
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function ReservationDetailPage() {
-  const { id = "" } = useParams<{ id: string }>(); // ✅ tipar el param
+  const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const reservation = mockReservationDetails[id] as ReservationDetail | undefined;
-  const [currentReservation, setCurrentReservation] = useState<ReservationDetail | null>(reservation ?? null);
+  const [reservation, setReservation] = useState<ReservationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Dialog states
   const [hotelDialogOpen, setHotelDialogOpen] = useState(false);
@@ -34,11 +36,60 @@ export default function ReservationDetailPage() {
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
   const [selectedFlight, setSelectedFlight] = useState<PlaneType | undefined>();
 
-  if (!currentReservation) {
+  // ✅ Fetch detalle de reserva con include
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchReservation = async () => {
+      console.log(`[ReservationDetailPage] 🔄 Iniciando fetch de reserva ID=${id}...`);
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetchAPI<ReservationDetail>(
+          `/reservations/${id}?include=paxReservations,currencyTotals,hotels,planes,cruises,transfers,excursions,medicalAssists`
+        );
+
+        console.log("[ReservationDetailPage] ✅ Reserva cargada correctamente:", res);
+        if (!res) {
+          console.warn("[ReservationDetailPage] ⚠️ Respuesta vacía o inválida:", res);
+          setError("Reserva no encontrada");
+          return;
+        }
+
+        // Normalización preventiva (evita errores tipo 'undefined.map')
+        const safeRes = {
+          ...res,
+          paxReservations: res.paxReservations ?? [],
+          currencyTotals: res.currencyTotals ?? [],
+          hotels: res.hotels ?? [],
+          planes: res.planes ?? [],
+          cruises: res.cruises ?? [],
+          transfers: res.transfers ?? [],
+          excursions: res.excursions ?? [],
+          medicalAssists: res.medicalAssists ?? [],
+        };
+
+        setReservation(safeRes);
+      } catch (err) {
+        console.error("[ReservationDetailPage] ❌ Error al cargar la reserva:", err);
+        setError("No se pudo cargar la reserva");
+      } finally {
+        console.log("[ReservationDetailPage] 🏁 Fetch finalizado.");
+        setLoading(false);
+      }
+    };
+
+    fetchReservation();
+  }, [id]);
+
+  // 🧩 Loading o error
+  if (loading) return <FullPageLoader />;
+  if (error || !reservation) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-          <p className="text-muted-foreground">Reserva no encontrada</p>
+          <p className="text-muted-foreground">{error ?? "Reserva no encontrada"}</p>
           <Button onClick={() => navigate("/reservas")}>Volver a reservas</Button>
         </div>
       </DashboardLayout>
@@ -47,32 +98,37 @@ export default function ReservationDetailPage() {
 
   // ---------------- Handlers ----------------
   const handleStateChange = (state: ReservationState) => {
-    setCurrentReservation({ ...currentReservation, state });
+    console.log("[ReservationDetailPage] 🔄 Cambio de estado:", state);
+    setReservation({ ...reservation, state });
   };
 
   const handlePassengersChange = (passengers: Pax[]) => {
-    setCurrentReservation({
-      ...currentReservation,
+    console.log("[ReservationDetailPage] 🧍 Actualizando pasajeros:", passengers);
+    setReservation({
+      ...reservation,
       paxReservations: passengers.map((pax) => ({ pax })),
     });
   };
 
   // Hotels
   const handleCreateHotel = () => {
+    console.log("[ReservationDetailPage] ➕ Crear nuevo hotel");
     setSelectedHotel(undefined);
     setHotelDialogOpen(true);
   };
 
   const handleEditHotel = (hotel: Record<string, unknown>) => {
+    console.log("[ReservationDetailPage] ✏️ Editar hotel:", hotel);
     setSelectedHotel(hotel as unknown as HotelType);
     setHotelDialogOpen(true);
   };
 
   const handleSaveHotel = (hotelData: Partial<HotelType>) => {
+    console.log("[ReservationDetailPage] 💾 Guardar hotel:", hotelData);
     if (selectedHotel) {
-      setCurrentReservation({
-        ...currentReservation,
-        hotels: currentReservation.hotels.map((h) =>
+      setReservation({
+        ...reservation,
+        hotels: reservation.hotels.map((h) =>
           h.id === selectedHotel.id ? { ...h, ...hotelData } : h
         ),
       });
@@ -81,36 +137,40 @@ export default function ReservationDetailPage() {
         ...(hotelData as HotelType),
         id: `HTL-${Date.now()}`,
       };
-      setCurrentReservation({
-        ...currentReservation,
-        hotels: [...currentReservation.hotels, newHotel],
+      setReservation({
+        ...reservation,
+        hotels: [...reservation.hotels, newHotel],
       });
     }
   };
 
   const handleDeleteHotel = (hotelId: string) => {
-    setCurrentReservation({
-      ...currentReservation,
-      hotels: currentReservation.hotels.filter((h) => h.id !== hotelId),
+    console.log("[ReservationDetailPage] 🗑️ Eliminar hotel ID:", hotelId);
+    setReservation({
+      ...reservation,
+      hotels: reservation.hotels.filter((h) => h.id !== hotelId),
     });
   };
 
   // Flights
   const handleCreateFlight = () => {
+    console.log("[ReservationDetailPage] ✈️ Crear nuevo vuelo");
     setSelectedFlight(undefined);
     setFlightDialogOpen(true);
   };
 
   const handleEditFlight = (flight: Record<string, unknown>) => {
+    console.log("[ReservationDetailPage] 🛫 Editar vuelo:", flight);
     setSelectedFlight(flight as unknown as PlaneType);
     setFlightDialogOpen(true);
   };
 
   const handleSaveFlight = (flightData: Partial<PlaneType>) => {
+    console.log("[ReservationDetailPage] 💾 Guardar vuelo:", flightData);
     if (selectedFlight) {
-      setCurrentReservation({
-        ...currentReservation,
-        planes: currentReservation.planes.map((p) =>
+      setReservation({
+        ...reservation,
+        planes: reservation.planes.map((p) =>
           p.id === selectedFlight.id ? { ...p, ...flightData } : p
         ),
       });
@@ -119,17 +179,18 @@ export default function ReservationDetailPage() {
         ...(flightData as PlaneType),
         id: `PLN-${Date.now()}`,
       };
-      setCurrentReservation({
-        ...currentReservation,
-        planes: [...currentReservation.planes, newFlight],
+      setReservation({
+        ...reservation,
+        planes: [...reservation.planes, newFlight],
       });
     }
   };
 
   const handleDeleteFlight = (flightId: string) => {
-    setCurrentReservation({
-      ...currentReservation,
-      planes: currentReservation.planes.filter((p) => p.id !== flightId),
+    console.log("[ReservationDetailPage] 🗑️ Eliminar vuelo ID:", flightId);
+    setReservation({
+      ...reservation,
+      planes: reservation.planes.filter((p) => p.id !== flightId),
     });
   };
 
@@ -144,7 +205,7 @@ export default function ReservationDetailPage() {
   const formatDate = (dateString: string) =>
     format(new Date(dateString), "dd MMM yyyy", { locale: es });
 
-  // ---------------- Column defs (tipadas) ----------------
+  // ---------------- Column defs ----------------
   const hotelColumns: Column[] = [
     { key: "hotelName", label: "Hotel" },
     { key: "city", label: "Ciudad" },
@@ -224,8 +285,8 @@ export default function ReservationDetailPage() {
           {/* Main */}
           <div className="space-y-6">
             <ReservationDetailHeader
-              reservation={currentReservation}
-              availablePassengers={mockPassengers}
+              reservation={reservation}
+              availablePassengers={reservation.paxReservations.map((r) => r.pax)}
               onStateChange={handleStateChange}
               onPassengersChange={handlePassengersChange}
             />
@@ -257,7 +318,7 @@ export default function ReservationDetailPage() {
                   <Button onClick={handleCreateHotel}>Crear Hotel</Button>
                 </div>
                 <EntityTable
-                  data={currentReservation.hotels as unknown as Record<string, unknown>[]}
+                  data={reservation.hotels as unknown as Record<string, unknown>[]}
                   columns={hotelColumns}
                   onEdit={handleEditHotel}
                   onDelete={handleDeleteHotel}
@@ -270,48 +331,19 @@ export default function ReservationDetailPage() {
                   <Button onClick={handleCreateFlight}>Crear Vuelo</Button>
                 </div>
                 <EntityTable
-                  data={currentReservation.planes as unknown as Record<string, unknown>[]}
+                  data={reservation.planes as unknown as Record<string, unknown>[]}
                   columns={flightColumns}
                   onEdit={handleEditFlight}
                   onDelete={handleDeleteFlight}
                   emptyMessage="No hay vuelos agregados aún"
                 />
               </TabsContent>
-
-              {/* placeholders para el resto de tabs */}
-              <TabsContent value="cruises" className="space-y-4">
-                <div className="rounded-lg border border-border bg-card p-8 text-center">
-                  <p className="text-muted-foreground mb-4">No hay cruceros agregados aún</p>
-                  <Button>Crear Crucero</Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="transfers" className="space-y-4">
-                <div className="rounded-lg border border-border bg-card p-8 text-center">
-                  <p className="text-muted-foreground mb-4">No hay traslados agregados aún</p>
-                  <Button>Crear Traslado</Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="excursions" className="space-y-4">
-                <div className="rounded-lg border border-border bg-card p-8 text-center">
-                  <p className="text-muted-foreground mb-4">No hay excursiones agregadas aún</p>
-                  <Button>Crear Excursión</Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="medical" className="space-y-4">
-                <div className="rounded-lg border border-border bg-card p-8 text-center">
-                  <p className="text-muted-foreground mb-4">No hay asistencias médicas agregadas aún</p>
-                  <Button>Crear Asistencia Médica</Button>
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
 
           {/* Audit Panel */}
           <div className="lg:sticky lg:top-20 lg:h-fit">
-            <AuditPanel reservation={currentReservation} />
+            <AuditPanel reservation={reservation} />
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { mockReservations } from "@/lib/mock-data";
 import { fetchAPI } from "@/lib/api/fetchApi"
-import type { Pax } from "@/lib/types";
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
 
 export default function PasajerosPage() {
