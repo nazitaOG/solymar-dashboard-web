@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Reservation } from "@/lib/types";
+import type { Reservation } from "@/lib/interfaces/reservation/reservation.interface";
 
 interface ReservationsTableProps {
   reservations: Reservation[];
@@ -63,7 +63,6 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[100px]">ID</TableHead>
               <TableHead className="min-w-[120px]">Estado</TableHead>
               <TableHead className="min-w-[150px]">Pasajeros</TableHead>
               <TableHead className="min-w-[150px]">Totales</TableHead>
@@ -86,7 +85,6 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                   className="cursor-pointer hover:bg-accent/50"
                   onClick={() => navigate(`./${reservation.id}`)}
                 >
-                  <TableCell className="font-mono font-medium text-sm">{reservation.id}</TableCell>
                   <TableCell>{getStateBadge(reservation.state)}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -108,11 +106,17 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(reservation.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                    {reservation.createdAt
+                      ? format(new Date(reservation.createdAt), "dd MMM yyyy, HH:mm", { locale: es })
+                      : "—"}
                   </TableCell>
+
                   <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(reservation.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                    {reservation.updatedAt
+                      ? format(new Date(reservation.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })
+                      : "—"}
                   </TableCell>
+
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button

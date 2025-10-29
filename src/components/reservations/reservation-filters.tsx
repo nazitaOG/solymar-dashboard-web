@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Filter } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/class_value.utils";
 import type { ReservationFilters, ReservationState, Currency, Pax } from "@/lib/types";
 
 interface ReservationFiltersProps {

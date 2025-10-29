@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/class_value.utils";
 import { Calendar, Users, BarChart3, Settings, Plane, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";

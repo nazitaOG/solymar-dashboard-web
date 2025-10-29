@@ -22,8 +22,8 @@ import {
 import type { Pax } from "@/lib/types"
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
 import { fetchAPI } from "@/lib/api/fetchApi"
-import { paxToRequest } from "@/lib/utils/pax/pax-transform"
-import type { CreatePaxRequest } from "@/lib/types/pax/pax-request"
+import { paxToRequest } from "@/lib/utils/pax/pax_transform.utils"
+import type { CreatePaxRequest } from "@/lib/interfaces/pax/pax-request.interface"
 import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
 
 // ----------------------------------------------------

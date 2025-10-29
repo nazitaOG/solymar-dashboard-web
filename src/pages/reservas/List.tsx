@@ -1,34 +1,53 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect, useTransition, Suspense } from "react"
+import { useNavigate, Outlet } from "react-router"
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"; // ✅ export nombrado
+import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { ReservationFilters } from "@/components/reservations/reservation-filters"
+import { ReservationsTable } from "@/components/reservations/reservations-table"
+import { CreateReservationDialog } from "@/components/reservations/create-reservation-dialog"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { FullPageLoader } from "@/components/FullPageLoader"
 
-import { ReservationFilters } from "@/components/reservations/reservation-filters";
-import { ReservationsTable } from "@/components/reservations/reservations-table";
-import { CreateReservationDialog } from "@/components/reservations/create-reservation-dialog";
+import { fetchAPI } from "@/lib/api/fetchApi"
 
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-
-import { mockReservations, mockPassengers } from "@/lib/mock-data";
-import type {
-  Reservation,
-  ReservationFilters as Filters,
-  ReservationState,
-  Pax,
-} from "@/lib/types";
-
-import { Outlet } from "react-router";
+import type { Reservation } from "@/lib/interfaces/reservation/reservation.interface"
+import type { PaginatedResponse } from "@/lib/interfaces/api.interface"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface"
+import type { ReservationFilters as Filters, ReservationState } from "@/lib/interfaces/reservation/reservation.interface"
 
 export default function ReservasPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([])
+  const [passengers, setPassengers] = useState<Pax[]>([])
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
-  const [reservations, setReservations] = useState<Reservation[]>(mockReservations);
-  const [filteredReservations, setFilteredReservations] = useState<Reservation[]>(mockReservations);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // 🧭 Fetch inicial de reservas y pasajeros
+  useEffect(() => {
+    startTransition(async () => {
+      try {
+        const [reservationsRes, passengersData] = await Promise.all([
+          fetchAPI<PaginatedResponse<Reservation>>("/reservations"),
+          fetchAPI<Pax[]>("/pax"),
+        ])
 
+        console.log(passengersData)
+        console.log(reservationsRes)
+        const reservationsData = reservationsRes.data
+        setReservations(reservationsData)
+        setFilteredReservations(reservationsData)
+        setPassengers(passengersData)
+      } catch (error) {
+        console.error("Error al obtener datos:", error)
+      }
+    })
+  }, [])
+
+  // 🎛️ Filtros locales
   const handleFilterChange = (filters: Filters) => {
-    let filtered = [...reservations];
+    let filtered = [...reservations]
 
     if (filters.passengerNames?.length) {
       filtered = filtered.filter((r) =>
@@ -37,87 +56,90 @@ export default function ReservasPage() {
             pr.pax.name.toLowerCase().includes(name.toLowerCase())
           )
         )
-      );
+      )
     }
 
     if (filters.states?.length) {
-      filtered = filtered.filter((r) => filters.states!.includes(r.state));
+      filtered = filtered.filter((r) => filters.states!.includes(r.state))
     }
 
     if (filters.dateFrom) {
-      filtered = filtered.filter((r) => new Date(r.createdAt) >= filters.dateFrom!);
+      filtered = filtered.filter((r) => new Date(r.createdAt) >= filters.dateFrom!)
     }
     if (filters.dateTo) {
-      filtered = filtered.filter((r) => new Date(r.createdAt) <= filters.dateTo!);
+      filtered = filtered.filter((r) => new Date(r.createdAt) <= filters.dateTo!)
     }
 
     if (filters.currency) {
       filtered = filtered.filter((r) =>
         r.currencyTotals.some((ct) => ct.currency === filters.currency)
-      );
+      )
     }
 
     if (filters.sortBy === "newest") {
       filtered.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      )
     } else if (filters.sortBy === "oldest") {
       filtered.sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
+      )
     }
 
-    setFilteredReservations(filtered);
-  };
+    setFilteredReservations(filtered)
+  }
 
+  // ➕ Crear reserva
+  const handleCreateReservation = async (data: { state: ReservationState; passengers: Pax[] }) => {
+    try {
+      const body = {
+        state: data.state,
+        paxIds: data.passengers.map((p) => p.id),
+      }
 
-  const handleCreateReservation = (data: { state: ReservationState; passengers: Pax[] }) => {
-    const newReservation: Reservation = {
-      id: `RSV-${String(reservations.length + 1).padStart(3, "0")}`,
-      userId: "user-new",
-      state: data.state,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: "admin@solymar.com",
-      updatedBy: "admin@solymar.com",
-      currencyTotals: [],
-      paxReservations: data.passengers.map((pax) => ({ pax })),
-    };
+      const newReservation = await fetchAPI<Reservation>("/reservations", {
+        method: "POST",
+        body: JSON.stringify(body),
+      })
 
-    setReservations([newReservation, ...reservations]);
-    setFilteredReservations([newReservation, ...filteredReservations]);
-    navigate(`/reservas/${newReservation.id}`);
-  };
+      setReservations((prev) => [newReservation, ...prev])
+      setFilteredReservations((prev) => [newReservation, ...prev])
+      navigate(`/reservas/${newReservation.id}`)
+    } catch (error) {
+      console.error("Error al crear reserva:", error)
+    }
+  }
 
+  // 🧩 Render principal
   return (
-    // ❌ NO pasamos topbar/sidebar como props
-    // ✅ usamos onCreateReservation para el botón del Topbar
     <DashboardLayout onCreateReservation={() => setCreateDialogOpen(true)}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reservas</h1>
-            <p className="text-muted-foreground">Administra todas las reservas de viajes</p>
+      <Suspense fallback={<FullPageLoader />}>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Reservas</h1>
+              <p className="text-muted-foreground">Administra todas las reservas de viajes</p>
+            </div>
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2" disabled={isPending}>
+              <Plus className="h-4 w-4" />
+              {isPending ? "Cargando..." : "Crear Reserva"}
+            </Button>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Crear Reserva
-          </Button>
+
+          {/* ✅ Ahora pasa el array de pasajeros correctamente */}
+          <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
+          <ReservationsTable reservations={filteredReservations} />
         </div>
 
-        <ReservationFilters passengers={mockPassengers} onFilterChange={handleFilterChange} />
+        <CreateReservationDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          availablePassengers={passengers}
+          onCreate={handleCreateReservation}
+        />
 
-        {/* Si tu tabla ya navega "por dentro", podés quitar onRowClick */}
-        <ReservationsTable reservations={filteredReservations} />
-      </div>
-
-      <CreateReservationDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        availablePassengers={mockPassengers}
-        onCreate={handleCreateReservation}
-      />
-      <Outlet />
+        <Outlet />
+      </Suspense>
     </DashboardLayout>
-  );
+  )
 }

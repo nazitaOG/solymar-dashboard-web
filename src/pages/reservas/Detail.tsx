@@ -13,13 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart } from "lucide-react";
 
 import { mockReservationDetails, mockPassengers } from "@/lib/mock-data";
-import type {
-  ReservationState,
-  Pax,
-  Hotel as HotelType,
-  Plane as PlaneType,
-  ReservationDetail,
-} from "@/lib/types";
+import type { ReservationDetail, ReservationState } from "@/lib/interfaces/reservation/reservation.interface"
+import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface"
+import type { Plane as PlaneType } from "@/lib/interfaces/plane/plane.interface"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
