@@ -1,16 +1,20 @@
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
 
 export interface Plane {
-  id: string
-  reservationId: string
-  departure: string
-  arrival: string
-  departureDate: string
-  arrivalDate: string
-  totalPrice: number
-  amountPaid: number
-  bookingReference: string
-  provider: string
-  notes?: string
-  currency: Currency
+  id: string;
+  departure: string;
+  arrival: string | null;
+  departureDate: string;
+  arrivalDate: string | null;
+  bookingReference: string;
+  provider: string | null;
+  totalPrice: number;
+  amountPaid: number;
+  notes: string | null;
+  currency: Currency;
+  reservationId: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }

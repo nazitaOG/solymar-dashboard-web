@@ -28,22 +28,29 @@ export default function ReservasPage() {
   useEffect(() => {
     startTransition(async () => {
       try {
+        // 🟢 Pedimos explícitamente incluir pasajeros y totales
         const [reservationsRes, passengersData] = await Promise.all([
-          fetchAPI<PaginatedResponse<Reservation>>("/reservations"),
+          fetchAPI<PaginatedResponse<Reservation>>(
+            "/reservations?include=paxReservations,currencyTotals"
+          ),
           fetchAPI<Pax[]>("/pax"),
-        ])
-
-        console.log(passengersData)
-        console.log(reservationsRes)
-        const reservationsData = reservationsRes.data
-        setReservations(reservationsData)
-        setFilteredReservations(reservationsData)
-        setPassengers(passengersData)
+        ]);
+  
+        console.log("📦 Pasajeros:", passengersData);
+        console.log("📦 Reservas:", reservationsRes);
+  
+        // Desestructuramos el array real de datos
+        const reservationsData = reservationsRes.data ?? [];
+  
+        setReservations(reservationsData);
+        setFilteredReservations(reservationsData);
+        setPassengers(passengersData);
       } catch (error) {
-        console.error("Error al obtener datos:", error)
+        console.error("Error al obtener datos:", error);
       }
-    })
-  }, [])
+    });
+  }, []);
+  
 
   // 🎛️ Filtros locales
   const handleFilterChange = (filters: Filters) => {

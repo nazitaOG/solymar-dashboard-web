@@ -50,3 +50,13 @@ export interface ReservationDetail extends Reservation {
   medicalAssists: MedicalAssist[]
 }
 
+export interface ReservationCurrencyTotal {
+  id: string;
+  reservationId: string;
+  currency: Currency;
+  totalPrice: number;
+  amountPaid: number;
+  createdAt: string;
+  updatedAt: string;
+}
+

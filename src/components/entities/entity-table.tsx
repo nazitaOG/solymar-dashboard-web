@@ -34,6 +34,8 @@ export function EntityTable({ data, columns, onEdit, onDelete, emptyMessage = "N
     return String(value)
   }
 
+  console.log("data", data)
+
   return (
     <div className="rounded-lg border border-border bg-card">
       <Table>

@@ -18,95 +18,74 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { Plane } from "@/lib/interfaces/plane/plane.interface";
+import type { MedicalAssist } from "@/lib/interfaces/medical_assist/medical_assist.interface";
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
 
-interface FlightDialogProps {
+interface MedicalAssistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  flight?: Plane;
+  assist?: MedicalAssist;
   reservationId: string;
-  onSave: (flight: Partial<Plane>) => void;
+  onSave: (assist: Partial<MedicalAssist>) => void;
   onDelete?: (id: string) => void;
 }
 
-export function FlightDialog({
+export function MedicalAssistDialog({
   open,
   onOpenChange,
-  flight,
+  assist,
   reservationId,
   onSave,
   onDelete,
-}: FlightDialogProps) {
+}: MedicalAssistDialogProps) {
   const [formData, setFormData] = useState({
-    departure: "",
-    arrival: "",
-    departureDate: "",
-    arrivalDate: "",
-    bookingReference: "",
     provider: "",
+    bookingReference: "",
+    assistType: "",
     totalPrice: "",
     amountPaid: "",
     notes: "",
     currency: "USD" as Currency,
   });
 
-  // 🔄 Cargar datos del vuelo si se está editando
+  // 🔄 Cargar datos si se está editando
   useEffect(() => {
-    if (flight) {
+    if (assist) {
       setFormData({
-        departure: flight.departure ?? "",
-        arrival: flight.arrival ?? "",
-        departureDate: flight.departureDate
-          ? flight.departureDate.split("T")[0]
-          : "",
-        arrivalDate: flight.arrivalDate
-          ? flight.arrivalDate.split("T")[0]
-          : "",
-        bookingReference: flight.bookingReference ?? "",
-        provider: flight.provider ?? "",
-        totalPrice: String(flight.totalPrice ?? ""),
-        amountPaid: String(flight.amountPaid ?? ""),
-        notes: flight.notes ?? "",
-        currency: flight.currency ?? "USD",
+        provider: assist.provider ?? "",
+        bookingReference: assist.bookingReference ?? "",
+        assistType: assist.assistType ?? "",
+        totalPrice: String(assist.totalPrice ?? ""),
+        amountPaid: String(assist.amountPaid ?? ""),
+        notes: "",
+        currency: assist.currency ?? "USD",
       });
     } else {
       setFormData({
-        departure: "",
-        arrival: "",
-        departureDate: "",
-        arrivalDate: "",
-        bookingReference: "",
         provider: "",
+        bookingReference: "",
+        assistType: "",
         totalPrice: "",
         amountPaid: "",
         notes: "",
         currency: "USD",
       });
     }
-  }, [flight, open]);
+  }, [assist, open]);
 
-  // 🧠 Normaliza fecha
-  const toIsoDate = (d: string): string | null =>
-    d ? new Date(`${d}T12:00:00`).toISOString() : null;
-
-  // 💾 Guardar vuelo
+  // 💾 Guardar asistencia médica
   const handleSave = () => {
     const total = Number.parseFloat(formData.totalPrice || "0");
     const paid = Number.parseFloat(formData.amountPaid || "0");
 
-    const data: Partial<Plane> = {
-      ...(flight?.id && { id: flight.id }),
+    const data: Partial<MedicalAssist> = {
+      ...(assist?.id && { id: assist.id }),
       reservationId,
-      departure: formData.departure,
-      arrival: formData.arrival || null,
-      departureDate: toIsoDate(formData.departureDate) ?? "",
-      arrivalDate: toIsoDate(formData.arrivalDate),
+      provider: formData.provider,
       bookingReference: formData.bookingReference,
-      provider: formData.provider || null,
+      assistType: formData.assistType || null,
       totalPrice: total,
       amountPaid: paid,
-      notes: formData.notes || null,
       currency: formData.currency,
     };
 
@@ -118,83 +97,47 @@ export function FlightDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{flight ? "Editar Vuelo" : "Crear Vuelo"}</DialogTitle>
+          <DialogTitle>
+            {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Campos principales */}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="departure">Origen *</Label>
-              <Input
-                id="departure"
-                value={formData.departure}
-                onChange={(e) =>
-                  setFormData({ ...formData, departure: e.target.value })
-                }
-                placeholder="Buenos Aires (EZE)"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="arrival">Destino *</Label>
-              <Input
-                id="arrival"
-                value={formData.arrival}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrival: e.target.value })
-                }
-                placeholder="Miami (MIA)"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="departureDate">Fecha de salida *</Label>
-              <Input
-                id="departureDate"
-                type="date"
-                value={formData.departureDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, departureDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="arrivalDate">Fecha de llegada *</Label>
-              <Input
-                id="arrivalDate"
-                type="date"
-                value={formData.arrivalDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrivalDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="provider">Aerolínea *</Label>
+              <Label htmlFor="provider">Proveedor *</Label>
               <Input
                 id="provider"
                 value={formData.provider}
                 onChange={(e) =>
                   setFormData({ ...formData, provider: e.target.value })
                 }
-                placeholder="American Airlines"
+                placeholder="Assist Card"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bookingReference">Referencia *</Label>
+              <Label htmlFor="bookingReference">Referencia de reserva *</Label>
               <Input
                 id="bookingReference"
                 value={formData.bookingReference}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    bookingReference: e.target.value,
-                  })
+                  setFormData({ ...formData, bookingReference: e.target.value })
                 }
-                placeholder="AA-123456"
+                placeholder="ASST-00123"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="assistType">Tipo de asistencia</Label>
+              <Input
+                id="assistType"
+                value={formData.assistType}
+                onChange={(e) =>
+                  setFormData({ ...formData, assistType: e.target.value })
+                }
+                placeholder="Emergencia médica internacional"
               />
             </div>
 
@@ -225,7 +168,7 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, totalPrice: e.target.value })
                 }
-                placeholder="1000"
+                placeholder="500"
               />
             </div>
 
@@ -238,12 +181,12 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, amountPaid: e.target.value })
                 }
-                placeholder="500"
+                placeholder="300"
               />
             </div>
           </div>
 
-          {/* Notas */}
+          {/* Notas opcionales */}
           <div className="space-y-1">
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
@@ -252,7 +195,7 @@ export function FlightDialog({
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
-              placeholder="2 maletas incluidas, asiento 14B..."
+              placeholder="Cobertura de 30 días con asistencia odontológica incluida."
               rows={3}
             />
           </div>
@@ -261,11 +204,11 @@ export function FlightDialog({
         {/* Footer */}
         <DialogFooter className="flex justify-between">
           <div>
-            {flight && onDelete && (
+            {assist && onDelete && (
               <Button
                 variant="destructive"
                 onClick={() => {
-                  onDelete(flight.id);
+                  onDelete(assist.id);
                   onOpenChange(false);
                 }}
               >
@@ -278,7 +221,7 @@ export function FlightDialog({
               Cancelar
             </Button>
             <Button onClick={handleSave}>
-              {flight ? "Guardar cambios" : "Crear"}
+              {assist ? "Guardar cambios" : "Crear"}
             </Button>
           </div>
         </DialogFooter>

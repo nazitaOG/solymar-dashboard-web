@@ -18,95 +18,88 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { Plane } from "@/lib/interfaces/plane/plane.interface";
+import type { Excursion } from "@/lib/interfaces/excursion/excursion.interface";
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
 
-interface FlightDialogProps {
+interface ExcursionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  flight?: Plane;
+  excursion?: Excursion;
   reservationId: string;
-  onSave: (flight: Partial<Plane>) => void;
+  onSave: (excursion: Partial<Excursion>) => void;
   onDelete?: (id: string) => void;
 }
 
-export function FlightDialog({
+export function ExcursionDialog({
   open,
   onOpenChange,
-  flight,
+  excursion,
   reservationId,
   onSave,
   onDelete,
-}: FlightDialogProps) {
+}: ExcursionDialogProps) {
   const [formData, setFormData] = useState({
-    departure: "",
-    arrival: "",
-    departureDate: "",
-    arrivalDate: "",
-    bookingReference: "",
+    excursionName: "",
+    origin: "",
     provider: "",
+    bookingReference: "",
+    excursionDate: "",
     totalPrice: "",
     amountPaid: "",
     notes: "",
     currency: "USD" as Currency,
   });
 
-  // 🔄 Cargar datos del vuelo si se está editando
+  // 🔄 Cargar datos si se está editando
   useEffect(() => {
-    if (flight) {
+    if (excursion) {
       setFormData({
-        departure: flight.departure ?? "",
-        arrival: flight.arrival ?? "",
-        departureDate: flight.departureDate
-          ? flight.departureDate.split("T")[0]
+        excursionName: excursion.excursionName ?? "",
+        origin: excursion.origin ?? "",
+        provider: excursion.provider ?? "",
+        bookingReference: excursion.bookingReference ?? "",
+        excursionDate: excursion.excursionDate
+          ? excursion.excursionDate.split("T")[0]
           : "",
-        arrivalDate: flight.arrivalDate
-          ? flight.arrivalDate.split("T")[0]
-          : "",
-        bookingReference: flight.bookingReference ?? "",
-        provider: flight.provider ?? "",
-        totalPrice: String(flight.totalPrice ?? ""),
-        amountPaid: String(flight.amountPaid ?? ""),
-        notes: flight.notes ?? "",
-        currency: flight.currency ?? "USD",
+        totalPrice: String(excursion.totalPrice ?? ""),
+        amountPaid: String(excursion.amountPaid ?? ""),
+        notes: "",
+        currency: excursion.currency ?? "USD",
       });
     } else {
       setFormData({
-        departure: "",
-        arrival: "",
-        departureDate: "",
-        arrivalDate: "",
-        bookingReference: "",
+        excursionName: "",
+        origin: "",
         provider: "",
+        bookingReference: "",
+        excursionDate: "",
         totalPrice: "",
         amountPaid: "",
         notes: "",
         currency: "USD",
       });
     }
-  }, [flight, open]);
+  }, [excursion, open]);
 
   // 🧠 Normaliza fecha
   const toIsoDate = (d: string): string | null =>
     d ? new Date(`${d}T12:00:00`).toISOString() : null;
 
-  // 💾 Guardar vuelo
+  // 💾 Guardar excursión
   const handleSave = () => {
     const total = Number.parseFloat(formData.totalPrice || "0");
     const paid = Number.parseFloat(formData.amountPaid || "0");
 
-    const data: Partial<Plane> = {
-      ...(flight?.id && { id: flight.id }),
+    const data: Partial<Excursion> = {
+      ...(excursion?.id && { id: excursion.id }),
       reservationId,
-      departure: formData.departure,
-      arrival: formData.arrival || null,
-      departureDate: toIsoDate(formData.departureDate) ?? "",
-      arrivalDate: toIsoDate(formData.arrivalDate),
-      bookingReference: formData.bookingReference,
-      provider: formData.provider || null,
+      excursionName: formData.excursionName,
+      origin: formData.origin,
+      provider: formData.provider,
+      bookingReference: formData.bookingReference || null,
+      excursionDate: toIsoDate(formData.excursionDate) ?? "",
       totalPrice: total,
       amountPaid: paid,
-      notes: formData.notes || null,
       currency: formData.currency,
     };
 
@@ -118,73 +111,52 @@ export function FlightDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{flight ? "Editar Vuelo" : "Crear Vuelo"}</DialogTitle>
+          <DialogTitle>
+            {excursion ? "Editar Excursión" : "Crear Excursión"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Campos principales */}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="departure">Origen *</Label>
+              <Label htmlFor="excursionName">Nombre de la excursión *</Label>
               <Input
-                id="departure"
-                value={formData.departure}
+                id="excursionName"
+                value={formData.excursionName}
                 onChange={(e) =>
-                  setFormData({ ...formData, departure: e.target.value })
+                  setFormData({ ...formData, excursionName: e.target.value })
                 }
-                placeholder="Buenos Aires (EZE)"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="arrival">Destino *</Label>
-              <Input
-                id="arrival"
-                value={formData.arrival}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrival: e.target.value })
-                }
-                placeholder="Miami (MIA)"
+                placeholder="Visita guiada a Machu Picchu"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="departureDate">Fecha de salida *</Label>
+              <Label htmlFor="origin">Origen / Punto de partida *</Label>
               <Input
-                id="departureDate"
-                type="date"
-                value={formData.departureDate}
+                id="origin"
+                value={formData.origin}
                 onChange={(e) =>
-                  setFormData({ ...formData, departureDate: e.target.value })
+                  setFormData({ ...formData, origin: e.target.value })
                 }
+                placeholder="Cusco"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="arrivalDate">Fecha de llegada *</Label>
-              <Input
-                id="arrivalDate"
-                type="date"
-                value={formData.arrivalDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrivalDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="provider">Aerolínea *</Label>
+              <Label htmlFor="provider">Proveedor *</Label>
               <Input
                 id="provider"
                 value={formData.provider}
                 onChange={(e) =>
                   setFormData({ ...formData, provider: e.target.value })
                 }
-                placeholder="American Airlines"
+                placeholder="Peru Travel Agency"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bookingReference">Referencia *</Label>
+              <Label htmlFor="bookingReference">Referencia de reserva</Label>
               <Input
                 id="bookingReference"
                 value={formData.bookingReference}
@@ -194,7 +166,19 @@ export function FlightDialog({
                     bookingReference: e.target.value,
                   })
                 }
-                placeholder="AA-123456"
+                placeholder="EXC-001234"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="excursionDate">Fecha de la excursión *</Label>
+              <Input
+                id="excursionDate"
+                type="date"
+                value={formData.excursionDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, excursionDate: e.target.value })
+                }
               />
             </div>
 
@@ -225,7 +209,7 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, totalPrice: e.target.value })
                 }
-                placeholder="1000"
+                placeholder="150"
               />
             </div>
 
@@ -238,12 +222,12 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, amountPaid: e.target.value })
                 }
-                placeholder="500"
+                placeholder="150"
               />
             </div>
           </div>
 
-          {/* Notas */}
+          {/* Notas opcionales */}
           <div className="space-y-1">
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
@@ -252,7 +236,7 @@ export function FlightDialog({
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
-              placeholder="2 maletas incluidas, asiento 14B..."
+              placeholder="Incluye almuerzo y transporte local."
               rows={3}
             />
           </div>
@@ -261,11 +245,11 @@ export function FlightDialog({
         {/* Footer */}
         <DialogFooter className="flex justify-between">
           <div>
-            {flight && onDelete && (
+            {excursion && onDelete && (
               <Button
                 variant="destructive"
                 onClick={() => {
-                  onDelete(flight.id);
+                  onDelete(excursion.id);
                   onOpenChange(false);
                 }}
               >
@@ -278,7 +262,7 @@ export function FlightDialog({
               Cancelar
             </Button>
             <Button onClick={handleSave}>
-              {flight ? "Guardar cambios" : "Crear"}
+              {excursion ? "Guardar cambios" : "Crear"}
             </Button>
           </div>
         </DialogFooter>

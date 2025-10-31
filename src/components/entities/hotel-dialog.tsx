@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Hotel, Currency } from "@/lib/types";
+import type { Hotel as HotelInterface } from "@/lib/interfaces/hotel/hotel.interface";
+import type { Currency as CurrencyInterface } from "@/lib/interfaces/currency/currency.interface";
 
 interface HotelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  hotel?: Hotel;
+  hotel?: HotelInterface;
   reservationId: string;
-  onSave: (hotel: Partial<Hotel>) => void;
+  onSave: (hotel: Partial<HotelInterface>) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -26,7 +27,7 @@ export function HotelDialog({ open, onOpenChange, hotel, reservationId, onSave, 
     amountPaid: "",
     roomType: "",
     provider: "",
-    currency: "USD" as Currency,
+    currency: "USD" as CurrencyInterface,
   });
 
   // util para normalizar ISO -> YYYY-MM-DD
@@ -77,7 +78,7 @@ export function HotelDialog({ open, onOpenChange, hotel, reservationId, onSave, 
     // YYYY-MM-DD -> ISO con "T12:00:00" para evitar TZ shift
     const toIso = (ymd: string) => (ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "");
 
-    const data: Partial<Hotel> = {
+    const data: Partial<HotelInterface> = {
       ...(hotel?.id && { id: hotel.id }),
       reservationId,
       startDate: toIso(formData.startDate),
@@ -172,7 +173,7 @@ export function HotelDialog({ open, onOpenChange, hotel, reservationId, onSave, 
               <Label htmlFor="currency">Moneda *</Label>
               <Select
                 value={formData.currency}
-                onValueChange={(value: Currency) => setFormData({ ...formData, currency: value })}
+                onValueChange={(value: CurrencyInterface) => setFormData({ ...formData, currency: value })}
               >
                 <SelectTrigger id="currency" className="bg-transparent">
                   <SelectValue />

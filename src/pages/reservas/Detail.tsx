@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
@@ -7,6 +7,10 @@ import { AuditPanel } from "@/components/reservations/audit-panel";
 import { EntityTable, type Column } from "@/components/entities/entity-table";
 import { HotelDialog } from "@/components/entities/hotel-dialog";
 import { FlightDialog } from "@/components/entities/flight-dialog";
+import { CruiseDialog } from "@/components/entities/cruise-dialog";
+import { TransferDialog } from "@/components/entities/transfer-dialog";
+import { ExcursionDialog } from "@/components/entities/excursion-dialog";
+import { MedicalAssistDialog } from "@/components/entities/medical-assist-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,10 +18,20 @@ import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart } from "lucide-react
 import { FullPageLoader } from "@/components/FullPageLoader";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
-import type { ReservationDetail, ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
+import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservation.utils";
+
+import type {
+  Reservation,
+  ReservationDetail,
+  ReservationState,
+} from "@/lib/interfaces/reservation/reservation.interface";
 import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface";
 import type { Plane as PlaneType } from "@/lib/interfaces/plane/plane.interface";
-import type { Pax } from "@/lib/interfaces/pax/pax.interface";
+import type { Cruise as CruiseType } from "@/lib/interfaces/cruise/cruise.interface";
+import type { Transfer as TransferType } from "@/lib/interfaces/transfer/transfer.interface";
+import type { Excursion as ExcursionType } from "@/lib/interfaces/excursion/excursion.interface";
+import type { MedicalAssist as MedicalAssistType } from "@/lib/interfaces/medical_assist/medical_assist.interface";
+import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,6 +39,8 @@ import { es } from "date-fns/locale";
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passedReservation = location.state as Reservation | undefined;
 
   const [reservation, setReservation] = useState<ReservationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,55 +49,78 @@ export default function ReservationDetailPage() {
   // Dialog states
   const [hotelDialogOpen, setHotelDialogOpen] = useState(false);
   const [flightDialogOpen, setFlightDialogOpen] = useState(false);
+  const [cruiseDialogOpen, setCruiseDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [excursionDialogOpen, setExcursionDialogOpen] = useState(false);
+  const [medicalAssistDialogOpen, setMedicalAssistDialogOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
   const [selectedFlight, setSelectedFlight] = useState<PlaneType | undefined>();
+  const [selectedCruise, setSelectedCruise] = useState<CruiseType | undefined>();
+  const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
+  const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
+  const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
 
-  // ✅ Fetch detalle de reserva con include
+  // 🧭 Fetch detalle de reserva
   useEffect(() => {
     if (!id) return;
 
-    const fetchReservation = async () => {
-      console.log(`[ReservationDetailPage] 🔄 Iniciando fetch de reserva ID=${id}...`);
-      setLoading(true);
-      setError(null);
-
+    const fetchEntities = async () => {
       try {
-        const res = await fetchAPI<ReservationDetail>(
-          `/reservations/${id}?include=paxReservations,currencyTotals,hotels,planes,cruises,transfers,excursions,medicalAssists`
-        );
+        setLoading(true);
 
-        console.log("[ReservationDetailPage] ✅ Reserva cargada correctamente:", res);
-        if (!res) {
-          console.warn("[ReservationDetailPage] ⚠️ Respuesta vacía o inválida:", res);
-          setError("Reserva no encontrada");
-          return;
+        const [
+          hotels,
+          planes,
+          cruises,
+          transfers,
+          excursions,
+          medicalAssists,
+        ] = await Promise.all([
+          fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
+          fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
+          fetchAPI<CruiseType[]>(`/cruises/reservation/${id}`),
+          fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
+          fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
+          fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
+        ]);
+
+        console.log("📦 Hotels:", hotels);
+        console.log("📦 Planes:", planes);
+        console.log("📦 Cruises:", cruises);
+        console.log("📦 Transfers:", transfers);
+        console.log("📦 Excursions:", excursions);
+        console.log("📦 MedicalAssists:", medicalAssists);
+        console.log("📦 Passed Reservation:", passedReservation);
+
+        if (passedReservation) {
+          // ✅ Normalizamos todo: datos del padre + entidades fetchadas
+          setReservation(
+            normalizeReservation({
+              ...passedReservation,
+              hotels,
+              planes,
+              cruises,
+              transfers,
+              excursions,
+              medicalAssists,
+            })
+          );
+          console.log("reservation", reservation)
+        } else {
+          // 🔁 Fallback: si el usuario entra directo por URL
+          const res = await fetchAPI<ReservationDetail>(`/reservations/${id}?include=all`);
+          setReservation(normalizeReservation(res));
         }
-
-        // Normalización preventiva (evita errores tipo 'undefined.map')
-        const safeRes = {
-          ...res,
-          paxReservations: res.paxReservations ?? [],
-          currencyTotals: res.currencyTotals ?? [],
-          hotels: res.hotels ?? [],
-          planes: res.planes ?? [],
-          cruises: res.cruises ?? [],
-          transfers: res.transfers ?? [],
-          excursions: res.excursions ?? [],
-          medicalAssists: res.medicalAssists ?? [],
-        };
-
-        setReservation(safeRes);
       } catch (err) {
-        console.error("[ReservationDetailPage] ❌ Error al cargar la reserva:", err);
+        console.error("Error al cargar reserva:", err);
         setError("No se pudo cargar la reserva");
       } finally {
-        console.log("[ReservationDetailPage] 🏁 Fetch finalizado.");
         setLoading(false);
       }
     };
 
-    fetchReservation();
-  }, [id]);
+    fetchEntities();
+  }, [id, passedReservation]);
 
   // 🧩 Loading o error
   if (loading) return <FullPageLoader />;
@@ -102,7 +141,7 @@ export default function ReservationDetailPage() {
     setReservation({ ...reservation, state });
   };
 
-  const handlePassengersChange = (passengers: Pax[]) => {
+  const handlePassengersChange = (passengers: PaxType[]) => {
     console.log("[ReservationDetailPage] 🧍 Actualizando pasajeros:", passengers);
     setReservation({
       ...reservation,
@@ -112,19 +151,16 @@ export default function ReservationDetailPage() {
 
   // Hotels
   const handleCreateHotel = () => {
-    console.log("[ReservationDetailPage] ➕ Crear nuevo hotel");
     setSelectedHotel(undefined);
     setHotelDialogOpen(true);
   };
 
   const handleEditHotel = (hotel: Record<string, unknown>) => {
-    console.log("[ReservationDetailPage] ✏️ Editar hotel:", hotel);
     setSelectedHotel(hotel as unknown as HotelType);
     setHotelDialogOpen(true);
   };
 
   const handleSaveHotel = (hotelData: Partial<HotelType>) => {
-    console.log("[ReservationDetailPage] 💾 Guardar hotel:", hotelData);
     if (selectedHotel) {
       setReservation({
         ...reservation,
@@ -145,7 +181,6 @@ export default function ReservationDetailPage() {
   };
 
   const handleDeleteHotel = (hotelId: string) => {
-    console.log("[ReservationDetailPage] 🗑️ Eliminar hotel ID:", hotelId);
     setReservation({
       ...reservation,
       hotels: reservation.hotels.filter((h) => h.id !== hotelId),
@@ -154,19 +189,16 @@ export default function ReservationDetailPage() {
 
   // Flights
   const handleCreateFlight = () => {
-    console.log("[ReservationDetailPage] ✈️ Crear nuevo vuelo");
     setSelectedFlight(undefined);
     setFlightDialogOpen(true);
   };
 
   const handleEditFlight = (flight: Record<string, unknown>) => {
-    console.log("[ReservationDetailPage] 🛫 Editar vuelo:", flight);
     setSelectedFlight(flight as unknown as PlaneType);
     setFlightDialogOpen(true);
   };
 
   const handleSaveFlight = (flightData: Partial<PlaneType>) => {
-    console.log("[ReservationDetailPage] 💾 Guardar vuelo:", flightData);
     if (selectedFlight) {
       setReservation({
         ...reservation,
@@ -187,12 +219,165 @@ export default function ReservationDetailPage() {
   };
 
   const handleDeleteFlight = (flightId: string) => {
-    console.log("[ReservationDetailPage] 🗑️ Eliminar vuelo ID:", flightId);
     setReservation({
       ...reservation,
       planes: reservation.planes.filter((p) => p.id !== flightId),
     });
   };
+
+  // Cruises
+  const handleCreateCruise = () => {
+    setSelectedCruise(undefined);
+    setCruiseDialogOpen(true);
+  };
+
+  const handleEditCruise = (cruise: Record<string, unknown>) => {
+    setSelectedCruise(cruise as unknown as CruiseType);
+    setCruiseDialogOpen(true);
+  };
+
+  const handleSaveCruise = (cruiseData: Partial<CruiseType>) => {
+    if (selectedCruise) {
+      setReservation({
+        ...reservation!,
+        cruises: reservation!.cruises.map((c) =>
+          c.id === selectedCruise.id ? { ...c, ...cruiseData } : c
+        ),
+      });
+    } else {
+      const newCruise: CruiseType = {
+        ...(cruiseData as CruiseType),
+        id: `CRS-${Date.now()}`,
+      };
+      setReservation({
+        ...reservation!,
+        cruises: [...reservation!.cruises, newCruise],
+      });
+    }
+  };
+
+  const handleDeleteCruise = (cruiseId: string) => {
+    setReservation({
+      ...reservation!,
+      cruises: reservation!.cruises.filter((c) => c.id !== cruiseId),
+    });
+  };
+
+  // Transfers
+  const handleCreateTransfer = () => {
+    setSelectedTransfer(undefined);
+    setTransferDialogOpen(true);
+  };
+
+  const handleEditTransfer = (transfer: Record<string, unknown>) => {
+    setSelectedTransfer(transfer as unknown as TransferType);
+    setTransferDialogOpen(true);
+  };
+
+  const handleSaveTransfer = (transferData: Partial<TransferType>) => {
+    if (selectedTransfer) {
+      setReservation({
+        ...reservation!,
+        transfers: reservation!.transfers.map((t) =>
+          t.id === selectedTransfer.id ? { ...t, ...transferData } : t
+        ),
+      });
+    } else {
+      const newTransfer: TransferType = {
+        ...(transferData as TransferType),
+        id: `TRF-${Date.now()}`,
+      };
+      setReservation({
+        ...reservation!,
+        transfers: [...reservation!.transfers, newTransfer],
+      });
+    }
+  };
+
+  const handleDeleteTransfer = (transferId: string) => {
+    setReservation({
+      ...reservation!,
+      transfers: reservation!.transfers.filter((t) => t.id !== transferId),
+    });
+  };
+
+  // Excursions
+  const handleCreateExcursion = () => {
+    setSelectedExcursion(undefined);
+    setExcursionDialogOpen(true);
+  };
+
+  const handleEditExcursion = (excursion: Record<string, unknown>) => {
+    setSelectedExcursion(excursion as unknown as ExcursionType);
+    setExcursionDialogOpen(true);
+  };
+
+  const handleSaveExcursion = (excursionData: Partial<ExcursionType>) => {
+    if (selectedExcursion) {
+      setReservation({
+        ...reservation!,
+        excursions: reservation!.excursions.map((e) =>
+          e.id === selectedExcursion.id ? { ...e, ...excursionData } : e
+        ),
+      });
+    } else {
+      const newExcursion: ExcursionType = {
+        ...(excursionData as ExcursionType),
+        id: `EXC-${Date.now()}`,
+      };
+      setReservation({
+        ...reservation!,
+        excursions: [...reservation!.excursions, newExcursion],
+      });
+    }
+  };
+
+  const handleDeleteExcursion = (excursionId: string) => {
+    setReservation({
+      ...reservation!,
+      excursions: reservation!.excursions.filter((e) => e.id !== excursionId),
+    });
+  };
+
+  // Medical Assists
+  const handleCreateMedicalAssist = () => {
+    setSelectedMedicalAssist(undefined);
+    setMedicalAssistDialogOpen(true);
+  };
+
+  const handleEditMedicalAssist = (assist: Record<string, unknown>) => {
+    setSelectedMedicalAssist(assist as unknown as MedicalAssistType);
+    setMedicalAssistDialogOpen(true);
+  };
+
+  const handleSaveMedicalAssist = (assistData: Partial<MedicalAssistType>) => {
+    if (selectedMedicalAssist) {
+      setReservation({
+        ...reservation!,
+        medicalAssists: reservation!.medicalAssists.map((a) =>
+          a.id === selectedMedicalAssist.id ? { ...a, ...assistData } : a
+        ),
+      });
+    } else {
+      const newAssist: MedicalAssistType = {
+        ...(assistData as MedicalAssistType),
+        id: `MED-${Date.now()}`,
+      };
+      setReservation({
+        ...reservation!,
+        medicalAssists: [...reservation!.medicalAssists, newAssist],
+      });
+    }
+  };
+
+  const handleDeleteMedicalAssist = (assistId: string) => {
+    setReservation({
+      ...reservation!,
+      medicalAssists: reservation!.medicalAssists.filter((a) => a.id !== assistId),
+    });
+  };
+
+
 
   // ---------------- Formatters ----------------
   const formatCurrency = (amount: number, currency: string) =>
@@ -202,8 +387,12 @@ export default function ReservationDetailPage() {
       minimumFractionDigits: 0,
     }).format(amount);
 
-  const formatDate = (dateString: string) =>
-    format(new Date(dateString), "dd MMM yyyy", { locale: es });
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "—";
+    const parsed = new Date(dateString);
+    if (isNaN(parsed.getTime())) return "—";
+    return format(parsed, "dd MMM yyyy", { locale: es });
+  };
 
   // ---------------- Column defs ----------------
   const hotelColumns: Column[] = [
@@ -226,7 +415,9 @@ export default function ReservationDetailPage() {
       label: "Precio",
       render: (_value, row) => (
         <div className="text-sm">
-          <div className="font-medium">{formatCurrency(Number(row.amountPaid), String(row.currency))}</div>
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
           <div className="text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice), String(row.currency))}
           </div>
@@ -263,7 +454,9 @@ export default function ReservationDetailPage() {
       label: "Precio",
       render: (_value, row) => (
         <div className="text-sm">
-          <div className="font-medium">{formatCurrency(Number(row.amountPaid), String(row.currency))}</div>
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
           <div className="text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice), String(row.currency))}
           </div>
@@ -271,6 +464,128 @@ export default function ReservationDetailPage() {
       ),
     },
   ];
+
+  // ---------------- Column defs extra ----------------
+
+  const cruiseColumns: Column[] = [
+    { key: "shipName", label: "Crucero" },
+    { key: "route", label: "Ruta" },
+    {
+      key: "departureDate",
+      label: "Salida / Llegada",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div>{formatDate(String(row.departureDate))}</div>
+          <div className="text-muted-foreground">{formatDate(String(row.arrivalDate))}</div>
+        </div>
+      ),
+    },
+    { key: "provider", label: "Naviera" },
+    { key: "bookingReference", label: "Referencia" },
+    {
+      key: "totalPrice",
+      label: "Precio",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
+          <div className="text-muted-foreground">
+            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const transferColumns: Column[] = [
+    { key: "origin", label: "Origen" },
+    { key: "destination", label: "Destino" },
+    {
+      key: "departureDate",
+      label: "Salida / Llegada",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div>{formatDate(String(row.departureDate))}</div>
+          <div className="text-muted-foreground">{formatDate(String(row.arrivalDate))}</div>
+        </div>
+      ),
+    },
+    { key: "provider", label: "Proveedor" },
+    { key: "transportType", label: "Tipo" },
+    {
+      key: "totalPrice",
+      label: "Precio",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
+          <div className="text-muted-foreground">
+            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const excursionColumns: Column[] = [
+    { key: "excursionName", label: "Excursión" },
+    { key: "location", label: "Lugar" },
+    {
+      key: "date",
+      label: "Fecha",
+      render: (value) => (
+        <div className="text-sm">{formatDate(String(value))}</div>
+      ),
+    },
+    { key: "provider", label: "Proveedor" },
+    {
+      key: "totalPrice",
+      label: "Precio",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
+          <div className="text-muted-foreground">
+            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const medicalAssistColumns: Column[] = [
+    { key: "provider", label: "Proveedor" },
+    { key: "planName", label: "Plan" },
+    {
+      key: "startDate",
+      label: "Inicio / Fin",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div>{formatDate(String(row.startDate))}</div>
+          <div className="text-muted-foreground">{formatDate(String(row.endDate))}</div>
+        </div>
+      ),
+    },
+    { key: "coverage", label: "Cobertura" },
+    {
+      key: "totalPrice",
+      label: "Precio",
+      render: (_value, row) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+          </div>
+          <div className="text-muted-foreground">
+            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
 
   // ---------------- Render ----------------
   return (
@@ -338,6 +653,58 @@ export default function ReservationDetailPage() {
                   emptyMessage="No hay vuelos agregados aún"
                 />
               </TabsContent>
+              <TabsContent value="cruises" className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateCruise}>Crear Crucero</Button>
+                </div>
+                <EntityTable
+                  data={reservation.cruises as unknown as Record<string, unknown>[]}
+                  columns={cruiseColumns}
+                  onEdit={handleEditCruise}
+                  onDelete={handleDeleteCruise}
+                  emptyMessage="No hay cruceros agregados aún"
+                />
+              </TabsContent>
+
+              <TabsContent value="transfers" className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateTransfer}>Crear Traslado</Button>
+                </div>
+                <EntityTable
+                  data={reservation.transfers as unknown as Record<string, unknown>[]}
+                  columns={transferColumns}
+                  onEdit={handleEditTransfer}
+                  onDelete={handleDeleteTransfer}
+                  emptyMessage="No hay traslados agregados aún"
+                />
+              </TabsContent>
+
+              <TabsContent value="excursions" className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateExcursion}>Crear Excursión</Button>
+                </div>
+                <EntityTable
+                  data={reservation.excursions as unknown as Record<string, unknown>[]}
+                  columns={excursionColumns}
+                  onEdit={handleEditExcursion}
+                  onDelete={handleDeleteExcursion}
+                  emptyMessage="No hay excursiones agregadas aún"
+                />
+              </TabsContent>
+
+              <TabsContent value="medical" className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateMedicalAssist}>Crear Asistencia</Button>
+                </div>
+                <EntityTable
+                  data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
+                  columns={medicalAssistColumns}
+                  onEdit={handleEditMedicalAssist}
+                  onDelete={handleDeleteMedicalAssist}
+                  emptyMessage="No hay asistencias agregadas aún"
+                />
+              </TabsContent>
+
             </Tabs>
           </div>
 
@@ -366,6 +733,43 @@ export default function ReservationDetailPage() {
         onSave={handleSaveFlight}
         onDelete={handleDeleteFlight}
       />
+
+      <CruiseDialog
+        open={cruiseDialogOpen}
+        onOpenChange={setCruiseDialogOpen}
+        cruise={selectedCruise}
+        reservationId={id}
+        onSave={handleSaveCruise}
+        onDelete={handleDeleteCruise}
+      />
+
+      <TransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+        transfer={selectedTransfer}
+        reservationId={id}
+        onSave={handleSaveTransfer}
+        onDelete={handleDeleteTransfer}
+      />
+
+      <ExcursionDialog
+        open={excursionDialogOpen}
+        onOpenChange={setExcursionDialogOpen}
+        excursion={selectedExcursion}
+        reservationId={id}
+        onSave={handleSaveExcursion}
+        onDelete={handleDeleteExcursion}
+      />
+
+      <MedicalAssistDialog
+        open={medicalAssistDialogOpen}
+        onOpenChange={setMedicalAssistDialogOpen}
+        assist={selectedMedicalAssist}
+        reservationId={id}
+        onSave={handleSaveMedicalAssist}
+        onDelete={handleDeleteMedicalAssist}
+      />
+
     </DashboardLayout>
   );
 }

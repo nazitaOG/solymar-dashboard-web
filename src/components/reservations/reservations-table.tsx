@@ -7,6 +7,7 @@ import { Eye, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Reservation } from "@/lib/interfaces/reservation/reservation.interface";
+import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservation.utils";
 
 interface ReservationsTableProps {
   reservations: Reservation[];
@@ -19,10 +20,13 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalPages = Math.ceil(reservations.length / ITEMS_PER_PAGE);
+  // ✅ Normalizamos todas las reservas antes de renderizarlas
+  const safeReservations = reservations.map((r) => normalizeReservation(r));
+
+  const totalPages = Math.ceil(safeReservations.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentReservations = reservations.slice(startIndex, endIndex);
+  const currentReservations = safeReservations.slice(startIndex, endIndex);
 
   const getStateBadge = (state: Reservation["state"]) => {
     const variants = {
@@ -71,6 +75,7 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
               <TableHead className="text-right min-w-[100px]">Acciones</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {currentReservations.length === 0 ? (
               <TableRow>
@@ -83,28 +88,38 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                 <TableRow
                   key={reservation.id}
                   className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => navigate(`./${reservation.id}`)}
+                  onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
                 >
                   <TableCell>{getStateBadge(reservation.state)}</TableCell>
+
+                  {/* ✅ Evita crash si paxReservations está vacío */}
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {reservation.paxReservations.map((pr, idx) => (
+                      {(reservation.paxReservations ?? []).map((pr, idx) => (
                         <Badge key={idx} variant="outline" className="text-xs">
-                          {pr.pax.name}
+                          {pr.pax?.name ?? "—"}
                         </Badge>
                       ))}
                     </div>
                   </TableCell>
+
+                  {/* ✅ Evita crash si currencyTotals está vacío */}
                   <TableCell>
                     <div className="space-y-1">
-                      {reservation.currencyTotals.map((ct, idx) => (
+                      {(reservation.currencyTotals ?? []).map((ct, idx) => (
                         <div key={idx} className="text-sm">
-                          <span className="font-medium">{formatCurrency(ct.amountPaid, ct.currency)}</span>
-                          <span className="text-muted-foreground"> / {formatCurrency(ct.totalPrice, ct.currency)}</span>
+                          <span className="font-medium">
+                            {formatCurrency(ct.amountPaid ?? 0, ct.currency ?? "USD")}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            / {formatCurrency(ct.totalPrice ?? 0, ct.currency ?? "USD")}
+                          </span>
                         </div>
                       ))}
                     </div>
                   </TableCell>
+
                   <TableCell className="text-sm text-muted-foreground">
                     {reservation.createdAt
                       ? format(new Date(reservation.createdAt), "dd MMM yyyy, HH:mm", { locale: es })
@@ -124,7 +139,7 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`./${reservation.id}`);
+                          navigate(`./${reservation.id}`, { state: reservation });
                         }}
                       >
                         <Eye className="h-4 w-4" />
@@ -154,7 +169,8 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-            Mostrando {startIndex + 1} a {Math.min(endIndex, reservations.length)} de {reservations.length} reservas
+            Mostrando {startIndex + 1} a {Math.min(endIndex, safeReservations.length)} de{" "}
+            {safeReservations.length} reservas
           </p>
           <div className="flex gap-2">
             <Button

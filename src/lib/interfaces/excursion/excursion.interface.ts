@@ -1,14 +1,18 @@
 import { Currency } from "../currency/currency.interface"
 
 export interface Excursion {
-  id: string
-  reservationId: string
-  excursionName: string
-  origin: string
-  provider: string
-  excursionDate: string
-  bookingReference: string
-  totalPrice: number
-  amountPaid: number
-  currency: Currency
+  id: string;
+  totalPrice: number;
+  amountPaid: number;
+  origin: string;
+  provider: string;
+  bookingReference: string | null;
+  excursionDate: string;
+  excursionName: string;
+  reservationId: string;
+  currency: Currency;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }

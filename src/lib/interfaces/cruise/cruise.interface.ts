@@ -1,15 +1,19 @@
 import { Currency } from "../currency/currency.interface"
 
 export interface Cruise {
-  id: string
-  reservationId: string
-  startDate: string
-  endDate: string
-  bookingReference: string
-  provider: string
-  embarkationPort: string
-  arrivalPort: string
-  totalPrice: number
-  amountPaid: number
-  currency: Currency
+  id: string;
+  startDate: string;
+  endDate: string | null;
+  bookingReference: string | null;
+  provider: string;
+  embarkationPort: string;
+  arrivalPort: string | null;
+  totalPrice: number;
+  amountPaid: number;
+  reservationId: string;
+  currency: Currency;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }

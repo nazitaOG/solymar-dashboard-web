@@ -18,95 +18,90 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { Plane } from "@/lib/interfaces/plane/plane.interface";
+import type { Cruise } from "@/lib/interfaces/cruise/cruise.interface";
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
 
-interface FlightDialogProps {
+interface CruiseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  flight?: Plane;
+  cruise?: Cruise;
   reservationId: string;
-  onSave: (flight: Partial<Plane>) => void;
+  onSave: (cruise: Partial<Cruise>) => void;
   onDelete?: (id: string) => void;
 }
 
-export function FlightDialog({
+export function CruiseDialog({
   open,
   onOpenChange,
-  flight,
+  cruise,
   reservationId,
   onSave,
   onDelete,
-}: FlightDialogProps) {
+}: CruiseDialogProps) {
   const [formData, setFormData] = useState({
-    departure: "",
-    arrival: "",
-    departureDate: "",
-    arrivalDate: "",
-    bookingReference: "",
     provider: "",
+    embarkationPort: "",
+    arrivalPort: "",
+    bookingReference: "",
+    startDate: "",
+    endDate: "",
     totalPrice: "",
     amountPaid: "",
     notes: "",
     currency: "USD" as Currency,
   });
 
-  // 🔄 Cargar datos del vuelo si se está editando
+  // 🔄 Cargar datos si se está editando
   useEffect(() => {
-    if (flight) {
+    if (cruise) {
       setFormData({
-        departure: flight.departure ?? "",
-        arrival: flight.arrival ?? "",
-        departureDate: flight.departureDate
-          ? flight.departureDate.split("T")[0]
-          : "",
-        arrivalDate: flight.arrivalDate
-          ? flight.arrivalDate.split("T")[0]
-          : "",
-        bookingReference: flight.bookingReference ?? "",
-        provider: flight.provider ?? "",
-        totalPrice: String(flight.totalPrice ?? ""),
-        amountPaid: String(flight.amountPaid ?? ""),
-        notes: flight.notes ?? "",
-        currency: flight.currency ?? "USD",
+        provider: cruise.provider ?? "",
+        embarkationPort: cruise.embarkationPort ?? "",
+        arrivalPort: cruise.arrivalPort ?? "",
+        bookingReference: cruise.bookingReference ?? "",
+        startDate: cruise.startDate ? cruise.startDate.split("T")[0] : "",
+        endDate: cruise.endDate ? cruise.endDate.split("T")[0] : "",
+        totalPrice: String(cruise.totalPrice ?? ""),
+        amountPaid: String(cruise.amountPaid ?? ""),
+        notes: "",
+        currency: cruise.currency ?? "USD",
       });
     } else {
       setFormData({
-        departure: "",
-        arrival: "",
-        departureDate: "",
-        arrivalDate: "",
-        bookingReference: "",
         provider: "",
+        embarkationPort: "",
+        arrivalPort: "",
+        bookingReference: "",
+        startDate: "",
+        endDate: "",
         totalPrice: "",
         amountPaid: "",
         notes: "",
         currency: "USD",
       });
     }
-  }, [flight, open]);
+  }, [cruise, open]);
 
   // 🧠 Normaliza fecha
   const toIsoDate = (d: string): string | null =>
     d ? new Date(`${d}T12:00:00`).toISOString() : null;
 
-  // 💾 Guardar vuelo
+  // 💾 Guardar crucero
   const handleSave = () => {
     const total = Number.parseFloat(formData.totalPrice || "0");
     const paid = Number.parseFloat(formData.amountPaid || "0");
 
-    const data: Partial<Plane> = {
-      ...(flight?.id && { id: flight.id }),
+    const data: Partial<Cruise> = {
+      ...(cruise?.id && { id: cruise.id }),
       reservationId,
-      departure: formData.departure,
-      arrival: formData.arrival || null,
-      departureDate: toIsoDate(formData.departureDate) ?? "",
-      arrivalDate: toIsoDate(formData.arrivalDate),
-      bookingReference: formData.bookingReference,
-      provider: formData.provider || null,
+      provider: formData.provider,
+      embarkationPort: formData.embarkationPort,
+      arrivalPort: formData.arrivalPort || null,
+      bookingReference: formData.bookingReference || null,
+      startDate: toIsoDate(formData.startDate) ?? "",
+      endDate: toIsoDate(formData.endDate),
       totalPrice: total,
       amountPaid: paid,
-      notes: formData.notes || null,
       currency: formData.currency,
     };
 
@@ -118,73 +113,50 @@ export function FlightDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{flight ? "Editar Vuelo" : "Crear Vuelo"}</DialogTitle>
+          <DialogTitle>{cruise ? "Editar Crucero" : "Crear Crucero"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Campos principales */}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="departure">Origen *</Label>
-              <Input
-                id="departure"
-                value={formData.departure}
-                onChange={(e) =>
-                  setFormData({ ...formData, departure: e.target.value })
-                }
-                placeholder="Buenos Aires (EZE)"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="arrival">Destino *</Label>
-              <Input
-                id="arrival"
-                value={formData.arrival}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrival: e.target.value })
-                }
-                placeholder="Miami (MIA)"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="departureDate">Fecha de salida *</Label>
-              <Input
-                id="departureDate"
-                type="date"
-                value={formData.departureDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, departureDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="arrivalDate">Fecha de llegada *</Label>
-              <Input
-                id="arrivalDate"
-                type="date"
-                value={formData.arrivalDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, arrivalDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="provider">Aerolínea *</Label>
+              <Label htmlFor="provider">Proveedor *</Label>
               <Input
                 id="provider"
                 value={formData.provider}
                 onChange={(e) =>
                   setFormData({ ...formData, provider: e.target.value })
                 }
-                placeholder="American Airlines"
+                placeholder="MSC Cruises"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bookingReference">Referencia *</Label>
+              <Label htmlFor="embarkationPort">Puerto de embarque *</Label>
+              <Input
+                id="embarkationPort"
+                value={formData.embarkationPort}
+                onChange={(e) =>
+                  setFormData({ ...formData, embarkationPort: e.target.value })
+                }
+                placeholder="Buenos Aires"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="arrivalPort">Puerto de llegada</Label>
+              <Input
+                id="arrivalPort"
+                value={formData.arrivalPort}
+                onChange={(e) =>
+                  setFormData({ ...formData, arrivalPort: e.target.value })
+                }
+                placeholder="Rio de Janeiro"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="bookingReference">Referencia de reserva</Label>
               <Input
                 id="bookingReference"
                 value={formData.bookingReference}
@@ -194,7 +166,31 @@ export function FlightDialog({
                     bookingReference: e.target.value,
                   })
                 }
-                placeholder="AA-123456"
+                placeholder="CR-56789"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="startDate">Fecha de inicio *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, startDate: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="endDate">Fecha de fin</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, endDate: e.target.value })
+                }
               />
             </div>
 
@@ -225,7 +221,7 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, totalPrice: e.target.value })
                 }
-                placeholder="1000"
+                placeholder="2000"
               />
             </div>
 
@@ -243,7 +239,7 @@ export function FlightDialog({
             </div>
           </div>
 
-          {/* Notas */}
+          {/* Notas opcionales */}
           <div className="space-y-1">
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
@@ -252,7 +248,7 @@ export function FlightDialog({
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
-              placeholder="2 maletas incluidas, asiento 14B..."
+              placeholder="Incluye comidas, bebidas y excursiones locales."
               rows={3}
             />
           </div>
@@ -261,11 +257,11 @@ export function FlightDialog({
         {/* Footer */}
         <DialogFooter className="flex justify-between">
           <div>
-            {flight && onDelete && (
+            {cruise && onDelete && (
               <Button
                 variant="destructive"
                 onClick={() => {
-                  onDelete(flight.id);
+                  onDelete(cruise.id);
                   onOpenChange(false);
                 }}
               >
@@ -278,7 +274,7 @@ export function FlightDialog({
               Cancelar
             </Button>
             <Button onClick={handleSave}>
-              {flight ? "Guardar cambios" : "Crear"}
+              {cruise ? "Guardar cambios" : "Crear"}
             </Button>
           </div>
         </DialogFooter>

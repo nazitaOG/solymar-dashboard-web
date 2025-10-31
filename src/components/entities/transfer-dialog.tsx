@@ -18,95 +18,94 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { Plane } from "@/lib/interfaces/plane/plane.interface";
+import type { Transfer, TransportType } from "@/lib/interfaces/transfer/transfer.interface";
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
 
-interface FlightDialogProps {
+interface TransferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  flight?: Plane;
+  transfer?: Transfer;
   reservationId: string;
-  onSave: (flight: Partial<Plane>) => void;
+  onSave: (transfer: Partial<Transfer>) => void;
   onDelete?: (id: string) => void;
 }
 
-export function FlightDialog({
+export function TransferDialog({
   open,
   onOpenChange,
-  flight,
+  transfer,
   reservationId,
   onSave,
   onDelete,
-}: FlightDialogProps) {
+}: TransferDialogProps) {
   const [formData, setFormData] = useState({
-    departure: "",
-    arrival: "",
+    origin: "",
+    destination: "",
     departureDate: "",
     arrivalDate: "",
-    bookingReference: "",
     provider: "",
+    bookingReference: "",
+    transportType: "PICKUP" as TransportType,
     totalPrice: "",
     amountPaid: "",
     notes: "",
     currency: "USD" as Currency,
   });
 
-  // 🔄 Cargar datos del vuelo si se está editando
+  // 🔄 Cargar datos si se está editando
   useEffect(() => {
-    if (flight) {
+    if (transfer) {
       setFormData({
-        departure: flight.departure ?? "",
-        arrival: flight.arrival ?? "",
-        departureDate: flight.departureDate
-          ? flight.departureDate.split("T")[0]
-          : "",
-        arrivalDate: flight.arrivalDate
-          ? flight.arrivalDate.split("T")[0]
-          : "",
-        bookingReference: flight.bookingReference ?? "",
-        provider: flight.provider ?? "",
-        totalPrice: String(flight.totalPrice ?? ""),
-        amountPaid: String(flight.amountPaid ?? ""),
-        notes: flight.notes ?? "",
-        currency: flight.currency ?? "USD",
+        origin: transfer.origin ?? "",
+        destination: transfer.destination ?? "",
+        departureDate: transfer.departureDate?.split("T")[0] ?? "",
+        arrivalDate: transfer.arrivalDate?.split("T")[0] ?? "",
+        provider: transfer.provider ?? "",
+        bookingReference: transfer.bookingReference ?? "",
+        transportType: transfer.transportType ?? "OTHER",
+        totalPrice: String(transfer.totalPrice ?? ""),
+        amountPaid: String(transfer.amountPaid ?? ""),
+        notes: "",
+        currency: transfer.currency ?? "USD",
       });
     } else {
       setFormData({
-        departure: "",
-        arrival: "",
+        origin: "",
+        destination: "",
         departureDate: "",
         arrivalDate: "",
-        bookingReference: "",
         provider: "",
+        bookingReference: "",
+        transportType: "PICKUP" as TransportType,
         totalPrice: "",
         amountPaid: "",
         notes: "",
         currency: "USD",
       });
     }
-  }, [flight, open]);
+  }, [transfer, open]);
 
-  // 🧠 Normaliza fecha
+  // 🧠 Normaliza fecha a ISO
   const toIsoDate = (d: string): string | null =>
     d ? new Date(`${d}T12:00:00`).toISOString() : null;
 
-  // 💾 Guardar vuelo
+  // 💾 Guardar traslado
   const handleSave = () => {
     const total = Number.parseFloat(formData.totalPrice || "0");
     const paid = Number.parseFloat(formData.amountPaid || "0");
 
-    const data: Partial<Plane> = {
-      ...(flight?.id && { id: flight.id }),
+    const data: Partial<Transfer> = {
+      ...(transfer?.id && { id: transfer.id }),
       reservationId,
-      departure: formData.departure,
-      arrival: formData.arrival || null,
+      origin: formData.origin,
+      destination: formData.destination || null,
       departureDate: toIsoDate(formData.departureDate) ?? "",
-      arrivalDate: toIsoDate(formData.arrivalDate),
-      bookingReference: formData.bookingReference,
-      provider: formData.provider || null,
+      arrivalDate: toIsoDate(formData.arrivalDate) ?? "",
+      provider: formData.provider,
+      bookingReference: formData.bookingReference || null,
+      transportType: formData.transportType,
       totalPrice: total,
       amountPaid: paid,
-      notes: formData.notes || null,
       currency: formData.currency,
     };
 
@@ -118,32 +117,33 @@ export function FlightDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{flight ? "Editar Vuelo" : "Crear Vuelo"}</DialogTitle>
+          <DialogTitle>{transfer ? "Editar Traslado" : "Crear Traslado"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Campos principales */}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="departure">Origen *</Label>
+              <Label htmlFor="origin">Origen *</Label>
               <Input
-                id="departure"
-                value={formData.departure}
+                id="origin"
+                value={formData.origin}
                 onChange={(e) =>
-                  setFormData({ ...formData, departure: e.target.value })
+                  setFormData({ ...formData, origin: e.target.value })
                 }
-                placeholder="Buenos Aires (EZE)"
+                placeholder="Aeropuerto de Ezeiza"
               />
             </div>
+
             <div className="space-y-1">
-              <Label htmlFor="arrival">Destino *</Label>
+              <Label htmlFor="destination">Destino</Label>
               <Input
-                id="arrival"
-                value={formData.arrival}
+                id="destination"
+                value={formData.destination}
                 onChange={(e) =>
-                  setFormData({ ...formData, arrival: e.target.value })
+                  setFormData({ ...formData, destination: e.target.value })
                 }
-                placeholder="Miami (MIA)"
+                placeholder="Hotel Alvear"
               />
             </div>
 
@@ -172,19 +172,19 @@ export function FlightDialog({
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="provider">Aerolínea *</Label>
+              <Label htmlFor="provider">Proveedor *</Label>
               <Input
                 id="provider"
                 value={formData.provider}
                 onChange={(e) =>
                   setFormData({ ...formData, provider: e.target.value })
                 }
-                placeholder="American Airlines"
+                placeholder="Remises del Sol"
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bookingReference">Referencia *</Label>
+              <Label htmlFor="bookingReference">Referencia de reserva</Label>
               <Input
                 id="bookingReference"
                 value={formData.bookingReference}
@@ -194,8 +194,29 @@ export function FlightDialog({
                     bookingReference: e.target.value,
                   })
                 }
-                placeholder="AA-123456"
+                placeholder="TRF-00991"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="transportType">Tipo de transporte *</Label>
+              <Select
+                value={formData.transportType}
+                onValueChange={(value: TransportType) =>
+                  setFormData({ ...formData, transportType: value })
+                }
+              >
+                <SelectTrigger id="transportType" className="bg-transparent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PICKUP">Pickup</SelectItem>
+                  <SelectItem value="BUS">Bus</SelectItem>
+                  <SelectItem value="TRAIN">Tren</SelectItem>
+                  <SelectItem value="FERRY">Ferry</SelectItem>
+                  <SelectItem value="OTHER">Otro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
@@ -225,7 +246,7 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, totalPrice: e.target.value })
                 }
-                placeholder="1000"
+                placeholder="150"
               />
             </div>
 
@@ -238,12 +259,12 @@ export function FlightDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, amountPaid: e.target.value })
                 }
-                placeholder="500"
+                placeholder="50"
               />
             </div>
           </div>
 
-          {/* Notas */}
+          {/* Notas opcionales */}
           <div className="space-y-1">
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
@@ -252,7 +273,7 @@ export function FlightDialog({
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
-              placeholder="2 maletas incluidas, asiento 14B..."
+              placeholder="Incluye espera en aeropuerto y traslado de regreso."
               rows={3}
             />
           </div>
@@ -261,11 +282,11 @@ export function FlightDialog({
         {/* Footer */}
         <DialogFooter className="flex justify-between">
           <div>
-            {flight && onDelete && (
+            {transfer && onDelete && (
               <Button
                 variant="destructive"
                 onClick={() => {
-                  onDelete(flight.id);
+                  onDelete(transfer.id);
                   onOpenChange(false);
                 }}
               >
@@ -278,7 +299,7 @@ export function FlightDialog({
               Cancelar
             </Button>
             <Button onClick={handleSave}>
-              {flight ? "Guardar cambios" : "Crear"}
+              {transfer ? "Guardar cambios" : "Crear"}
             </Button>
           </div>
         </DialogFooter>
