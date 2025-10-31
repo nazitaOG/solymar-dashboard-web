@@ -1,7 +1,4 @@
-"use client"
-
 import type React from "react"
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
@@ -22,55 +19,100 @@ interface EntityTableProps {
   emptyMessage?: string
 }
 
-export function EntityTable({ data, columns, onEdit, onDelete, emptyMessage = "No hay datos" }: EntityTableProps) {
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd MMM yyyy", { locale: es })
+/**
+ * ✅ EntityTable con:
+ * - Filtrado basado solo en ID (más confiable)
+ * - Fallbacks seguros para valores null/undefined
+ * - Debug logs para troubleshooting
+ */
+export function EntityTable({
+  data,
+  columns,
+  onEdit,
+  onDelete,
+  emptyMessage = "No hay datos",
+}: EntityTableProps) {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "—"
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "—"
+    return format(date, "dd MMM yyyy", { locale: es })
   }
 
   const defaultRender = (value: unknown, key: string): React.ReactNode => {
-    if (value === null || value === undefined) return "-"
-    if (key.includes("Date") && typeof value === "string") return formatDate(value)
-    if (typeof value === "number" && key.includes("Price")) return value
+    if (value === null || value === undefined || value === "") return "—"
+    if (key.toLowerCase().includes("date") && typeof value === "string") return formatDate(value)
+    if (typeof value === "number" && key.toLowerCase().includes("price")) {
+      return value.toLocaleString("es-AR", { minimumFractionDigits: 2 })
+    }
     return String(value)
   }
 
-  console.log("data", data)
+  // 🔑 Filtrado seguro: Solo verificamos que sea un objeto válido con ID
+  const filteredData = Array.isArray(data)
+    ? data.filter((item) => {
+        if (!item || typeof item !== 'object') return false
+        const hasValidId = item.id && String(item.id).trim() !== ""
+        return hasValidId
+      })
+    : []
+
+  // Debug solo si hay problemas (comentar en producción)
+  // console.log("🔍 EntityTable data recibida:", data)
+  // console.log("✅ EntityTable data filtrada:", filteredData)
+
+  const noData = filteredData.length === 0
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             {columns.map((col) => (
-              <TableHead key={col.key}>{col.label}</TableHead>
+              <TableHead key={col.key} className="whitespace-nowrap">
+                {col.label}
+              </TableHead>
             ))}
-            <TableHead className="text-right">Acciones</TableHead>
+            <TableHead className="text-right whitespace-nowrap">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length === 0 ? (
+          {noData ? (
             <TableRow>
               <TableCell colSpan={columns.length + 1} className="h-24 text-center">
                 <p className="text-muted-foreground">{emptyMessage}</p>
               </TableCell>
             </TableRow>
           ) : (
-            data.map((item, idx) => (
-              <TableRow key={String(item.id) || idx}>
-                {columns.map((col) => (
-                  <TableCell key={col.key}>
-                    {col.render ? col.render(item[col.key], item) : defaultRender(item[col.key], col.key)}
-                  </TableCell>
-                ))}
+            filteredData.map((item, idx) => (
+              <TableRow key={`${String(item.id)}-${idx}`}>
+                {columns.map((col) => {
+                  const value = item[col.key]
+                  return (
+                    <TableCell key={col.key}>
+                      {col.render
+                        ? col.render(value ?? "—", item)
+                        : defaultRender(value, col.key)}
+                    </TableCell>
+                  )
+                })}
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(item)}
+                      aria-label="Editar"
+                    >
                       <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Editar</span>
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(String(item.id))}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(String(item.id))}
+                      aria-label="Eliminar"
+                    >
                       <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Eliminar</span>
                     </Button>
                   </div>
                 </TableCell>

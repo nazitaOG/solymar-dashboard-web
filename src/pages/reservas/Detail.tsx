@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -42,7 +42,24 @@ export default function ReservationDetailPage() {
   const location = useLocation();
   const passedReservation = location.state as Reservation | undefined;
 
-  const [reservation, setReservation] = useState<ReservationDetail | null>(null);
+  const initialReservation: ReservationDetail = {
+    id: "",
+    userId: "",
+    state: "PENDING",
+    createdBy: "",
+    updatedBy: "",
+    currencyTotals: [],
+    hotels: [],
+    planes: [],
+    cruises: [],
+    transfers: [],
+    excursions: [],
+    medicalAssists: [],
+    paxReservations: [],
+    createdAt: "",
+    updatedAt: "",
+  };
+  const [reservation, setReservation] = useState<ReservationDetail>(initialReservation);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +76,29 @@ export default function ReservationDetailPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
   const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
+
+  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
+const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
+  try {
+    await fetchAPI<void>(`/hotels/${hotelId}`, { method: "DELETE" });
+    setReservation((prev) => ({
+      ...prev,
+      hotels: prev.hotels.filter((h) => h.id !== hotelId),
+    }));
+  } catch (err) {
+    console.error("❌ Error al eliminar hotel (server):", err);
+    if (err instanceof Error) alert(err.message);
+  }
+}, []);
+
+// ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
+const handleDeleteHotelLocal = useCallback((hotelId: string) => {
+  setReservation((prev) => ({
+    ...prev,
+    hotels: prev.hotels.filter((h) => h.id !== hotelId),
+  }));
+}, []);
+
 
   // 🧭 Fetch detalle de reserva
   useEffect(() => {
@@ -84,33 +124,21 @@ export default function ReservationDetailPage() {
           fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
         ]);
 
-        console.log("📦 Hotels:", hotels);
-        console.log("📦 Planes:", planes);
-        console.log("📦 Cruises:", cruises);
-        console.log("📦 Transfers:", transfers);
-        console.log("📦 Excursions:", excursions);
-        console.log("📦 MedicalAssists:", medicalAssists);
-        console.log("📦 Passed Reservation:", passedReservation);
+        const baseReservation =
+          passedReservation ??
+          (await fetchAPI<ReservationDetail>(`/reservations/${id}?include=all`));
 
-        if (passedReservation) {
-          // ✅ Normalizamos todo: datos del padre + entidades fetchadas
-          setReservation(
-            normalizeReservation({
-              ...passedReservation,
-              hotels,
-              planes,
-              cruises,
-              transfers,
-              excursions,
-              medicalAssists,
-            })
-          );
-          console.log("reservation", reservation)
-        } else {
-          // 🔁 Fallback: si el usuario entra directo por URL
-          const res = await fetchAPI<ReservationDetail>(`/reservations/${id}?include=all`);
-          setReservation(normalizeReservation(res));
-        }
+        const normalized = normalizeReservation({
+          ...baseReservation,
+          hotels,
+          planes,
+          cruises,
+          transfers,
+          excursions,
+          medicalAssists,
+        });
+
+        setReservation(normalized);
       } catch (err) {
         console.error("Error al cargar reserva:", err);
         setError("No se pudo cargar la reserva");
@@ -137,12 +165,10 @@ export default function ReservationDetailPage() {
 
   // ---------------- Handlers ----------------
   const handleStateChange = (state: ReservationState) => {
-    console.log("[ReservationDetailPage] 🔄 Cambio de estado:", state);
     setReservation({ ...reservation, state });
   };
 
   const handlePassengersChange = (passengers: PaxType[]) => {
-    console.log("[ReservationDetailPage] 🧍 Actualizando pasajeros:", passengers);
     setReservation({
       ...reservation,
       paxReservations: passengers.map((pax) => ({ pax })),
@@ -160,30 +186,13 @@ export default function ReservationDetailPage() {
     setHotelDialogOpen(true);
   };
 
-  const handleSaveHotel = (hotelData: Partial<HotelType>) => {
-    if (selectedHotel) {
-      setReservation({
-        ...reservation,
-        hotels: reservation.hotels.map((h) =>
-          h.id === selectedHotel.id ? { ...h, ...hotelData } : h
-        ),
-      });
-    } else {
-      const newHotel: HotelType = {
-        ...(hotelData as HotelType),
-        id: `HTL-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        hotels: [...reservation.hotels, newHotel],
-      });
-    }
-  };
-
-  const handleDeleteHotel = (hotelId: string) => {
-    setReservation({
-      ...reservation,
-      hotels: reservation.hotels.filter((h) => h.id !== hotelId),
+  const handleSaveHotel = (savedHotel: HotelType) => {
+    setReservation((prev) => {
+      const exists = prev.hotels.some((h) => h.id === savedHotel.id);
+      const updatedHotels = exists
+        ? prev.hotels.map((h) => (h.id === savedHotel.id ? savedHotel : h))
+        : [...prev.hotels, savedHotel];
+      return { ...prev, hotels: updatedHotels };
     });
   };
 
@@ -239,8 +248,8 @@ export default function ReservationDetailPage() {
   const handleSaveCruise = (cruiseData: Partial<CruiseType>) => {
     if (selectedCruise) {
       setReservation({
-        ...reservation!,
-        cruises: reservation!.cruises.map((c) =>
+        ...reservation,
+        cruises: reservation.cruises.map((c) =>
           c.id === selectedCruise.id ? { ...c, ...cruiseData } : c
         ),
       });
@@ -250,16 +259,16 @@ export default function ReservationDetailPage() {
         id: `CRS-${Date.now()}`,
       };
       setReservation({
-        ...reservation!,
-        cruises: [...reservation!.cruises, newCruise],
+        ...reservation,
+        cruises: [...reservation.cruises, newCruise],
       });
     }
   };
 
   const handleDeleteCruise = (cruiseId: string) => {
     setReservation({
-      ...reservation!,
-      cruises: reservation!.cruises.filter((c) => c.id !== cruiseId),
+      ...reservation,
+      cruises: reservation.cruises.filter((c) => c.id !== cruiseId),
     });
   };
 
@@ -277,8 +286,8 @@ export default function ReservationDetailPage() {
   const handleSaveTransfer = (transferData: Partial<TransferType>) => {
     if (selectedTransfer) {
       setReservation({
-        ...reservation!,
-        transfers: reservation!.transfers.map((t) =>
+        ...reservation,
+        transfers: reservation.transfers.map((t) =>
           t.id === selectedTransfer.id ? { ...t, ...transferData } : t
         ),
       });
@@ -288,16 +297,16 @@ export default function ReservationDetailPage() {
         id: `TRF-${Date.now()}`,
       };
       setReservation({
-        ...reservation!,
-        transfers: [...reservation!.transfers, newTransfer],
+        ...reservation,
+        transfers: [...reservation.transfers, newTransfer],
       });
     }
   };
 
   const handleDeleteTransfer = (transferId: string) => {
     setReservation({
-      ...reservation!,
-      transfers: reservation!.transfers.filter((t) => t.id !== transferId),
+      ...reservation,
+      transfers: reservation.transfers.filter((t) => t.id !== transferId),
     });
   };
 
@@ -315,8 +324,8 @@ export default function ReservationDetailPage() {
   const handleSaveExcursion = (excursionData: Partial<ExcursionType>) => {
     if (selectedExcursion) {
       setReservation({
-        ...reservation!,
-        excursions: reservation!.excursions.map((e) =>
+        ...reservation,
+        excursions: reservation.excursions.map((e) =>
           e.id === selectedExcursion.id ? { ...e, ...excursionData } : e
         ),
       });
@@ -326,16 +335,16 @@ export default function ReservationDetailPage() {
         id: `EXC-${Date.now()}`,
       };
       setReservation({
-        ...reservation!,
-        excursions: [...reservation!.excursions, newExcursion],
+        ...reservation,
+        excursions: [...reservation.excursions, newExcursion],
       });
     }
   };
 
   const handleDeleteExcursion = (excursionId: string) => {
     setReservation({
-      ...reservation!,
-      excursions: reservation!.excursions.filter((e) => e.id !== excursionId),
+      ...reservation,
+      excursions: reservation.excursions.filter((e) => e.id !== excursionId),
     });
   };
 
@@ -353,8 +362,8 @@ export default function ReservationDetailPage() {
   const handleSaveMedicalAssist = (assistData: Partial<MedicalAssistType>) => {
     if (selectedMedicalAssist) {
       setReservation({
-        ...reservation!,
-        medicalAssists: reservation!.medicalAssists.map((a) =>
+        ...reservation,
+        medicalAssists: reservation.medicalAssists.map((a) =>
           a.id === selectedMedicalAssist.id ? { ...a, ...assistData } : a
         ),
       });
@@ -364,28 +373,41 @@ export default function ReservationDetailPage() {
         id: `MED-${Date.now()}`,
       };
       setReservation({
-        ...reservation!,
-        medicalAssists: [...reservation!.medicalAssists, newAssist],
+        ...reservation,
+        medicalAssists: [...reservation.medicalAssists, newAssist],
       });
     }
   };
 
   const handleDeleteMedicalAssist = (assistId: string) => {
     setReservation({
-      ...reservation!,
-      medicalAssists: reservation!.medicalAssists.filter((a) => a.id !== assistId),
+      ...reservation,
+      medicalAssists: reservation.medicalAssists.filter((a) => a.id !== assistId),
     });
   };
 
-
-
   // ---------------- Formatters ----------------
-  const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+  function formatCurrency(
+    value?: number | null,
+    currency?: string,
+    locale = "es-AR"
+  ): string {
+    const safeCurrency =
+      currency && typeof currency === "string" && currency.length === 3
+        ? currency
+        : "USD";
+    const safeValue = typeof value === "number" ? value : 0;
+
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: safeCurrency,
+        minimumFractionDigits: 2,
+      }).format(safeValue);
+    } catch {
+      return `${safeCurrency} ${safeValue.toFixed(2)}`;
+    }
+  }
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
@@ -465,8 +487,6 @@ export default function ReservationDetailPage() {
     },
   ];
 
-  // ---------------- Column defs extra ----------------
-
   const cruiseColumns: Column[] = [
     { key: "shipName", label: "Crucero" },
     { key: "route", label: "Ruta" },
@@ -535,9 +555,7 @@ export default function ReservationDetailPage() {
     {
       key: "date",
       label: "Fecha",
-      render: (value) => (
-        <div className="text-sm">{formatDate(String(value))}</div>
-      ),
+      render: (value) => <div className="text-sm">{formatDate(String(value))}</div>,
     },
     { key: "provider", label: "Proveedor" },
     {
@@ -586,7 +604,6 @@ export default function ReservationDetailPage() {
     },
   ];
 
-
   // ---------------- Render ----------------
   return (
     <DashboardLayout>
@@ -632,11 +649,16 @@ export default function ReservationDetailPage() {
                 <div className="flex justify-end">
                   <Button onClick={handleCreateHotel}>Crear Hotel</Button>
                 </div>
+
+                <div className="text-xs text-muted-foreground mb-2">
+                  Total de hotels en estado: {reservation.hotels.length}
+                </div>
+
                 <EntityTable
                   data={reservation.hotels as unknown as Record<string, unknown>[]}
                   columns={hotelColumns}
                   onEdit={handleEditHotel}
-                  onDelete={handleDeleteHotel}
+                  onDelete={handleDeleteHotelServer}
                   emptyMessage="No hay hoteles agregados aún"
                 />
               </TabsContent>
@@ -653,6 +675,7 @@ export default function ReservationDetailPage() {
                   emptyMessage="No hay vuelos agregados aún"
                 />
               </TabsContent>
+
               <TabsContent value="cruises" className="space-y-4">
                 <div className="flex justify-end">
                   <Button onClick={handleCreateCruise}>Crear Crucero</Button>
@@ -704,7 +727,6 @@ export default function ReservationDetailPage() {
                   emptyMessage="No hay asistencias agregadas aún"
                 />
               </TabsContent>
-
             </Tabs>
           </div>
 
@@ -722,7 +744,7 @@ export default function ReservationDetailPage() {
         hotel={selectedHotel}
         reservationId={id}
         onSave={handleSaveHotel}
-        onDelete={handleDeleteHotel}
+        onDelete={handleDeleteHotelLocal}
       />
 
       <FlightDialog
@@ -769,7 +791,6 @@ export default function ReservationDetailPage() {
         onSave={handleSaveMedicalAssist}
         onDelete={handleDeleteMedicalAssist}
       />
-
     </DashboardLayout>
   );
 }

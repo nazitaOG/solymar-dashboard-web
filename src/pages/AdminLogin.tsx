@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Globe, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { fetchAPI } from "@/lib/api/fetchApi"
-import { loginSchema } from "@/lib/schemas/login/login-schema"
+import { loginSchema } from "@/lib/schemas/login/login.schema"
 
 const travelImages = [
   { url: "/images/santorini-sunset.png", location: "Santorini, Greece" },
