@@ -4,9 +4,9 @@ import { useNavigate, useParams, useLocation } from "react-router";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
 import { AuditPanel } from "@/components/reservations/audit-panel";
-import { EntityTable, type Column } from "@/components/entities/entity-table";
+import { EntityTable, type Column } from "@/components/entities/table/entity-table";
 import { HotelDialog } from "@/components/entities/hotel-dialog";
-import { FlightDialog } from "@/components/entities/flight-dialog";
+import { PlaneDialog } from "@/components/entities/plane-dialog";
 import { CruiseDialog } from "@/components/entities/cruise-dialog";
 import { TransferDialog } from "@/components/entities/transfer-dialog";
 import { ExcursionDialog } from "@/components/entities/excursion-dialog";
@@ -65,39 +65,149 @@ export default function ReservationDetailPage() {
 
   // Dialog states
   const [hotelDialogOpen, setHotelDialogOpen] = useState(false);
-  const [flightDialogOpen, setFlightDialogOpen] = useState(false);
+  const [planeDialogOpen, setPlaneDialogOpen] = useState(false);
   const [cruiseDialogOpen, setCruiseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [excursionDialogOpen, setExcursionDialogOpen] = useState(false);
   const [medicalAssistDialogOpen, setMedicalAssistDialogOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
-  const [selectedFlight, setSelectedFlight] = useState<PlaneType | undefined>();
+  const [selectedPlane, setSelectedPlane] = useState<PlaneType | undefined>();
   const [selectedCruise, setSelectedCruise] = useState<CruiseType | undefined>();
   const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
   const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
 
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
-const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
-  try {
-    await fetchAPI<void>(`/hotels/${hotelId}`, { method: "DELETE" });
+  const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
+    try {
+      await fetchAPI<void>(`/hotels/${hotelId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        hotels: prev.hotels.filter((h) => h.id !== hotelId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar hotel (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
+  const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     setReservation((prev) => ({
       ...prev,
       hotels: prev.hotels.filter((h) => h.id !== hotelId),
     }));
-  } catch (err) {
-    console.error("❌ Error al eliminar hotel (server):", err);
-    if (err instanceof Error) alert(err.message);
-  }
-}, []);
+  }, []);
 
-// ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
-const handleDeleteHotelLocal = useCallback((hotelId: string) => {
-  setReservation((prev) => ({
-    ...prev,
-    hotels: prev.hotels.filter((h) => h.id !== hotelId),
-  }));
-}, []);
+  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
+  const handleDeletePlaneServer = useCallback(async (planeId: string) => {
+    try {
+      await fetchAPI<void>(`/planes/${planeId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        planes: prev.planes.filter((p) => p.id !== planeId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar vuelo (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
+  const handleDeletePlaneLocal = useCallback((planeId: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      planes: prev.planes.filter((p) => p.id !== planeId),
+    }));
+  }, []);
+
+  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
+  const handleDeleteCruiseServer = useCallback(async (cruiseId: string) => {
+    try {
+      await fetchAPI<void>(`/cruises/${cruiseId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        cruises: prev.cruises.filter((c) => c.id !== cruiseId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar crucero (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // ✅ 2) Borrado disparado por el diálogo (ya hizo DELETE → solo actualiza estado)
+  const handleDeleteCruiseLocal = useCallback((cruiseId: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      cruises: prev.cruises.filter((c) => c.id !== cruiseId),
+    }));
+  }, []);
+
+  // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
+  const handleDeleteTransferServer = useCallback(async (transferId: string) => {
+    try {
+      await fetchAPI<void>(`/transfers/${transferId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        transfers: prev.transfers.filter((t) => t.id !== transferId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar traslado (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // 🗑️ DELETE desde el diálogo (ya lo borró, actualiza estado)
+  const handleDeleteTransferLocal = useCallback((transferId: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      transfers: prev.transfers.filter((t) => t.id !== transferId),
+    }));
+  }, []);
+
+  // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
+  const handleDeleteExcursionServer = useCallback(async (excursionId: string) => {
+    try {
+      await fetchAPI<void>(`/excursions/${excursionId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        excursions: prev.excursions.filter((e) => e.id !== excursionId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar excursión (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // 🗑️ DELETE desde el diálogo (ya lo borró → solo actualiza estado)
+  const handleDeleteExcursionLocal = useCallback((excursionId: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      excursions: prev.excursions.filter((e) => e.id !== excursionId),
+    }));
+  }, []);
+
+  // ✅ DELETE desde la tabla (real al backend + estado)
+  const handleDeleteMedicalAssistServer = useCallback(async (assistId: string) => {
+    try {
+      await fetchAPI<void>(`/medical-assists/${assistId}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar asistencia médica (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // ✅ DELETE desde el diálogo (ya se eliminó en backend → solo actualizar estado local)
+  const handleDeleteMedicalAssistLocal = useCallback((assistId: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
+    }));
+  }, []);
 
 
   // 🧭 Fetch detalle de reserva
@@ -123,6 +233,8 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
           fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
           fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
         ]);
+
+        console.log("🟨 Excursiones cargados:", excursions);
 
         const baseReservation =
           passedReservation ??
@@ -196,43 +308,28 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     });
   };
 
-  // Flights
-  const handleCreateFlight = () => {
-    setSelectedFlight(undefined);
-    setFlightDialogOpen(true);
+  // Planes
+  const handleCreatePlane = () => {
+    setSelectedPlane(undefined);
+    setPlaneDialogOpen(true);
   };
 
-  const handleEditFlight = (flight: Record<string, unknown>) => {
-    setSelectedFlight(flight as unknown as PlaneType);
-    setFlightDialogOpen(true);
+  const handleEditPlane = (plane: Record<string, unknown>) => {
+    setSelectedPlane(plane as unknown as PlaneType);
+    setPlaneDialogOpen(true);
   };
 
-  const handleSaveFlight = (flightData: Partial<PlaneType>) => {
-    if (selectedFlight) {
-      setReservation({
-        ...reservation,
-        planes: reservation.planes.map((p) =>
-          p.id === selectedFlight.id ? { ...p, ...flightData } : p
-        ),
-      });
-    } else {
-      const newFlight: PlaneType = {
-        ...(flightData as PlaneType),
-        id: `PLN-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        planes: [...reservation.planes, newFlight],
-      });
-    }
-  };
-
-  const handleDeleteFlight = (flightId: string) => {
-    setReservation({
-      ...reservation,
-      planes: reservation.planes.filter((p) => p.id !== flightId),
+  // 💾 Guardar (creación o edición)
+  const handleSavePlane = (savedPlane: PlaneType) => {
+    setReservation((prev) => {
+      const exists = prev.planes.some((p) => p.id === savedPlane.id);
+      const updatedPlanes = exists
+        ? prev.planes.map((p) => (p.id === savedPlane.id ? savedPlane : p))
+        : [...prev.planes, savedPlane];
+      return { ...prev, planes: updatedPlanes };
     });
   };
+
 
   // Cruises
   const handleCreateCruise = () => {
@@ -245,32 +342,16 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     setCruiseDialogOpen(true);
   };
 
-  const handleSaveCruise = (cruiseData: Partial<CruiseType>) => {
-    if (selectedCruise) {
-      setReservation({
-        ...reservation,
-        cruises: reservation.cruises.map((c) =>
-          c.id === selectedCruise.id ? { ...c, ...cruiseData } : c
-        ),
-      });
-    } else {
-      const newCruise: CruiseType = {
-        ...(cruiseData as CruiseType),
-        id: `CRS-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        cruises: [...reservation.cruises, newCruise],
-      });
-    }
-  };
-
-  const handleDeleteCruise = (cruiseId: string) => {
-    setReservation({
-      ...reservation,
-      cruises: reservation.cruises.filter((c) => c.id !== cruiseId),
+  const handleSaveCruise = (savedCruise: CruiseType) => {
+    setReservation((prev) => {
+      const exists = prev.cruises.some((c) => c.id === savedCruise.id);
+      const updatedCruises = exists
+        ? prev.cruises.map((c) => (c.id === savedCruise.id ? savedCruise : c))
+        : [...prev.cruises, savedCruise];
+      return { ...prev, cruises: updatedCruises };
     });
   };
+
 
   // Transfers
   const handleCreateTransfer = () => {
@@ -278,39 +359,25 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     setTransferDialogOpen(true);
   };
 
+  // ✏️ Editar (abre diálogo con datos existentes)
   const handleEditTransfer = (transfer: Record<string, unknown>) => {
     setSelectedTransfer(transfer as unknown as TransferType);
     setTransferDialogOpen(true);
   };
 
-  const handleSaveTransfer = (transferData: Partial<TransferType>) => {
-    if (selectedTransfer) {
-      setReservation({
-        ...reservation,
-        transfers: reservation.transfers.map((t) =>
-          t.id === selectedTransfer.id ? { ...t, ...transferData } : t
-        ),
-      });
-    } else {
-      const newTransfer: TransferType = {
-        ...(transferData as TransferType),
-        id: `TRF-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        transfers: [...reservation.transfers, newTransfer],
-      });
-    }
-  };
-
-  const handleDeleteTransfer = (transferId: string) => {
-    setReservation({
-      ...reservation,
-      transfers: reservation.transfers.filter((t) => t.id !== transferId),
+  // 💾 Guardar traslado (creación o edición)
+  const handleSaveTransfer = (savedTransfer: TransferType) => {
+    setReservation((prev) => {
+      const exists = prev.transfers.some((t) => t.id === savedTransfer.id);
+      const updatedTransfers = exists
+        ? prev.transfers.map((t) => (t.id === savedTransfer.id ? savedTransfer : t))
+        : [...prev.transfers, savedTransfer];
+      return { ...prev, transfers: updatedTransfers };
     });
   };
 
   // Excursions
+  // ✅ Excursions (completo, igual arquitectura que Transfer)
   const handleCreateExcursion = () => {
     setSelectedExcursion(undefined);
     setExcursionDialogOpen(true);
@@ -321,70 +388,43 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     setExcursionDialogOpen(true);
   };
 
-  const handleSaveExcursion = (excursionData: Partial<ExcursionType>) => {
-    if (selectedExcursion) {
-      setReservation({
-        ...reservation,
-        excursions: reservation.excursions.map((e) =>
-          e.id === selectedExcursion.id ? { ...e, ...excursionData } : e
-        ),
-      });
-    } else {
-      const newExcursion: ExcursionType = {
-        ...(excursionData as ExcursionType),
-        id: `EXC-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        excursions: [...reservation.excursions, newExcursion],
-      });
-    }
-  };
-
-  const handleDeleteExcursion = (excursionId: string) => {
-    setReservation({
-      ...reservation,
-      excursions: reservation.excursions.filter((e) => e.id !== excursionId),
+  // 💾 Guardar (creación o edición)
+  const handleSaveExcursion = (savedExcursion: ExcursionType) => {
+    setReservation((prev) => {
+      const exists = prev.excursions.some((e) => e.id === savedExcursion.id);
+      const updatedExcursions = exists
+        ? prev.excursions.map((e) =>
+          e.id === savedExcursion.id ? savedExcursion : e
+        )
+        : [...prev.excursions, savedExcursion];
+      return { ...prev, excursions: updatedExcursions };
     });
   };
 
   // Medical Assists
+  // ✅ Crear
   const handleCreateMedicalAssist = () => {
     setSelectedMedicalAssist(undefined);
     setMedicalAssistDialogOpen(true);
   };
 
+  // ✅ Editar
   const handleEditMedicalAssist = (assist: Record<string, unknown>) => {
     setSelectedMedicalAssist(assist as unknown as MedicalAssistType);
     setMedicalAssistDialogOpen(true);
   };
 
-  const handleSaveMedicalAssist = (assistData: Partial<MedicalAssistType>) => {
-    if (selectedMedicalAssist) {
-      setReservation({
-        ...reservation,
-        medicalAssists: reservation.medicalAssists.map((a) =>
-          a.id === selectedMedicalAssist.id ? { ...a, ...assistData } : a
-        ),
-      });
-    } else {
-      const newAssist: MedicalAssistType = {
-        ...(assistData as MedicalAssistType),
-        id: `MED-${Date.now()}`,
-      };
-      setReservation({
-        ...reservation,
-        medicalAssists: [...reservation.medicalAssists, newAssist],
-      });
-    }
-  };
-
-  const handleDeleteMedicalAssist = (assistId: string) => {
-    setReservation({
-      ...reservation,
-      medicalAssists: reservation.medicalAssists.filter((a) => a.id !== assistId),
+  // ✅ Guardar (crear o editar)
+  const handleSaveMedicalAssist = (savedAssist: MedicalAssistType) => {
+    setReservation((prev) => {
+      const exists = prev.medicalAssists.some((a) => a.id === savedAssist.id);
+      const updatedAssists = exists
+        ? prev.medicalAssists.map((a) => (a.id === savedAssist.id ? savedAssist : a))
+        : [...prev.medicalAssists, savedAssist];
+      return { ...prev, medicalAssists: updatedAssists };
     });
   };
+
 
   // ---------------- Formatters ----------------
   function formatCurrency(
@@ -448,7 +488,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
     },
   ];
 
-  const flightColumns: Column[] = [
+  const planeColumns: Column[] = [
     {
       key: "departure",
       label: "Ruta",
@@ -488,35 +528,49 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
   ];
 
   const cruiseColumns: Column[] = [
-    { key: "shipName", label: "Crucero" },
-    { key: "route", label: "Ruta" },
     {
-      key: "departureDate",
+      key: "provider",
+      label: "Naviera",
+    },
+    {
+      key: "route",
+      label: "Ruta",
+      render: (_v, row) => {
+        const embark = row.embarkationPort as string | undefined
+        const arrival = row.arrivalPort as string | undefined
+        return embark || arrival ? `${embark ?? "?"} → ${arrival ?? "?"}` : "—"
+      },
+    },
+    {
+      key: "startDate",
       label: "Salida / Llegada",
-      render: (_value, row) => (
+      render: (_v, row) => (
         <div className="text-sm">
-          <div>{formatDate(String(row.departureDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.arrivalDate))}</div>
+          <div>{formatDate(String(row.startDate))}</div>
+          <div className="text-muted-foreground">{formatDate(String(row.endDate))}</div>
         </div>
       ),
     },
-    { key: "provider", label: "Naviera" },
-    { key: "bookingReference", label: "Referencia" },
+    {
+      key: "bookingReference",
+      label: "Referencia",
+    },
     {
       key: "totalPrice",
       label: "Precio",
-      render: (_value, row) => (
+      render: (_v, row) => (
         <div className="text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
           <div className="text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
       ),
     },
-  ];
+  ]
+
 
   const transferColumns: Column[] = [
     { key: "origin", label: "Origen" },
@@ -551,11 +605,13 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
 
   const excursionColumns: Column[] = [
     { key: "excursionName", label: "Excursión" },
-    { key: "location", label: "Lugar" },
+    { key: "origin", label: "Lugar / Origen" },
     {
-      key: "date",
+      key: "excursionDate",
       label: "Fecha",
-      render: (value) => <div className="text-sm">{formatDate(String(value))}</div>,
+      render: (_value, row) => (
+        <div className="text-sm">{formatDate(String(row.excursionDate))}</div>
+      ),
     },
     { key: "provider", label: "Proveedor" },
     {
@@ -564,45 +620,45 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
       render: (_value, row) => (
         <div className="text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
           <div className="text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
       ),
     },
   ];
 
+
   const medicalAssistColumns: Column[] = [
     { key: "provider", label: "Proveedor" },
-    { key: "planName", label: "Plan" },
     {
-      key: "startDate",
-      label: "Inicio / Fin",
-      render: (_value, row) => (
-        <div className="text-sm">
-          <div>{formatDate(String(row.startDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.endDate))}</div>
-        </div>
-      ),
+      key: "assistType",
+      label: "Tipo de asistencia",
+      render: (_value, row) => <div className="text-sm">{String(row.assistType) || "—"}</div>,
     },
-    { key: "coverage", label: "Cobertura" },
+    {
+      key: "bookingReference",
+      label: "Referencia",
+      render: (_value, row) => <div className="text-sm">{String(row.bookingReference) || "—"}</div>,
+    },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_value, row) => (
         <div className="text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
           <div className="text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
+            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
       ),
     },
   ];
+  
 
   // ---------------- Render ----------------
   return (
@@ -628,7 +684,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                 <TabsTrigger value="hotels" className="gap-2">
                   <Hotel className="h-4 w-4" /> Hoteles
                 </TabsTrigger>
-                <TabsTrigger value="flights" className="gap-2">
+                <TabsTrigger value="planes" className="gap-2">
                   <Plane className="h-4 w-4" /> Vuelos
                 </TabsTrigger>
                 <TabsTrigger value="cruises" className="gap-2">
@@ -663,15 +719,15 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                 />
               </TabsContent>
 
-              <TabsContent value="flights" className="space-y-4">
+              <TabsContent value="planes" className="space-y-4">
                 <div className="flex justify-end">
-                  <Button onClick={handleCreateFlight}>Crear Vuelo</Button>
+                  <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
                 </div>
                 <EntityTable
                   data={reservation.planes as unknown as Record<string, unknown>[]}
-                  columns={flightColumns}
-                  onEdit={handleEditFlight}
-                  onDelete={handleDeleteFlight}
+                  columns={planeColumns}
+                  onEdit={handleEditPlane}
+                  onDelete={handleDeletePlaneServer}
                   emptyMessage="No hay vuelos agregados aún"
                 />
               </TabsContent>
@@ -684,7 +740,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                   data={reservation.cruises as unknown as Record<string, unknown>[]}
                   columns={cruiseColumns}
                   onEdit={handleEditCruise}
-                  onDelete={handleDeleteCruise}
+                  onDelete={handleDeleteCruiseServer}
                   emptyMessage="No hay cruceros agregados aún"
                 />
               </TabsContent>
@@ -697,7 +753,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                   data={reservation.transfers as unknown as Record<string, unknown>[]}
                   columns={transferColumns}
                   onEdit={handleEditTransfer}
-                  onDelete={handleDeleteTransfer}
+                  onDelete={handleDeleteTransferServer}
                   emptyMessage="No hay traslados agregados aún"
                 />
               </TabsContent>
@@ -710,7 +766,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                   data={reservation.excursions as unknown as Record<string, unknown>[]}
                   columns={excursionColumns}
                   onEdit={handleEditExcursion}
-                  onDelete={handleDeleteExcursion}
+                  onDelete={handleDeleteExcursionServer}
                   emptyMessage="No hay excursiones agregadas aún"
                 />
               </TabsContent>
@@ -723,7 +779,7 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
                   data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
                   columns={medicalAssistColumns}
                   onEdit={handleEditMedicalAssist}
-                  onDelete={handleDeleteMedicalAssist}
+                  onDelete={handleDeleteMedicalAssistServer}
                   emptyMessage="No hay asistencias agregadas aún"
                 />
               </TabsContent>
@@ -738,59 +794,78 @@ const handleDeleteHotelLocal = useCallback((hotelId: string) => {
       </div>
 
       {/* Dialogs */}
-      <HotelDialog
-        open={hotelDialogOpen}
-        onOpenChange={setHotelDialogOpen}
-        hotel={selectedHotel}
-        reservationId={id}
-        onSave={handleSaveHotel}
-        onDelete={handleDeleteHotelLocal}
-      />
+      {hotelDialogOpen && (
+        <HotelDialog
+          key="hotel-dialog"
+          open={hotelDialogOpen}
+          onOpenChange={setHotelDialogOpen}
+          hotel={selectedHotel}
+          reservationId={id}
+          onSave={handleSaveHotel}
+          onDelete={handleDeleteHotelLocal}
+        />
+      )}
 
-      <FlightDialog
-        open={flightDialogOpen}
-        onOpenChange={setFlightDialogOpen}
-        flight={selectedFlight}
-        reservationId={id}
-        onSave={handleSaveFlight}
-        onDelete={handleDeleteFlight}
-      />
+      {planeDialogOpen && (
+        <PlaneDialog
+          key="plane-dialog"
+          open={planeDialogOpen}
+          onOpenChange={setPlaneDialogOpen}
+          plane={selectedPlane}
+          reservationId={id}
+          onSave={handleSavePlane}
+          onDelete={handleDeletePlaneLocal}
+        />
+      )}
 
-      <CruiseDialog
-        open={cruiseDialogOpen}
-        onOpenChange={setCruiseDialogOpen}
-        cruise={selectedCruise}
-        reservationId={id}
-        onSave={handleSaveCruise}
-        onDelete={handleDeleteCruise}
-      />
+      {cruiseDialogOpen && (
+        <CruiseDialog
+          key="cruise-dialog"
+          open={cruiseDialogOpen}
+          onOpenChange={setCruiseDialogOpen}
+          cruise={selectedCruise}
+          reservationId={id}
+          onSave={handleSaveCruise}
+          onDelete={handleDeleteCruiseLocal}
+        />
+      )}
 
-      <TransferDialog
-        open={transferDialogOpen}
-        onOpenChange={setTransferDialogOpen}
-        transfer={selectedTransfer}
-        reservationId={id}
-        onSave={handleSaveTransfer}
-        onDelete={handleDeleteTransfer}
-      />
+      {transferDialogOpen && (
+        <TransferDialog
+          key="transfer-dialog"
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          transfer={selectedTransfer}
+          reservationId={id}
+          onSave={handleSaveTransfer}
+          onDelete={handleDeleteTransferLocal}
+        />
 
-      <ExcursionDialog
-        open={excursionDialogOpen}
-        onOpenChange={setExcursionDialogOpen}
-        excursion={selectedExcursion}
-        reservationId={id}
-        onSave={handleSaveExcursion}
-        onDelete={handleDeleteExcursion}
-      />
+      )}
 
-      <MedicalAssistDialog
-        open={medicalAssistDialogOpen}
-        onOpenChange={setMedicalAssistDialogOpen}
-        assist={selectedMedicalAssist}
-        reservationId={id}
-        onSave={handleSaveMedicalAssist}
-        onDelete={handleDeleteMedicalAssist}
-      />
+      {excursionDialogOpen && (
+        <ExcursionDialog
+          key="excursion-dialog"
+          open={excursionDialogOpen}
+          onOpenChange={setExcursionDialogOpen}
+          excursion={selectedExcursion}
+          reservationId={id}
+          onSave={handleSaveExcursion}
+          onDelete={handleDeleteExcursionLocal}
+        />
+      )}
+
+      {medicalAssistDialogOpen && (
+        <MedicalAssistDialog
+          key="medical-assist-dialog"
+          open={medicalAssistDialogOpen}
+          onOpenChange={setMedicalAssistDialogOpen}
+          assist={selectedMedicalAssist}
+          reservationId={id}
+          onSave={handleSaveMedicalAssist}
+          onDelete={handleDeleteMedicalAssistLocal}
+        />
+      )}
     </DashboardLayout>
   );
 }

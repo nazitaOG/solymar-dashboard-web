@@ -3,8 +3,7 @@ import { z } from "zod";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 
 // ✅ si Currency es un tipo como type Currency = "USD" | "ARS";
-const currencyValues = ["USD", "ARS"] as const satisfies Readonly<Currency[]>;
-
+const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 // Base sin currency ni reservationId
 const hotelBase = z.object({
   startDate: z.string().min(1, "La fecha de entrada es obligatoria"),
@@ -22,8 +21,7 @@ const hotelBase = z.object({
 export const createHotelSchema = hotelBase.extend({
   currency: z
     .enum(currencyValues, "Moneda inválida")
-    .default("USD"),
-  reservationId: z.string().uuid("reservationId inválido"),
+    .default(Currency.USD),
 });
 
 // ✏️ UPDATE: sin currency/reservationId y parcial

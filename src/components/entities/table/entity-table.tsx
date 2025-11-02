@@ -56,6 +56,8 @@ export function EntityTable({
         return hasValidId
       })
     : []
+  
+    console.log("🟨 EntityTable data filtrada:", filteredData)
 
   // Debug solo si hay problemas (comentar en producción)
   // console.log("🔍 EntityTable data recibida:", data)

@@ -24,7 +24,7 @@ import {
 
 import { fetchAPI } from "@/lib/api/fetchApi";
 import type { Hotel } from "@/lib/interfaces/hotel/hotel.interface";
-import type { Currency } from "@/lib/interfaces/currency/currency.interface";
+import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
 interface HotelDialogProps {
@@ -60,7 +60,7 @@ export function HotelDialog({
     amountPaid: 0,
     roomType: "",
     provider: "",
-    currency: "USD",
+    currency: Currency.USD,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -105,7 +105,7 @@ export function HotelDialog({
         amountPaid: 0,
         roomType: "",
         provider: "",
-        currency: "USD",
+        currency: Currency.USD,
       });
     }
   }, [hotel, open]);

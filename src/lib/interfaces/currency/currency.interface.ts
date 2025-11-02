@@ -1,4 +1,7 @@
-export type Currency = "USD" | "ARS";
+export enum Currency {
+  USD = "USD",
+  ARS = "ARS",
+}
 
 export interface CurrencyTotal {
   currency: Currency;      // coincide con enum de Prisma

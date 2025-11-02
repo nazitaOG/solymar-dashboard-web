@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -17,46 +18,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import {
-  createMedicalAssistSchema,
-  updateMedicalAssistSchema,
-} from "@/lib/schemas/medical-assist/medical-assist.schema";
-
 import { fetchAPI } from "@/lib/api/fetchApi";
-import type { MedicalAssist } from "@/lib/interfaces/medical_assist/medical_assist.interface";
+import {
+  createPlaneSchema,
+  updatePlaneSchema,
+} from "@/lib/schemas/plane/plane.schema";
+
+import type { Plane } from "@/lib/interfaces/plane/plane.interface";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
-interface MedicalAssistDialogProps {
+interface PlaneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  assist?: MedicalAssist;
+  plane?: Plane;
   reservationId: string;
-  onSave: (assist: MedicalAssist) => void;
+  onSave: (plane: Plane) => void;
   onDelete?: (id: string) => void;
 }
 
-// 🧩 Tipado derivado del schema
-type FormData = Omit<z.input<typeof createMedicalAssistSchema>, "reservationId">;
+type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId">;
 
 interface FormErrors extends Partial<Record<keyof FormData, string>> {
   _general?: string;
 }
 
-export function MedicalAssistDialog({
+export function PlaneDialog({
   open,
   onOpenChange,
-  assist,
+  plane,
   reservationId,
   onSave,
   onDelete,
-}: MedicalAssistDialogProps) {
+}: PlaneDialogProps) {
   const [formData, setFormData] = useState<FormData>({
+    departure: "",
+    arrival: "",
+    departureDate: "",
+    arrivalDate: "",
     bookingReference: "",
-    assistType: "",
     provider: "",
     totalPrice: 0,
     amountPaid: 0,
+    notes: "",
     currency: Currency.USD,
   });
 
@@ -64,47 +68,71 @@ export function MedicalAssistDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
+  const toYmd = (d?: string | null): string => {
+    if (!d) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+
+  const toIso = (ymd: string): string =>
+    ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "";
+
   // 🧩 Prellenar datos al abrir
   useEffect(() => {
-    if (assist) {
+    if (plane) {
       setFormData({
-        bookingReference: assist.bookingReference ?? "",
-        assistType: assist.assistType ?? "",
-        provider: assist.provider,
-        totalPrice: assist.totalPrice,
-        amountPaid: assist.amountPaid,
-        currency: assist.currency,
+        departure: plane.departure ?? "",
+        arrival: plane.arrival ?? "",
+        departureDate: toYmd(plane.departureDate),
+        arrivalDate: toYmd(plane.arrivalDate),
+        bookingReference: plane.bookingReference ?? "",
+        provider: plane.provider ?? "",
+        totalPrice: plane.totalPrice,
+        amountPaid: plane.amountPaid,
+        notes: plane.notes ?? "",
+        currency: plane.currency,
       });
     } else {
       setFormData({
+        departure: "",
+        arrival: "",
+        departureDate: "",
+        arrivalDate: "",
         bookingReference: "",
-        assistType: "",
         provider: "",
         totalPrice: 0,
         amountPaid: 0,
+        notes: "",
         currency: Currency.USD,
       });
     }
-  }, [assist, open]);
+  }, [plane, open]);
 
-  // 🧭 Comparar si hubo cambios
+  // 🧭 Detectar cambios
   const hasChanges = useMemo(() => {
-    if (!assist) return true;
+    if (!plane) return true;
     return !(
-      formData.bookingReference === (assist.bookingReference ?? "") &&
-      formData.assistType === (assist.assistType ?? "") &&
-      formData.provider === assist.provider &&
-      Number(formData.totalPrice) === Number(assist.totalPrice) &&
-      Number(formData.amountPaid) === Number(assist.amountPaid)
+      formData.departure === (plane.departure ?? "") &&
+      formData.arrival === (plane.arrival ?? "") &&
+      formData.departureDate === toYmd(plane.departureDate) &&
+      formData.arrivalDate === toYmd(plane.arrivalDate) &&
+      formData.bookingReference === (plane.bookingReference ?? "") &&
+      formData.provider === (plane.provider ?? "") &&
+      Number(formData.totalPrice) === Number(plane.totalPrice) &&
+      Number(formData.amountPaid) === Number(plane.amountPaid) &&
+      formData.notes === (plane.notes ?? "")
     );
-  }, [formData, assist]);
+  }, [formData, plane]);
 
-  // 💾 Guardar (creación o edición)
+  // 💾 Guardar vuelo
   const handleSave = async () => {
-    const isEdit = Boolean(assist);
-    const schema = isEdit ? updateMedicalAssistSchema : createMedicalAssistSchema;
+    const isEdit = Boolean(plane);
+    const schema = isEdit ? updatePlaneSchema : createPlaneSchema;
 
-    // 🚫 Si es edición y no hay cambios
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -112,7 +140,6 @@ export function MedicalAssistDialog({
       return;
     }
 
-    // 🧩 Validar datos
     const result = schema.safeParse({
       ...formData,
       ...(isEdit ? {} : { reservationId }),
@@ -138,57 +165,58 @@ export function MedicalAssistDialog({
     }
 
     const payload = {
-      bookingReference: formData.bookingReference || null,
-      assistType: formData.assistType || null,
-      provider: formData.provider,
+      departure: formData.departure,
+      arrival: formData.arrival || null,
+      departureDate: toIso(formData.departureDate),
+      arrivalDate: toIso(formData.arrivalDate),
+      bookingReference: formData.bookingReference,
+      provider: formData.provider || null,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
+      notes: formData.notes || null,
       ...(isEdit
         ? {}
         : {
             reservationId,
-            currency: formData.currency || Currency.USD,
+            currency: formData.currency || "USD",
           }),
     };
 
     try {
       setLoading(true);
-      const endpoint = isEdit
-        ? `/medical-assists/${assist!.id}`
-        : "/medical-assists";
+      const endpoint = isEdit ? `/planes/${plane!.id}` : "/planes";
       const method = isEdit ? "PATCH" : "POST";
 
-      const savedAssist = await fetchAPI<MedicalAssist>(endpoint, {
+      const savedPlane = await fetchAPI<Plane>(endpoint, {
         method,
         body: JSON.stringify(payload),
       });
 
-      onSave(savedAssist);
+      onSave(savedPlane);
       setTimeout(() => onOpenChange(false), 100);
     } catch {
       setErrors({
-        _general:
-          "Ocurrió un error al guardar la asistencia médica. Inténtalo nuevamente.",
+        _general: "Ocurrió un error al guardar el vuelo. Inténtalo nuevamente.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // 🗑️ Eliminar
+  // 🗑️ Eliminar vuelo
   const handleDelete = async () => {
-    if (!assist || deleteLock.current) return;
+    if (!plane || deleteLock.current) return;
     deleteLock.current = true;
 
     try {
       setLoading(true);
-      await fetchAPI<void>(`/medical-assists/${assist.id}`, { method: "DELETE" });
-      onDelete?.(assist.id);
+      await fetchAPI<void>(`/planes/${plane.id}`, { method: "DELETE" });
+      onDelete?.(plane.id);
       setTimeout(() => onOpenChange(false), 150);
     } catch (err) {
-      console.error("❌ Error al eliminar asistencia médica:", err);
+      console.error("❌ Error al eliminar vuelo:", err);
       if (err instanceof Error) {
-        setErrors({ _general: err.message || "Error al eliminar asistencia médica." });
+        setErrors({ _general: err.message || "Error al eliminar vuelo." });
       }
     } finally {
       deleteLock.current = false;
@@ -201,11 +229,10 @@ export function MedicalAssistDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
-          </DialogTitle>
+          <DialogTitle>{plane ? "Editar Vuelo" : "Crear Vuelo"}</DialogTitle>
         </DialogHeader>
 
+        {/* ⚠️ Error general */}
         {errors._general && (
           <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
             <p className="text-sm text-red-600 font-medium flex items-center gap-2">
@@ -214,22 +241,16 @@ export function MedicalAssistDialog({
           </div>
         )}
 
+        {/* Formulario */}
         <div className="grid gap-3 md:grid-cols-2">
-          {/* Campos principales */}
+          {/* Origen / Destino */}
           {[
-            { id: "provider", label: "Proveedor *", placeholder: "Assist Card" },
-            {
-              id: "bookingReference",
-              label: "Referencia de reserva *",
-              placeholder: "ASST-00123",
-            },
-            {
-              id: "assistType",
-              label: "Tipo de asistencia",
-              placeholder: "Emergencia médica internacional",
-            },
+            { id: "departure", label: "Origen *", placeholder: "Buenos Aires (EZE)" },
+            { id: "arrival", label: "Destino *", placeholder: "Miami (MIA)" },
+            { id: "provider", label: "Aerolínea *", placeholder: "American Airlines" },
+            { id: "bookingReference", label: "Referencia *", placeholder: "AA-123456" },
           ].map((f) => (
-            <div key={f.id}>
+            <div key={f.id} className="space-y-1">
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
@@ -247,9 +268,32 @@ export function MedicalAssistDialog({
             </div>
           ))}
 
-          {/* Moneda solo en creación */}
-          {!assist && (
-            <div>
+          {/* Fechas */}
+          {[
+            { id: "departureDate", label: "Fecha de salida *" },
+            { id: "arrivalDate", label: "Fecha de llegada *" },
+          ].map((f) => (
+            <div key={f.id} className="space-y-1">
+              <Label htmlFor={f.id}>{f.label}</Label>
+              <Input
+                id={f.id}
+                type="date"
+                value={formData[f.id as keyof FormData] as string}
+                onChange={(e) =>
+                  setFormData({ ...formData, [f.id]: e.target.value })
+                }
+              />
+              {errors[f.id as keyof FormData] && (
+                <p className="text-sm text-red-500">
+                  {errors[f.id as keyof FormData]}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {/* Moneda (solo en creación) */}
+          {!plane && (
+            <div className="space-y-1">
               <Label htmlFor="currency">Moneda *</Label>
               <Select
                 value={formData.currency}
@@ -258,7 +302,7 @@ export function MedicalAssistDialog({
                 }
               >
                 <SelectTrigger id="currency" className="bg-transparent">
-                  <SelectValue />
+                  <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="USD">USD</SelectItem>
@@ -273,10 +317,10 @@ export function MedicalAssistDialog({
 
           {/* Precios */}
           {[
-            { id: "totalPrice", label: "Precio total *", placeholder: "500" },
-            { id: "amountPaid", label: "Monto pagado *", placeholder: "300" },
+            { id: "totalPrice", label: "Precio total *", placeholder: "1500" },
+            { id: "amountPaid", label: "Monto pagado *", placeholder: "1000" },
           ].map((f) => (
-            <div key={f.id}>
+            <div key={f.id} className="space-y-1">
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
@@ -296,9 +340,29 @@ export function MedicalAssistDialog({
           ))}
         </div>
 
+        {/* Notas */}
+        <div className="mt-3">
+          <Label htmlFor="notes">Notas (opcional)</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes || ""}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="2 maletas incluidas, asiento 14B..."
+            rows={3}
+          />
+          {errors.notes && (
+            <p className="text-sm text-red-500">{errors.notes}</p>
+          )}
+        </div>
+
+        {/* Footer */}
         <DialogFooter className="flex justify-between mt-4">
-          {assist && (
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+          {plane && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+            >
               {loading ? "Eliminando..." : "Eliminar"}
             </Button>
           )}
@@ -312,11 +376,11 @@ export function MedicalAssistDialog({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={loading || (assist && !hasChanges)}
+              disabled={loading || (plane && !hasChanges)}
             >
               {loading
                 ? "Guardando..."
-                : assist
+                : plane
                 ? hasChanges
                   ? "Guardar cambios"
                   : "Sin cambios"
