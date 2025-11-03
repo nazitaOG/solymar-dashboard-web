@@ -19,7 +19,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import type { Pax } from "@/lib/types"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
 import { fetchAPI } from "@/lib/api/fetchApi"
 import { paxToRequest } from "@/lib/utils/pax/pax_transform.utils"

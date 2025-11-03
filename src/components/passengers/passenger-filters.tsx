@@ -42,7 +42,7 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+    <div className="space-y-4 w-fit rounded-lg border border-border bg-card p-4">
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <h3 className="font-semibold">Filtros</h3>
@@ -96,10 +96,6 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="with-dni">Con DNI</SelectItem>
               <SelectItem value="with-passport">Con Pasaporte</SelectItem>
-              <SelectItem value="with-any-document">
-                Con cualquier documento
-              </SelectItem>
-              <SelectItem value="without-documents">Sin documentos</SelectItem>
             </SelectContent>
           </Select>
         </div>

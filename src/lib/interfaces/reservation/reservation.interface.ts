@@ -6,19 +6,14 @@ import type { Cruise } from "@/lib/interfaces/cruise/cruise.interface";
 import type { Transfer } from "@/lib/interfaces/transfer/transfer.interface";
 import type { Excursion } from "@/lib/interfaces/excursion/excursion.interface";
 import type { MedicalAssist } from "@/lib/interfaces/medical_assist/medical_assist.interface";
+import type { PaxReservation } from "@/lib/interfaces/pax/pax.interface";
 
-export type ReservationState = "PENDING" | "CONFIRMED" | "CANCELLED";
-
-export interface PaxSummary {
-  id: string;
-  name: string;
-  birthDate?: string;
-  nationality?: string;
+export enum ReservationState {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  CANCELLED = "CANCELLED",
 }
 
-export interface ReservationPaxRelation {
-  pax: PaxSummary;
-}
 
 export interface Reservation {
   id: string;
@@ -28,7 +23,7 @@ export interface Reservation {
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
-  paxReservations: ReservationPaxRelation[];
+  paxReservations: PaxReservation[];
   currencyTotals: CurrencyTotal[];
 }
 

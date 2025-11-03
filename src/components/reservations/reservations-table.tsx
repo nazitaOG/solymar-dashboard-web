@@ -3,7 +3,18 @@ import { useNavigate } from "react-router";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Reservation } from "@/lib/interfaces/reservation/reservation.interface";
@@ -12,11 +23,12 @@ import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservat
 interface ReservationsTableProps {
   reservations: Reservation[];
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ReservationsTable({ reservations, onEdit }: ReservationsTableProps) {
+export function ReservationsTable({ reservations, onEdit, onDelete }: ReservationsTableProps) {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -31,24 +43,22 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
   const getStateBadge = (state: Reservation["state"]) => {
     const variants = {
       PENDING: {
-        variant: "default" as const,
         label: "Pendiente",
-        className: "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20",
+        className: "bg-amber-500/10 text-amber-500 border-amber-500/20",
       },
       CONFIRMED: {
-        variant: "default" as const,
         label: "Confirmada",
-        className: "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20",
+        className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
       },
       CANCELLED: {
-        variant: "default" as const,
         label: "Cancelada",
-        className: "bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border-rose-500/20",
+        className: "bg-rose-500/10 text-rose-500 border-rose-500/20",
       },
     } as const;
+
     const config = variants[state];
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant="default" className={config.className}>
         {config.label}
       </Badge>
     );
@@ -72,7 +82,7 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
               <TableHead className="min-w-[150px]">Totales</TableHead>
               <TableHead className="min-w-[150px]">Creada</TableHead>
               <TableHead className="min-w-[150px]">Última actualización</TableHead>
-              <TableHead className="text-right min-w-[100px]">Acciones</TableHead>
+              <TableHead className="text-right min-w-[150px]">Acciones</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -87,13 +97,23 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
               currentReservations.map((reservation) => (
                 <TableRow
                   key={reservation.id}
-                  className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                  className="hover:bg-accent/50 transition-colors"
                 >
-                  <TableCell>{getStateBadge(reservation.state)}</TableCell>
+                  {/* Estado */}
+                  <TableCell
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                  >
+                    {getStateBadge(reservation.state)}
+                  </TableCell>
 
-                  {/* ✅ Evita crash si paxReservations está vacío */}
-                  <TableCell>
+                  {/* Pasajeros */}
+                  <TableCell
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                  >
                     <div className="flex flex-wrap gap-1">
                       {(reservation.paxReservations ?? []).map((pr, idx) => (
                         <Badge key={idx} variant="outline" className="text-xs">
@@ -103,8 +123,12 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                     </div>
                   </TableCell>
 
-                  {/* ✅ Evita crash si currencyTotals está vacío */}
-                  <TableCell>
+                  {/* Totales */}
+                  <TableCell
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                  >
                     <div className="space-y-1">
                       {(reservation.currencyTotals ?? []).map((ct, idx) => (
                         <div key={idx} className="text-sm">
@@ -120,42 +144,95 @@ export function ReservationsTable({ reservations, onEdit }: ReservationsTablePro
                     </div>
                   </TableCell>
 
-                  <TableCell className="text-sm text-muted-foreground">
+                  {/* Fechas */}
+                  <TableCell
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                    className="text-sm text-muted-foreground"
+                  >
                     {reservation.createdAt
                       ? format(new Date(reservation.createdAt), "dd MMM yyyy, HH:mm", { locale: es })
                       : "—"}
                   </TableCell>
 
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                    className="text-sm text-muted-foreground"
+                  >
                     {reservation.updatedAt
                       ? format(new Date(reservation.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })
                       : "—"}
                   </TableCell>
 
+                  {/* Acciones */}
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      {/* 👁️ Ver */}
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           navigate(`./${reservation.id}`, { state: reservation });
                         }}
                       >
                         <Eye className="h-4 w-4" />
-                        <span className="sr-only">Ver</span>
                       </Button>
+
+                      {/* ✏️ Editar */}
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           onEdit?.(reservation.id);
                         }}
                       >
                         <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
                       </Button>
+
+                      {/* 🗑️ Eliminar con modal */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-rose-500" />
+                          </Button>
+                        </AlertDialogTrigger>
+
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar reserva?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción eliminará permanentemente la reserva y todos sus datos asociados.
+                              No podrás deshacer esta acción.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-rose-600 text-white hover:bg-rose-700"
+                              onClick={() => {
+                                console.log("🧨 Confirmado delete:", reservation.id);
+                                onDelete?.(reservation.id);
+                              }}
+                            >
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

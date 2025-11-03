@@ -5,7 +5,21 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Users } from "lucide-react"
 import { EditPassengersDialog } from "./edit-passengers-dialog"
-import type { ReservationDetail, ReservationState, Pax } from "@/lib/types"
+import type { ReservationDetail, Reservation } from "@/lib/interfaces/reservation/reservation.interface"
+import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface"
+import { fetchAPI } from "@/lib/api/fetchApi"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ReservationDetailHeaderProps {
   reservation: ReservationDetail
@@ -21,35 +35,97 @@ export function ReservationDetailHeader({
   onPassengersChange,
 }: ReservationDetailHeaderProps) {
   const [editPassengersOpen, setEditPassengersOpen] = useState(false)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [pendingState, setPendingState] = useState<ReservationState | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const { toast } = useToast()
 
+  // 🎨 Estado visual según tipo
   const getStateBadge = (state: ReservationState) => {
     const variants = {
-      PENDING: { label: "Pendiente", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-      CONFIRMED: { label: "Confirmada", className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-      CANCELLED: { label: "Cancelada", className: "bg-rose-500/10 text-rose-500 border-rose-500/20" },
-    }
+      [ReservationState.PENDING]: {
+        label: "Pendiente",
+        className: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+      },
+      [ReservationState.CONFIRMED]: {
+        label: "Confirmada",
+        className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+      },
+      [ReservationState.CANCELLED]: {
+        label: "Cancelada",
+        className: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+      },
+    } as const
+
     return variants[state]
   }
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("es-AR", {
+  const formatCurrency = (amount: number, currency: string) =>
+    new Intl.NumberFormat("es-AR", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
     }).format(amount)
-  }
 
   const currentPassengers = reservation.paxReservations.map((pr) => pr.pax)
+
+  // 💾 Reutiliza la misma lógica que en handleConfirmDialog del otro componente
+  const handleConfirmStateChange = async (): Promise<void> => {
+    if (!pendingState) return
+    try {
+      setIsUpdating(true)
+
+      // Construimos el body igual que en tu ejemplo funcional
+      const body: Partial<Pick<Reservation, "state">> & { paxIds?: string[] } = {
+        state: pendingState,
+        paxIds: currentPassengers.map((p) => p.id),
+      }
+
+      const updated = await fetchAPI<Reservation>(`/reservations/${reservation.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      })
+
+      // 🔄 Actualizamos visualmente
+      onStateChange(updated.state)
+
+      toast({
+        title: "Estado actualizado",
+        description: `La reserva ahora está marcada como ${getStateBadge(updated.state).label}.`,
+      })
+    } catch (error) {
+      console.error("❌ Error al actualizar estado:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado de la reserva.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+      setConfirmDialogOpen(false)
+      setPendingState(null)
+    }
+  }
 
   return (
     <>
       <div className="space-y-6">
-        {/* Header with ID and State */}
+        {/* Header con ID y estado */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold tracking-tight font-mono">{reservation.id}</h1>
-            <Select value={reservation.state} onValueChange={(value) => onStateChange(value as ReservationState)}>
-              <SelectTrigger className="w-[180px] bg-transparent">
+
+            <Select
+              value={reservation.state}
+              onValueChange={(value) => {
+                const newState = value as ReservationState
+                if (newState !== reservation.state) {
+                  setPendingState(newState)
+                  setConfirmDialogOpen(true)
+                }
+              }}
+            >
+              <SelectTrigger className="w-fit bg-transparent">
                 <Badge className={getStateBadge(reservation.state).className}>
                   {getStateBadge(reservation.state).label}
                 </Badge>
@@ -63,7 +139,7 @@ export function ReservationDetailHeader({
           </div>
         </div>
 
-        {/* Currency Totals */}
+        {/* Totales */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {reservation.currencyTotals.map((ct, idx) => (
             <Card key={idx}>
@@ -88,7 +164,7 @@ export function ReservationDetailHeader({
           ))}
         </div>
 
-        {/* Passengers */}
+        {/* Pasajeros */}
         <div className="flex items-center gap-4">
           <div className="flex flex-wrap gap-2">
             {currentPassengers.map((passenger) => (
@@ -104,6 +180,7 @@ export function ReservationDetailHeader({
         </div>
       </div>
 
+      {/* ✏️ Diálogo de edición de pasajeros */}
       <EditPassengersDialog
         open={editPassengersOpen}
         onOpenChange={setEditPassengersOpen}
@@ -111,6 +188,29 @@ export function ReservationDetailHeader({
         availablePassengers={availablePassengers}
         onSave={onPassengersChange}
       />
+
+      {/* ⚠️ Confirmación de cambio de estado */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar cambio de estado</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que querés cambiar la reserva de{" "}
+              <b>{getStateBadge(reservation.state).label}</b> a{" "}
+              <b>{pendingState ? getStateBadge(pendingState).label : ""}</b>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingState(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!pendingState || isUpdating}
+              onClick={handleConfirmStateChange}
+            >
+              {isUpdating ? "Actualizando..." : "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

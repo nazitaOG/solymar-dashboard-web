@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils/class_value.utils";
-import { Calendar, Users, BarChart3, Settings, Plane, X } from "lucide-react";
+import { Calendar, Users, BarChart3, Settings, Plane, X, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";
+import { useTheme } from "../theme-context";
 
 type NavItem = {
   name: string;
@@ -40,6 +41,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { pathname } = useLocation();
+  const { theme, setTheme } = useTheme();
 
   return (
     <>
@@ -109,6 +111,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
           </nav>
+          {/* Tema claro/oscuro */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        aria-label="Cambiar tema"
+      >
+        <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      </Button>
 
           <div className="border-t border-border p-4">
             <p className="text-xs text-muted-foreground">Dashboard v1.0</p>

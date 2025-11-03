@@ -1,13 +1,11 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/sidebar";
-import Topbar from "@/components/layout/topbar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  onCreateReservation?: () => void;
 }
 
-export function DashboardLayout({ children, onCreateReservation }: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -17,7 +15,6 @@ export function DashboardLayout({ children, onCreateReservation }: DashboardLayo
 
       <div className="flex flex-1 flex-col md:ml-64">
         {/* Topbar controla apertura del sidebar en mobile */}
-        <Topbar onCreateReservation={onCreateReservation} onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">{children}</main>
       </div>
     </div>

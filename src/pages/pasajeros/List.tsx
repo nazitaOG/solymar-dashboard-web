@@ -45,7 +45,7 @@ export default function PasajerosPage() {
       filtered = filtered.filter((p) => p.dni);
     } else if (filters.documentFilter === "with-passport") {
       filtered = filtered.filter((p) => p.passport);
-    }else if (filters.documentFilter === "with-any-document") {
+    } else if (filters.documentFilter === "with-any-document") {
       filtered = filtered.filter((p) => !!p.dni || !!p.passport);
     }
 
@@ -53,11 +53,6 @@ export default function PasajerosPage() {
   };
 
   // Crear / Ver / Editar
-  const handleCreate = () => {
-    setDialogMode("create");
-    setSelectedPassenger(undefined);
-    setDialogOpen(true);
-  };
 
   const handleView = (passenger: Pax) => {
     setDialogMode("view");
@@ -98,12 +93,14 @@ export default function PasajerosPage() {
 
   const linkedReservations = selectedPassenger
     ? mockReservations
-      .filter((r) => r.paxReservations.some((pr) => pr.pax.id === selectedPassenger.id))
+      .filter((r) =>
+        r.paxReservations.some((pr: { pax: Pax }) => pr.pax.id === selectedPassenger.id)
+      )
       .map((r) => ({ id: r.id, state: r.state }))
     : [];
 
   return (
-    <DashboardLayout onCreateReservation={handleCreate}>
+    <DashboardLayout>
       <Suspense fallback={<FullPageLoader />}>
         <div className="space-y-6">
           <div className="flex items-center justify-between">

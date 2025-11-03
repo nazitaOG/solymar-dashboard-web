@@ -20,10 +20,10 @@ import { FullPageLoader } from "@/components/FullPageLoader";
 import { fetchAPI } from "@/lib/api/fetchApi";
 import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservation.utils";
 
+import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type {
   Reservation,
   ReservationDetail,
-  ReservationState,
 } from "@/lib/interfaces/reservation/reservation.interface";
 import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface";
 import type { Plane as PlaneType } from "@/lib/interfaces/plane/plane.interface";
@@ -45,7 +45,7 @@ export default function ReservationDetailPage() {
   const initialReservation: ReservationDetail = {
     id: "",
     userId: "",
-    state: "PENDING",
+    state: ReservationState.PENDING,
     createdBy: "",
     updatedBy: "",
     currencyTotals: [],
