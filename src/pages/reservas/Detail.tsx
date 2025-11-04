@@ -23,6 +23,7 @@ import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservat
 import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type {
   Reservation,
+  ReservationCurrencyTotal,
   ReservationDetail,
 } from "@/lib/interfaces/reservation/reservation.interface";
 import type { Hotel as HotelType } from "@/lib/interfaces/hotel/hotel.interface";
@@ -35,12 +36,15 @@ import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Currency, CurrencyTotal } from "@/lib/interfaces/currency/currency.interface";
+
 
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const passedReservation = location.state as Reservation | undefined;
+
 
   const initialReservation: ReservationDetail = {
     id: "",
@@ -76,6 +80,7 @@ export default function ReservationDetailPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
   const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
+
 
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
   const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
@@ -212,12 +217,34 @@ export default function ReservationDetailPage() {
 
   // 🧭 Fetch detalle de reserva
   useEffect(() => {
-    if (!id) return;
+    if (!id) return
 
     const fetchEntities = async () => {
       try {
-        setLoading(true);
+        setLoading(true)
 
+        let baseReservation: ReservationDetail
+
+        if (passedReservation) {
+          // 🔹 Ya vino del listado → usarlo directamente
+          baseReservation = {
+            ...passedReservation,
+            // garantizar que los campos faltantes existan
+            hotels: [],
+            planes: [],
+            cruises: [],
+            transfers: [],
+            excursions: [],
+            medicalAssists: [],
+          } as ReservationDetail
+        } else {
+          // 🔹 Si entrás por URL → fetch completo
+          baseReservation = await fetchAPI<ReservationDetail>(
+            `/reservations/${id}?include=paxReservations,currencyTotals`
+          )
+        }
+
+        // 🔸 Fetch de entidades relacionadas (siempre)
         const [
           hotels,
           planes,
@@ -232,13 +259,7 @@ export default function ReservationDetailPage() {
           fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
           fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
           fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
-        ]);
-
-        console.log("🟨 Excursiones cargados:", excursions);
-
-        const baseReservation =
-          passedReservation ??
-          (await fetchAPI<ReservationDetail>(`/reservations/${id}?include=all`));
+        ])
 
         const normalized = normalizeReservation({
           ...baseReservation,
@@ -248,19 +269,92 @@ export default function ReservationDetailPage() {
           transfers,
           excursions,
           medicalAssists,
-        });
+        })
 
-        setReservation(normalized);
+        setReservation(normalized)
       } catch (err) {
-        console.error("Error al cargar reserva:", err);
-        setError("No se pudo cargar la reserva");
+        console.error("Error al cargar reserva:", err)
+        setError("No se pudo cargar la reserva")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchEntities();
-  }, [id, passedReservation]);
+    fetchEntities()
+  }, [id, passedReservation])
+
+  // 🔁 Recalcular currencyTotals cuando cambian las entidades
+  useEffect(() => {
+    if (!reservation) return
+
+    const totalsMap = new Map<string, { totalPrice: number; amountPaid: number }>()
+
+    const addTotals = (
+      items: {
+        currency?: string
+        totalPrice?: number | string | null
+        amountPaid?: number | string | null
+      }[]
+    ) => {
+      for (const item of items) {
+        const currency = item.currency ?? "USD"
+        const totalPrice = Number(item.totalPrice ?? 0)
+        const amountPaid = Number(item.amountPaid ?? 0)
+        const existing = totalsMap.get(currency) ?? { totalPrice: 0, amountPaid: 0 }
+        totalsMap.set(currency, {
+          totalPrice: existing.totalPrice + totalPrice,
+          amountPaid: existing.amountPaid + amountPaid,
+        })
+      }
+    }
+
+    // 🔹 Sumar totales de cada entidad asociada
+    addTotals(reservation.hotels)
+    addTotals(reservation.planes)
+    addTotals(reservation.cruises)
+    addTotals(reservation.transfers)
+    addTotals(reservation.excursions)
+    addTotals(reservation.medicalAssists)
+
+    // 🔸 Crear nuevo array de currencyTotals
+    const recalculatedTotals: ReservationCurrencyTotal[] = Array.from(totalsMap.entries()).map(
+      ([currencyCode, totals]) => ({
+        id: `local-${currencyCode}`,
+        reservationId: reservation.id,
+        currency:
+          currencyCode === "USD"
+            ? Currency.USD
+            : currencyCode === "ARS"
+              ? Currency.ARS
+              : (currencyCode as Currency), // fallback seguro
+        totalPrice: totals.totalPrice,
+        amountPaid: totals.amountPaid,
+        createdAt: reservation.createdAt,
+        updatedAt: new Date().toISOString(),
+      })
+    );
+
+
+    // ✅ Actualizar estado con cast seguro a CurrencyTotal[]
+    setReservation((prev) =>
+      prev
+        ? {
+          ...prev,
+          currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
+        }
+        : prev
+    )
+  }, [
+    reservation?.id,
+    reservation?.createdAt,
+    reservation?.hotels,
+    reservation?.planes,
+    reservation?.cruises,
+    reservation?.transfers,
+    reservation?.excursions,
+    reservation?.medicalAssists,
+  ])
+
 
   // 🧩 Loading o error
   if (loading) return <FullPageLoader />;
@@ -280,12 +374,29 @@ export default function ReservationDetailPage() {
     setReservation({ ...reservation, state });
   };
 
-  const handlePassengersChange = (passengers: PaxType[]) => {
-    setReservation({
-      ...reservation,
-      paxReservations: passengers.map((pax) => ({ pax })),
-    });
+  const handlePassengersChange = async (passengers: PaxType[]) => {
+    try {
+      // 🔹 1. Crear body con los IDs
+      const paxIds = passengers.map((p) => p.id);
+
+      // 🔹 2. PATCH al backend
+      const updated = await fetchAPI<ReservationDetail>(`/reservations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ paxIds }),
+      });
+
+      // 🔹 3. Actualizar estado local sin refetch
+      setReservation((prev) => ({
+        ...prev,
+        paxReservations: updated.paxReservations ?? passengers.map((p) => ({ pax: p })),
+      }));
+
+    } catch (error) {
+      console.error("❌ Error al vincular pasajeros a la reserva:", error);
+      alert("No se pudieron guardar los pasajeros en la reserva.");
+    }
   };
+
 
   // Hotels
   const handleCreateHotel = () => {
@@ -658,7 +769,7 @@ export default function ReservationDetailPage() {
       ),
     },
   ];
-  
+
 
   // ---------------- Render ----------------
   return (
@@ -674,7 +785,6 @@ export default function ReservationDetailPage() {
           <div className="space-y-6">
             <ReservationDetailHeader
               reservation={reservation}
-              availablePassengers={reservation.paxReservations.map((r) => r.pax)}
               onStateChange={handleStateChange}
               onPassengersChange={handlePassengersChange}
             />

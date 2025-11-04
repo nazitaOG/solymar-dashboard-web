@@ -4,7 +4,7 @@ import { useNavigate, Outlet } from "react-router";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationFilters } from "@/components/reservations/reservation-filters";
 import { ReservationsTable } from "@/components/reservations/reservations-table";
-import { ReservationDialog } from "@/components/reservations/reservation-dialog"; // ✅ unificado
+import { ReservationDialog } from "@/components/reservations/reservation-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { FullPageLoader } from "@/components/FullPageLoader";
@@ -19,13 +19,14 @@ import type {
   ReservationState,
 } from "@/lib/interfaces/reservation/reservation.interface";
 
+import { usePassengersStore } from "@/stores/usePassengerStore";
+
 export default function ReservasPage() {
   const navigate = useNavigate();
+  const { passengers, setPassengers, addPassenger, fetched, setFetched } = usePassengersStore();
 
-  // 🧠 Estado local
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
-  const [passengers, setPassengers] = useState<Pax[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -35,22 +36,27 @@ export default function ReservasPage() {
   useEffect(() => {
     startTransition(async () => {
       try {
-        const [reservationsRes, passengersData] = await Promise.all([
-          fetchAPI<PaginatedResponse<Reservation>>(
-            "/reservations?include=paxReservations,currencyTotals"
-          ),
-          fetchAPI<Pax[]>("/pax"),
-        ]);
-
+        const reservationsRes = await fetchAPI<PaginatedResponse<Reservation>>(
+          "/reservations?include=paxReservations,currencyTotals"
+        );
         const reservationsData = reservationsRes.data ?? [];
         setReservations(reservationsData);
         setFilteredReservations(reservationsData);
-        setPassengers(passengersData);
+
+        // 🚀 Solo fetch pasajeros si no estaban cargados
+        if (!fetched) {
+          const passengersData = await fetchAPI<Pax[]>("/pax");
+          setPassengers(passengersData);
+          setFetched(true);
+          console.log("✅ Pasajeros cargados globalmente (Zustand)");
+        } else {
+          console.log("⚡ Pasajeros recuperados del store Zustand");
+        }
       } catch (error) {
         console.error("❌ Error al obtener datos:", error);
       }
     });
-  }, []);
+  }, [fetched, setFetched, setPassengers]);
 
   // 🎛️ Filtros
   const handleFilterChange = (filters: Filters): void => {
@@ -146,13 +152,11 @@ export default function ReservasPage() {
   }): Promise<void> => {
     try {
       if (dialogMode === "create") {
-        // 🔹 Crear nueva reserva
         await handleCreateReservation({
           state: data.state,
           passengers: data.passengers,
         });
       } else if (dialogMode === "edit" && data.id) {
-        // 🔹 Editar reserva existente
         const body: Partial<Pick<Reservation, "state">> & { paxIds?: string[] } = {
           state: data.state,
           paxIds: data.passengers.map((p) => p.id),
@@ -216,14 +220,8 @@ export default function ReservasPage() {
           availablePassengers={passengers}
           reservation={selectedReservation}
           onConfirm={handleConfirmDialog}
-          onPassengerCreated={(newPax) => {
-            setPassengers((prev) => {
-              if (prev.some((p) => p.id === newPax.id)) return prev
-              return [...prev, newPax]
-            })
-          }}
+          onPassengerCreated={(newPax) => addPassenger(newPax)} // ✅ store global
         />
-
 
         <Outlet />
       </Suspense>

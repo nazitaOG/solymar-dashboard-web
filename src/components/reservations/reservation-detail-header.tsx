@@ -1,14 +1,11 @@
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
-import { Users } from "lucide-react"
-import { EditPassengersDialog } from "./edit-passengers-dialog"
-import type { ReservationDetail, Reservation } from "@/lib/interfaces/reservation/reservation.interface"
-import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface"
-import type { Pax } from "@/lib/interfaces/pax/pax.interface"
-import { fetchAPI } from "@/lib/api/fetchApi"
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Users } from "lucide-react";
+import { EditPassengersDialog } from "./edit-passengers-dialog";
+import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -18,27 +15,31 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@/components/ui/alert-dialog"
-import { useToast } from "@/components/ui/use-toast"
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
+
+import type { ReservationDetail, Reservation } from "@/lib/interfaces/reservation/reservation.interface";
+import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
+
+// 🧠 Importamos la store global
 
 interface ReservationDetailHeaderProps {
-  reservation: ReservationDetail
-  availablePassengers: Pax[]
-  onStateChange: (state: ReservationState) => void
-  onPassengersChange: (passengers: Pax[]) => void
+  reservation: ReservationDetail;
+  onStateChange: (state: ReservationState) => void;
+  onPassengersChange: (passengers: Pax[]) => void;
 }
 
 export function ReservationDetailHeader({
   reservation,
-  availablePassengers,
   onStateChange,
   onPassengersChange,
 }: ReservationDetailHeaderProps) {
-  const [editPassengersOpen, setEditPassengersOpen] = useState(false)
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [pendingState, setPendingState] = useState<ReservationState | null>(null)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const { toast } = useToast()
+  const [editPassengersOpen, setEditPassengersOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingState, setPendingState] = useState<ReservationState | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   // 🎨 Estado visual según tipo
   const getStateBadge = (state: ReservationState) => {
@@ -55,57 +56,55 @@ export function ReservationDetailHeader({
         label: "Cancelada",
         className: "bg-rose-500/10 text-rose-500 border-rose-500/20",
       },
-    } as const
+    } as const;
 
-    return variants[state]
-  }
+    return variants[state];
+  };
 
   const formatCurrency = (amount: number, currency: string) =>
     new Intl.NumberFormat("es-AR", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
-    }).format(amount)
+    }).format(amount);
 
-  const currentPassengers = reservation.paxReservations.map((pr) => pr.pax)
+  const currentPassengers = reservation.paxReservations.map((pr) => pr.pax);
 
-  // 💾 Reutiliza la misma lógica que en handleConfirmDialog del otro componente
+  // 💾 Confirmar cambio de estado
   const handleConfirmStateChange = async (): Promise<void> => {
-    if (!pendingState) return
+    if (!pendingState) return;
     try {
-      setIsUpdating(true)
+      setIsUpdating(true);
 
-      // Construimos el body igual que en tu ejemplo funcional
       const body: Partial<Pick<Reservation, "state">> & { paxIds?: string[] } = {
         state: pendingState,
         paxIds: currentPassengers.map((p) => p.id),
-      }
+      };
 
       const updated = await fetchAPI<Reservation>(`/reservations/${reservation.id}`, {
         method: "PATCH",
         body: JSON.stringify(body),
-      })
+      });
 
-      // 🔄 Actualizamos visualmente
-      onStateChange(updated.state)
+      onStateChange(updated.state);
 
       toast({
         title: "Estado actualizado",
         description: `La reserva ahora está marcada como ${getStateBadge(updated.state).label}.`,
-      })
+      });
     } catch (error) {
-      console.error("❌ Error al actualizar estado:", error)
+      console.error("❌ Error al actualizar estado:", error);
       toast({
         title: "Error",
         description: "No se pudo actualizar el estado de la reserva.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsUpdating(false)
-      setConfirmDialogOpen(false)
-      setPendingState(null)
+      setIsUpdating(false);
+      setConfirmDialogOpen(false);
+      setPendingState(null);
     }
-  }
+  };
 
   return (
     <>
@@ -118,10 +117,10 @@ export function ReservationDetailHeader({
             <Select
               value={reservation.state}
               onValueChange={(value) => {
-                const newState = value as ReservationState
+                const newState = value as ReservationState;
                 if (newState !== reservation.state) {
-                  setPendingState(newState)
-                  setConfirmDialogOpen(true)
+                  setPendingState(newState);
+                  setConfirmDialogOpen(true);
                 }
               }}
             >
@@ -142,9 +141,9 @@ export function ReservationDetailHeader({
         {/* Totales */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {reservation.currencyTotals.map((ct, idx) => (
-            <Card key={idx}>
+            <Card className="w-fit" key={idx}>
               <CardContent className="p-6">
-                <div className="space-y-2">
+                <div className="w-fit space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">{ct.currency}</p>
                   <div className="space-y-1">
                     <p className="text-3xl font-bold">{formatCurrency(ct.amountPaid, ct.currency)}</p>
@@ -185,7 +184,6 @@ export function ReservationDetailHeader({
         open={editPassengersOpen}
         onOpenChange={setEditPassengersOpen}
         currentPassengers={currentPassengers}
-        availablePassengers={availablePassengers}
         onSave={onPassengersChange}
       />
 
@@ -212,5 +210,5 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

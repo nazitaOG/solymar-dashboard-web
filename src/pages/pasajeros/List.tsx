@@ -6,37 +6,52 @@ import { PassengerDialog } from "@/components/passengers/passenger-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { mockReservations } from "@/lib/mock-data";
-import { fetchAPI } from "@/lib/api/fetchApi"
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
+import { usePassengersStore } from "@/stores/usePassengerStore";
 
 export default function PasajerosPage() {
-  const [passengers, setPassengers] = useState<Pax[]>([]);
   const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
   const [selectedPassenger, setSelectedPassenger] = useState<Pax | undefined>();
   const [isPending, startTransition] = useTransition();
 
-  // Fetch inicial de pasajeros
-  useEffect(() => {
-    startTransition(async () => {
-      try {
-        const data = await fetchAPI<Pax[]>("/pax")
-        setPassengers(data)
-        setFilteredPassengers(data)
-      } catch (error) {
-        console.error("Error fetching passengers:", error)
-      }
-    })
-  }, [])
+  // ✅ Estado global del store
+  const {
+    passengers,
+    fetched,
+    fetchPassengers,
+    addPassenger,
+    removePassenger,
+  } = usePassengersStore();
 
-  // Filtros
-  const handleFilterChange = (filters: { search: string; nationality?: string; documentFilter?: string }) => {
+  // 🧭 Fetch inicial — solo si aún no se hizo
+  useEffect(() => {
+    if (!fetched) {
+      startTransition(() => {
+        fetchPassengers();
+      });
+    }
+  }, [fetched, fetchPassengers]);
+
+  // 🔁 Mantener la lista filtrada sincronizada
+  useEffect(() => {
+    setFilteredPassengers(passengers);
+  }, [passengers]);
+
+  // 🔍 Filtros
+  const handleFilterChange = (filters: {
+    search: string;
+    nationality?: string;
+    documentFilter?: string;
+  }) => {
     let filtered = [...passengers];
 
     if (filters.search) {
-      filtered = filtered.filter((p) => p.name.toLowerCase().includes(filters.search.toLowerCase()));
+      filtered = filtered.filter((p) =>
+        p.name.toLowerCase().includes(filters.search.toLowerCase())
+      );
     }
     if (filters.nationality) {
       filtered = filtered.filter((p) => p.nationality === filters.nationality);
@@ -52,8 +67,7 @@ export default function PasajerosPage() {
     setFilteredPassengers(filtered);
   };
 
-  // Crear / Ver / Editar
-
+  // 🧩 Crear / Editar / Ver
   const handleView = (passenger: Pax) => {
     setDialogMode("view");
     setSelectedPassenger(passenger);
@@ -66,56 +80,60 @@ export default function PasajerosPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = (passengerData: Partial<Pax>) => {
+  // 💾 Guardar pasajero (crear o editar)
+  const handleSave = (newPassenger: Pax) => {
     if (dialogMode === "create") {
-      const newPassenger: Pax = {
-        id: `pax-${Date.now()}`,
-        name: passengerData.name!,
-        birthDate: passengerData.birthDate!,
-        nationality: passengerData.nationality!,
-        ...(passengerData.dni && { dni: passengerData.dni }),
-        ...(passengerData.passport && { passport: passengerData.passport }),
-      };
-      setPassengers((prev) => [...prev, newPassenger]);
-      setFilteredPassengers((prev) => [...prev, newPassenger]);
-    } else if (dialogMode === "edit" && selectedPassenger) {
-      const updated = passengers.map((p) => (p.id === selectedPassenger.id ? { ...p, ...passengerData } : p));
-      setPassengers(updated);
-      setFilteredPassengers(updated.filter((p) => filteredPassengers.find((fp) => fp.id === p.id)));
+      addPassenger(newPassenger);
+    } else if (dialogMode === "edit") {
+      // si querés, podés agregar un updatePassenger al store más adelante
+      removePassenger(newPassenger.id);
+      addPassenger(newPassenger);
     }
   };
 
+  // 🗑️ Eliminar pasajero
   const handleDelete = (id: string) => {
-    const updated = passengers.filter((p) => p.id !== id);
-    setPassengers(updated);
-    setFilteredPassengers(updated.filter((p) => filteredPassengers.find((fp) => fp.id === p.id)));
+    removePassenger(id);
   };
 
   const linkedReservations = selectedPassenger
     ? mockReservations
-      .filter((r) =>
-        r.paxReservations.some((pr: { pax: Pax }) => pr.pax.id === selectedPassenger.id)
-      )
-      .map((r) => ({ id: r.id, state: r.state }))
+        .filter((r) =>
+          r.paxReservations.some((pr: { pax: Pax }) => pr.pax.id === selectedPassenger.id)
+        )
+        .map((r) => ({ id: r.id, state: r.state }))
     : [];
 
   return (
     <DashboardLayout>
       <Suspense fallback={<FullPageLoader />}>
         <div className="space-y-6">
+          {/* Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Pasajeros</h1>
-              <p className="text-muted-foreground">Administra la información de todos los pasajeros</p>
+              <p className="text-muted-foreground">
+                Administra la información de todos los pasajeros
+              </p>
             </div>
-            <Button onClick={() => setDialogOpen(true)} className="gap-2" disabled={isPending}>
+            <Button
+              onClick={() => {
+                setSelectedPassenger(undefined);
+                setDialogMode("create");
+                setDialogOpen(true);
+              }}
+              className="gap-2"
+              disabled={isPending}
+            >
               <Plus className="h-4 w-4" />
               {isPending ? "Cargando..." : "Crear Pasajero"}
             </Button>
           </div>
 
+          {/* Filtros */}
           <PassengerFilters onFilterChange={handleFilterChange} />
 
+          {/* Tabla */}
           <PassengersTable
             passengers={filteredPassengers}
             onView={handleView}
@@ -124,15 +142,16 @@ export default function PasajerosPage() {
           />
         </div>
 
+        {/* Diálogo */}
         <PassengerDialog
-          key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`} // 🔥 fuerza el remount
+          key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`}
           open={dialogOpen}
           onOpenChange={(open) => {
             if (!open) {
-              setSelectedPassenger(undefined)
-              setDialogMode("create")
+              setSelectedPassenger(undefined);
+              setDialogMode("create");
             }
-            setDialogOpen(open)
+            setDialogOpen(open);
           }}
           passenger={selectedPassenger}
           mode={dialogMode}

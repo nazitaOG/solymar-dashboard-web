@@ -52,7 +52,7 @@ export function PassengerDialog({
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
-    nationality: "",
+    nationality: "Argentina",
     dniNum: "",
     dniExpiration: "",
     passportNum: "",
@@ -75,7 +75,7 @@ export function PassengerDialog({
     setFormData({
       name: "",
       birthDate: "",
-      nationality: "",
+      nationality: "Argentina",
       dniNum: "",
       dniExpiration: "",
       passportNum: "",
@@ -98,7 +98,7 @@ export function PassengerDialog({
         // capitaliza la primera letra
         return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
       }
-    
+
       setFormData({
         name: passenger.name,
         birthDate: formatDate(passenger.birthDate),
@@ -109,7 +109,7 @@ export function PassengerDialog({
         passportExpiration: formatDate(passenger.passport?.expirationDate),
       })
     }
-     else {
+    else {
       resetForm()
     }
   }, [passenger, open])
@@ -155,15 +155,15 @@ export function PassengerDialog({
           nationality: result.data.nationality,
           dni: result.data.dniNum
             ? {
-                dniNum: result.data.dniNum,
-                expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
-              }
+              dniNum: result.data.dniNum,
+              expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
+            }
             : undefined,
           passport: result.data.passportNum
             ? {
-                passportNum: result.data.passportNum,
-                expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
-              }
+              passportNum: result.data.passportNum,
+              expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
+            }
             : undefined,
         }
 
@@ -209,8 +209,8 @@ export function PassengerDialog({
             {isCreateMode
               ? "Crear Pasajero"
               : isViewMode
-              ? "Ver Pasajero"
-              : "Editar Pasajero"}
+                ? "Ver Pasajero"
+                : "Editar Pasajero"}
           </DialogTitle>
         </DialogHeader>
 
@@ -255,17 +255,17 @@ export function PassengerDialog({
               <div className="space-y-1">
                 <Label htmlFor="nationality">Nacionalidad *</Label>
                 <Select
-                  value={formData.nationality || "Argentina"}
+                  value={formData.nationality}
                   onValueChange={(value) =>
                     setFormData({ ...formData, nationality: value })
                   }
                   disabled={isViewMode}
                 >
+
                   <SelectTrigger
                     id="nationality"
-                    className={`bg-transparent ${
-                      errors.nationality ? "border-red-500" : ""
-                    }`}
+                    className={`bg-transparent ${errors.nationality ? "border-red-500" : ""
+                      }`}
                   >
                     <SelectValue placeholder="Argentina" />
                   </SelectTrigger>
@@ -429,8 +429,8 @@ export function PassengerDialog({
                 {isPending
                   ? "Guardando..."
                   : isCreateMode
-                  ? "Crear"
-                  : "Guardar cambios"}
+                    ? "Crear"
+                    : "Guardar cambios"}
               </Button>
             )}
           </div>
