@@ -3,6 +3,9 @@ import { z } from "zod";
 const passportRegex = /^[A-Za-z0-9]{6,9}$/;
 const dniRegex = /^\d{8}$/;
 
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
 export const CreatePaxSchema = z
   .object({
     name: z.string().trim().min(1, "El nombre no puede estar vacío").max(128),
@@ -19,6 +22,9 @@ export const CreatePaxSchema = z
       .max(128, "Máximo 128 caracteres")
       .transform((v) => v.toUpperCase()),
 
+    // ------------------------
+    // PASAPORTE
+    // ------------------------
     passportNum: z
       .string()
       .trim()
@@ -32,8 +38,18 @@ export const CreatePaxSchema = z
     passportExpirationDate: z
       .union([z.coerce.date(), z.literal("")])
       .transform((v) => (v === "" ? undefined : v))
-      .optional(),
+      .optional()
+      .refine(
+        (v) => {
+          if (!v) return true;
+          return v >= today;
+        },
+        { message: "La fecha de vencimiento no puede ser anterior a hoy." }
+      ),
 
+    // ------------------------
+    // DNI
+    // ------------------------
     dniNum: z
       .string()
       .trim()
@@ -44,33 +60,39 @@ export const CreatePaxSchema = z
     dniExpirationDate: z
       .union([z.coerce.date(), z.literal("")])
       .transform((v) => (v === "" ? undefined : v))
-      .optional(),
-
+      .optional()
+      .refine(
+        (v) => {
+          if (!v) return true;
+          return v >= today;
+        },
+        { message: "La fecha de vencimiento no puede ser anterior a hoy." }
+      ),
   })
   .superRefine((data, ctx) => {
     const hasPassport = !!data.passportNum;
     const hasDni = !!data.dniNum;
 
-    // 🔹 Regla 1: debe venir al menos uno
+    // Regla 1: debe venir al menos un documento
     if (!hasPassport && !hasDni) {
       ctx.addIssue({
         code: "custom",
         path: ["passportNum"],
-        message: "Debe ingresar DNI o Pasaporte",
+        message: "Debe ingresar DNI o Pasaporte.",
       });
       ctx.addIssue({
         code: "custom",
         path: ["dniNum"],
-        message: "Debe ingresar DNI o Pasaporte",
+        message: "Debe ingresar DNI o Pasaporte.",
       });
     }
 
-    // 🔹 Regla 2: fechas NO permitidas sin documento
+    // Regla 2: no permitir fecha sin número
     if (!hasPassport && data.passportExpirationDate) {
       ctx.addIssue({
         code: "custom",
         path: ["passportExpirationDate"],
-        message: "No puede ingresar fecha de pasaporte sin número de pasaporte",
+        message: "No puede ingresar fecha de pasaporte sin número de pasaporte.",
       });
     }
 
@@ -78,7 +100,7 @@ export const CreatePaxSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["dniExpirationDate"],
-        message: "No puede ingresar fecha de DNI sin número de DNI",
+        message: "No puede ingresar fecha de DNI sin número de DNI.",
       });
     }
   });
