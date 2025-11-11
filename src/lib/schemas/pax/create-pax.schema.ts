@@ -6,6 +6,10 @@ const dniRegex = /^\d{8}$/;
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
+const maxBirthDate = new Date();
+maxBirthDate.setMonth(maxBirthDate.getMonth() + 9);
+maxBirthDate.setHours(0, 0, 0, 0);
+
 export const CreatePaxSchema = z
   .object({
     name: z.string().trim().min(1, "El nombre no puede estar vacío").max(128),
@@ -13,8 +17,15 @@ export const CreatePaxSchema = z
     birthDate: z
       .string()
       .min(1, "La fecha de nacimiento es obligatoria")
-      .transform((v) => new Date(v)),
-
+      .transform((v) => new Date(v))
+      .refine(
+        (v) => {
+          if (!v) return true;
+          return v <= maxBirthDate;
+        },
+        { message: "La fecha de nacimiento no puede ser posterior a 9 meses desde hoy." }
+      ),
+      
     nationality: z
       .string()
       .trim()
