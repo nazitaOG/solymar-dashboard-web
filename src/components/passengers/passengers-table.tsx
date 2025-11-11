@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import type { Pax } from "@/lib/types"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
 
 interface PassengersTableProps {

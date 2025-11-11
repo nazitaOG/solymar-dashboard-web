@@ -156,15 +156,21 @@ export function PassengerDialog({
           dni: result.data.dniNum
             ? {
               dniNum: result.data.dniNum,
-              expirationDate: result.data.dniExpirationDate?.toISOString() ?? "",
+              expirationDate: result.data.dniExpirationDate
+                ? result.data.dniExpirationDate.toISOString()
+                : undefined,
             }
             : undefined,
+
           passport: result.data.passportNum
             ? {
               passportNum: result.data.passportNum,
-              expirationDate: result.data.passportExpirationDate?.toISOString() ?? "",
+              expirationDate: result.data.passportExpirationDate
+                ? result.data.passportExpirationDate.toISOString()
+                : undefined,
             }
             : undefined,
+
         }
 
         const requestBody: CreatePaxRequest = paxToRequest(normalized)
@@ -293,10 +299,10 @@ export function PassengerDialog({
 
           {/* DNI */}
           <div className="space-y-3">
-            <h4 className="font-medium">DNI (opcional)</h4>
+            <h4 className="font-medium">DNI</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="dniNum">Número de DNI</Label>
+                <Label htmlFor="dniNum">Número de DNI *</Label>
                 <Input
                   id="dniNum"
                   value={formData.dniNum}
@@ -311,7 +317,7 @@ export function PassengerDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="dniExpiration">Fecha de vencimiento</Label>
+                <Label htmlFor="dniExpiration">Fecha de vencimiento (Opcional)</Label>
                 <Input
                   id="dniExpiration"
                   type="date"
@@ -333,10 +339,10 @@ export function PassengerDialog({
 
           {/* Pasaporte */}
           <div className="space-y-3">
-            <h4 className="font-medium">Pasaporte (opcional)</h4>
+            <h4 className="font-medium">Pasaporte</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="passportNum">Número de pasaporte</Label>
+                <Label htmlFor="passportNum">Número de pasaporte *</Label>
                 <Input
                   id="passportNum"
                   value={formData.passportNum}
@@ -353,7 +359,7 @@ export function PassengerDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="passportExpiration">Fecha de vencimiento</Label>
+                <Label htmlFor="passportExpiration">Fecha de vencimiento (Opcional)</Label>
                 <Input
                   id="passportExpiration"
                   type="date"
