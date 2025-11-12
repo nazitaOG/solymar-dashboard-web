@@ -54,9 +54,9 @@ export function PassengerDialog({
     birthDate: "",
     nationality: "Argentina",
     dniNum: "",
-    dniExpiration: "",
+    dniExpirationDate: "",
     passportNum: "",
-    passportExpiration: "",
+    passportExpirationDate: "",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
@@ -77,9 +77,9 @@ export function PassengerDialog({
       birthDate: "",
       nationality: "Argentina",
       dniNum: "",
-      dniExpiration: "",
+      dniExpirationDate: "",
       passportNum: "",
-      passportExpiration: "",
+      passportExpirationDate: "",
     })
   }
 
@@ -104,9 +104,9 @@ export function PassengerDialog({
         birthDate: formatDate(passenger.birthDate),
         nationality: normalizeNationality(passenger.nationality),
         dniNum: passenger.dni?.dniNum || "",
-        dniExpiration: formatDate(passenger.dni?.expirationDate),
+        dniExpirationDate: formatDate(passenger.dni?.expirationDate),
         passportNum: passenger.passport?.passportNum || "",
-        passportExpiration: formatDate(passenger.passport?.expirationDate),
+        passportExpirationDate: formatDate(passenger.passport?.expirationDate),
       })
     }
     else {
@@ -124,17 +124,20 @@ export function PassengerDialog({
 
   // 💾 Guardar (crear / editar)
   const handleSave = () => {
+    // Prepara los datos
     const zodData = {
       name: formData.name,
       birthDate: formData.birthDate,
       nationality: formData.nationality,
       dniNum: formData.dniNum || undefined,
-      dniExpirationDate: formData.dniExpiration || undefined,
+      dniExpirationDate: formData.dniExpirationDate || undefined,
       passportNum: formData.passportNum || undefined,
-      passportExpirationDate: formData.passportExpiration || undefined,
+      passportExpirationDate: formData.passportExpirationDate || undefined,
     }
-
+  
+    // 1️⃣ Validación con Zod
     const result = CreatePaxSchema.safeParse(zodData)
+  
     if (!result.success) {
       const fieldErrors: Record<string, string> = {}
       for (const issue of result.error.issues) {
@@ -142,11 +145,12 @@ export function PassengerDialog({
         fieldErrors[field] = issue.message
       }
       setErrors(fieldErrors)
-      return
+      return // 🚫 corta inmediatamente, no se llama al backend
     }
-
+  
+    // 2️⃣ Si pasa Zod, se limpian errores y recién ahí se hace el fetch
     setErrors({})
-
+  
     startTransition(async () => {
       try {
         const normalized: Partial<Pax> = {
@@ -155,45 +159,44 @@ export function PassengerDialog({
           nationality: result.data.nationality,
           dni: result.data.dniNum
             ? {
-              dniNum: result.data.dniNum,
-              expirationDate: result.data.dniExpirationDate
-                ? result.data.dniExpirationDate.toISOString()
-                : undefined,
-            }
+                dniNum: result.data.dniNum,
+                expirationDate: result.data.dniExpirationDate
+                  ? result.data.dniExpirationDate.toISOString()
+                  : undefined,
+              }
             : undefined,
-
           passport: result.data.passportNum
             ? {
-              passportNum: result.data.passportNum,
-              expirationDate: result.data.passportExpirationDate
-                ? result.data.passportExpirationDate.toISOString()
-                : undefined,
-            }
+                passportNum: result.data.passportNum,
+                expirationDate: result.data.passportExpirationDate
+                  ? result.data.passportExpirationDate.toISOString()
+                  : undefined,
+              }
             : undefined,
-
         }
 
         const requestBody: CreatePaxRequest = paxToRequest(normalized)
 
+        // 3️⃣ Envío seguro al backend
+        let saved: Pax
         if (mode === "create") {
-          const created = await fetchAPI<Pax>("/pax", {
+          saved = await fetchAPI<Pax>("/pax", {
             method: "POST",
             body: JSON.stringify(requestBody),
           })
-          onSave?.(created)
-        }
-
-        if (mode === "edit" && passenger?.id) {
-          const updated = await fetchAPI<Pax>(`/pax/${passenger.id}`, {
+        } else if (mode === "edit" && passenger?.id) {
+          saved = await fetchAPI<Pax>(`/pax/${passenger.id}`, {
             method: "PATCH",
             body: JSON.stringify(requestBody),
           })
-          onSave?.(updated)
+        } else {
+          throw new Error("Modo no válido o pasajero sin ID")
         }
 
+        // ✅ Solo cerrar si fue exitoso
+        onSave?.(saved)
         onOpenChange(false)
       } catch (error) {
-        console.error("Error guardando pasajero:", error)
         const msg =
           error instanceof Error && error.message
             ? error.message
@@ -202,6 +205,7 @@ export function PassengerDialog({
       }
     })
   }
+  
 
   const isViewMode = mode === "view"
   const isCreateMode = mode === "create"
@@ -321,9 +325,9 @@ export function PassengerDialog({
                 <Input
                   id="dniExpiration"
                   type="date"
-                  value={formData.dniExpiration}
+                  value={formData.dniExpirationDate}
                   onChange={(e) =>
-                    setFormData({ ...formData, dniExpiration: e.target.value })
+                    setFormData({ ...formData, dniExpirationDate: e.target.value })
                   }
                   disabled={isViewMode}
                   className={errors.dniExpirationDate ? "border-red-500" : ""}
@@ -363,11 +367,11 @@ export function PassengerDialog({
                 <Input
                   id="passportExpiration"
                   type="date"
-                  value={formData.passportExpiration}
+                  value={formData.passportExpirationDate}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      passportExpiration: e.target.value,
+                      passportExpirationDate: e.target.value,
                     })
                   }
                   disabled={isViewMode}
