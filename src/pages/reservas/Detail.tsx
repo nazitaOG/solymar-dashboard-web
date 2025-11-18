@@ -82,6 +82,14 @@ export default function ReservationDetailPage() {
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
 
 
+  const fmt = (iso: string | null | undefined): string => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return format(d, "dd MMM yyyy HH:mm", { locale: es });
+  };
+
+
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
   const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
     try {
@@ -601,40 +609,80 @@ export default function ReservationDetailPage() {
 
   const planeColumns: Column[] = [
     {
-      key: "departure",
+      key: "segments",
       label: "Ruta",
-      render: (_value, row) => (
-        <div className="text-sm">
-          <div className="font-medium">{String(row.departure)}</div>
-          <div className="text-muted-foreground">→ {String(row.arrival)}</div>
-        </div>
-      ),
+      render: (_value: unknown, row: Record<string, unknown>) => {
+        const plane = row as unknown as PlaneType;
+        const segs = plane.segments ?? [];
+        if (segs.length === 0) {
+          return <span className="text-muted-foreground">— Sin tramos —</span>;
+        }
+        return (
+          <div className="text-sm space-y-1">
+            {segs.map((s) => (
+              <div key={s.segmentOrder} className="flex gap-1">
+                <span className="font-medium">{s.departure}</span>
+                <span className="text-muted-foreground">→</span>
+                <span className="font-medium">{s.arrival}</span>
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     {
-      key: "departureDate",
+      key: "segments",
       label: "Salida / Llegada",
-      render: (_value, row) => (
-        <div className="text-sm">
-          <div>{formatDate(String(row.departureDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.arrivalDate))}</div>
-        </div>
-      ),
+      render: (_value: unknown, row: Record<string, unknown>) => {
+        const plane = row as unknown as PlaneType;
+        const segs = plane.segments ?? [];
+        if (segs.length === 0) return <span className="text-muted-foreground">—</span>;
+  
+        const first = segs[0];
+        const last = segs[segs.length - 1];
+  
+        return (
+          <div className="text-sm">
+            <div>{fmt(first.departureDate)}</div>
+            <div className="text-muted-foreground">{fmt(last.arrivalDate)}</div>
+          </div>
+        );
+      },
     },
-    { key: "provider", label: "Aerolínea" },
-    { key: "bookingReference", label: "Referencia" },
+    {
+      key: "provider",
+      label: "Aerolínea",
+    },
+    {
+      key: "bookingReference",
+      label: "Referencia",
+    },
     {
       key: "totalPrice",
       label: "Precio",
-      render: (_value, row) => (
-        <div className="text-sm">
-          <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid), String(row.currency))}
+      render: (_value: unknown, row: Record<string, unknown>) => {
+        const plane = row as unknown as PlaneType;
+  
+        return (
+          <div className="text-sm">
+            <div className="font-medium">
+              {plane.amountPaid.toLocaleString("es-AR", {
+                style: "currency",
+                currency: plane.currency,
+                minimumFractionDigits: 2,
+              })}
+            </div>
+            <div className="text-muted-foreground">
+              de{" "}
+              {plane.totalPrice.toLocaleString("es-AR", {
+                style: "currency",
+                currency: plane.currency,
+                minimumFractionDigits: 2,
+              })}
+            </div>
           </div>
-          <div className="text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice), String(row.currency))}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
   ];
 
