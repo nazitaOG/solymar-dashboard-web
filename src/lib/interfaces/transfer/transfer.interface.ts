@@ -1,7 +1,7 @@
 import { Currency } from "../currency/currency.interface"
 
 export enum TransportType {
-  PICKUP = "PICKUP",
+  TRANSFER = "TRANSFER",
   BUS = "BUS",
   TRAIN = "TRAIN",
   FERRY = "FERRY",

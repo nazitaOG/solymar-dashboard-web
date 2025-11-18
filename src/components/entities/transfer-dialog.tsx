@@ -56,7 +56,7 @@ export function TransferDialog({
     arrivalDate: "",
     provider: "",
     bookingReference: "",
-    transportType: "PICKUP" as TransportType,
+    transportType: TransportType.TRANSFER,
     totalPrice: 0,
     amountPaid: 0,
     currency: "USD" as Currency,
@@ -96,7 +96,7 @@ export function TransferDialog({
         arrivalDate: "",
         provider: "",
         bookingReference: "",
-        transportType: TransportType.PICKUP,
+        transportType: TransportType.TRANSFER,
         totalPrice: 0,
         amountPaid: 0,
         currency: Currency.USD,
@@ -291,11 +291,11 @@ export function TransferDialog({
                 <SelectValue placeholder="Seleccionar" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PICKUP">Pickup</SelectItem>
-                <SelectItem value="BUS">Bus</SelectItem>
-                <SelectItem value="TRAIN">Tren</SelectItem>
-                <SelectItem value="FERRY">Ferry</SelectItem>
-                <SelectItem value="OTHER">Otro</SelectItem>
+                <SelectItem value={TransportType.TRANSFER}>Transfer</SelectItem>
+                <SelectItem value={TransportType.BUS}>Bus</SelectItem>
+                <SelectItem value={TransportType.TRAIN}>Tren</SelectItem>
+                <SelectItem value={TransportType.FERRY}>Ferry</SelectItem>
+                <SelectItem value={TransportType.OTHER}>Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>
