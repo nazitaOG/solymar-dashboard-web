@@ -5,7 +5,7 @@ import { z } from "zod";
 export const planeBaseSchema = z.object({
   bookingReference: z.string().min(1, "La referencia de reserva es obligatoria"),
 
-  provider: z.string().min(1, "El proveedor es obligatorio"),
+  provider: z.string().max(128).optional().or(z.literal("").transform(() => undefined)),
 
   totalPrice: z
     .coerce.number()

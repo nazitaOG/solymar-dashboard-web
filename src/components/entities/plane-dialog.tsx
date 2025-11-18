@@ -39,9 +39,10 @@ interface PlaneDialogProps {
 
 type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId">;
 
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+interface FormErrors extends Partial<Record<keyof FormData | "segments", string>> {
   _general?: string;
 }
+
 
 export function PlaneDialog({
   open,
@@ -163,9 +164,9 @@ export function PlaneDialog({
       ...(isEdit
         ? {}
         : {
-            reservationId,
-            currency: formData.currency,
-          }),
+          reservationId,
+          currency: formData.currency,
+        }),
     };
 
     try {
@@ -220,7 +221,7 @@ export function PlaneDialog({
         <div className="grid gap-3 md:grid-cols-2">
           {[
             { id: "bookingReference", label: "Referencia *" },
-            { id: "provider", label: "Proveedor *" },
+            { id: "provider", label: "Proveedor (opcional)" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
               <Label htmlFor={f.id}>{f.label}</Label>
@@ -296,35 +297,43 @@ export function PlaneDialog({
 
         {/* SEGMENTS */}
         <div className="mt-5 space-y-3">
-          <div className="flex justify-between items-center">
-            <Label>Tramos del vuelo *</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setFormData({
-                  ...formData,
-                  segments: [
-                    ...formData.segments,
-                    {
-                      segmentOrder: formData.segments.length + 1,
-                      departure: "",
-                      arrival: "",
-                      departureDate: "",
-                      arrivalDate: "",
-                      airline: "",
-                      flightNumber: "",
-                    },
-                  ],
-                })
-              }
-            >
-              + Agregar tramo
-            </Button>
-          </div>
+          <div>
+            <div className="flex justify-between items-center">
+              <Label>Tramos del vuelo *</Label>
 
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    segments: [
+                      ...formData.segments,
+                      {
+                        segmentOrder: formData.segments.length + 1,
+                        departure: "",
+                        arrival: "",
+                        departureDate: "",
+                        arrivalDate: "",
+                        airline: "",
+                        flightNumber: "",
+                      },
+                    ],
+                  })
+                }
+              >
+                + Agregar tramo
+              </Button>
+            </div>
+            {errors.segments && (
+              <p className="text-sm text-red-500">{errors.segments}</p>
+            )}
+          </div>
           {formData.segments.map((seg, index) => (
             <div key={index} className="border p-3 rounded-md space-y-2">
+              <p className="text-sm font-semibold">
+                Tramo #{index + 1}
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   placeholder="Origen (EZE)"
@@ -410,12 +419,12 @@ export function PlaneDialog({
               {loading
                 ? "Guardando..."
                 : plane
-                ? "Guardar cambios"
-                : "Crear vuelo"}
+                  ? "Guardar cambios"
+                  : "Crear vuelo"}
             </Button>
           </div>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }
