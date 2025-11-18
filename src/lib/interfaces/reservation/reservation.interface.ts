@@ -17,6 +17,8 @@ export enum ReservationState {
 
 export interface Reservation {
   id: string;
+  code: number;
+  name: string;
   userId: string;
   state: ReservationState;
   createdAt: string;

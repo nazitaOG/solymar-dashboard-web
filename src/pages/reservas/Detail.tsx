@@ -48,6 +48,8 @@ export default function ReservationDetailPage() {
 
   const initialReservation: ReservationDetail = {
     id: "",
+    code: 0,
+    name: "",
     userId: "",
     state: ReservationState.PENDING,
     createdBy: "",

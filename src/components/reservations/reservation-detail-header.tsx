@@ -112,7 +112,10 @@ export function ReservationDetailHeader({
         {/* Header con ID y estado */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold tracking-tight font-mono">{reservation.id}</h1>
+            <h1 className="text-3xl font-bold tracking-tight font-mono">
+              {reservation.name}-{String(reservation.code).padStart(5, "0")}
+            </h1>
+
 
             <Select
               value={reservation.state}
