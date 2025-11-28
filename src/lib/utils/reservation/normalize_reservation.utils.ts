@@ -37,5 +37,6 @@ export function normalizeReservation(
     transfers: keepArray(partial?.transfers),
     excursions: keepArray(partial?.excursions),
     medicalAssists: keepArray(partial?.medicalAssists),
+    carRentals: keepArray(partial?.carRentals),
   };
 }

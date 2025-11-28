@@ -7,6 +7,7 @@ import type { Transfer } from "@/lib/interfaces/transfer/transfer.interface";
 import type { Excursion } from "@/lib/interfaces/excursion/excursion.interface";
 import type { MedicalAssist } from "@/lib/interfaces/medical_assist/medical_assist.interface";
 import type { PaxReservation } from "@/lib/interfaces/pax/pax.interface";
+import type { CarRental } from "@/lib/interfaces/car_rental/car_rental.interface";
 
 export enum ReservationState {
   PENDING = "PENDING",
@@ -45,6 +46,7 @@ export interface ReservationDetail extends Reservation {
   transfers: Transfer[]
   excursions: Excursion[]
   medicalAssists: MedicalAssist[]
+  carRentals: CarRental[]
 }
 
 export interface ReservationCurrencyTotal {

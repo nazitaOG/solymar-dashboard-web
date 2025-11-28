@@ -61,12 +61,23 @@ export function ReservationDetailHeader({
     return variants[state];
   };
 
-  const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat("es-AR", {
+  const formatCurrency = (amount: number, currency: string) => {
+    // Caso especial para Pesos Argentinos
+    if (currency === "ARS") {
+      const number = new Intl.NumberFormat("es-AR", {
+        style: "decimal", // Formateamos como número normal (con puntos de mil)
+        minimumFractionDigits: 0,
+      }).format(amount);
+      return `AR$ ${number}`;
+    }
+
+    // Comportamiento normal para USD y otras monedas
+    return new Intl.NumberFormat("es-AR", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
     }).format(amount);
+  };
 
   const currentPassengers = reservation.paxReservations.map((pr) => pr.pax);
 
@@ -142,7 +153,7 @@ export function ReservationDetailHeader({
         </div>
 
         {/* Totales */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-fit">
           {reservation.currencyTotals.map((ct, idx) => (
             <Card className="w-fit" key={idx}>
               <CardContent className="p-6">

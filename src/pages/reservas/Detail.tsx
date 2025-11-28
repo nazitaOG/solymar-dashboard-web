@@ -11,10 +11,13 @@ import { CruiseDialog } from "@/components/entities/cruise-dialog";
 import { TransferDialog } from "@/components/entities/transfer-dialog";
 import { ExcursionDialog } from "@/components/entities/excursion-dialog";
 import { MedicalAssistDialog } from "@/components/entities/medical-assist-dialog";
+// 🆕 Importar el nuevo Dialog
+import { CarRentalDialog } from "@/components/entities/car-rental-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart } from "lucide-react";
+// 🆕 Importar CarFront para diferenciar de Traslados
+import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart, CarFront } from "lucide-react";
 import { FullPageLoader } from "@/components/FullPageLoader";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -32,6 +35,8 @@ import type { Cruise as CruiseType } from "@/lib/interfaces/cruise/cruise.interf
 import type { Transfer as TransferType } from "@/lib/interfaces/transfer/transfer.interface";
 import type { Excursion as ExcursionType } from "@/lib/interfaces/excursion/excursion.interface";
 import type { MedicalAssist as MedicalAssistType } from "@/lib/interfaces/medical_assist/medical_assist.interface";
+// 🆕 Importar interfaz CarRental
+import type { CarRental } from "@/lib/interfaces/car_rental/car_rental.interface";
 import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 
 import { format } from "date-fns";
@@ -61,6 +66,7 @@ export default function ReservationDetailPage() {
     transfers: [],
     excursions: [],
     medicalAssists: [],
+    carRentals: [], // 🆕 Inicializar array vacío
     paxReservations: [],
     createdAt: "",
     updatedAt: "",
@@ -76,12 +82,17 @@ export default function ReservationDetailPage() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [excursionDialogOpen, setExcursionDialogOpen] = useState(false);
   const [medicalAssistDialogOpen, setMedicalAssistDialogOpen] = useState(false);
+  // 🆕 Estado para Car Rental Dialog
+  const [carRentalDialogOpen, setCarRentalDialogOpen] = useState(false);
+
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
   const [selectedPlane, setSelectedPlane] = useState<PlaneType | undefined>();
   const [selectedCruise, setSelectedCruise] = useState<CruiseType | undefined>();
   const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
   const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
+  // 🆕 Estado selección Car Rental
+  const [selectedCarRental, setSelectedCarRental] = useState<CarRental | undefined>();
 
 
   const fmt = (iso: string | null | undefined): string => {
@@ -224,6 +235,28 @@ export default function ReservationDetailPage() {
     }));
   }, []);
 
+  // 🆕 ✅ DELETE Car Rental (Server)
+  const handleDeleteCarRentalServer = useCallback(async (id: string) => {
+    try {
+      await fetchAPI<void>(`/car-rentals/${id}`, { method: "DELETE" });
+      setReservation((prev) => ({
+        ...prev,
+        carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
+      }));
+    } catch (err) {
+      console.error("❌ Error al eliminar alquiler (server):", err);
+      if (err instanceof Error) alert(err.message);
+    }
+  }, []);
+
+  // 🆕 ✅ DELETE Car Rental (Local)
+  const handleDeleteCarRentalLocal = useCallback((id: string) => {
+    setReservation((prev) => ({
+      ...prev,
+      carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
+    }));
+  }, []);
+
 
   // 🧭 Fetch detalle de reserva
   useEffect(() => {
@@ -246,6 +279,7 @@ export default function ReservationDetailPage() {
             transfers: [],
             excursions: [],
             medicalAssists: [],
+            carRentals: [], // 🆕
           } as ReservationDetail
         } else {
           // 🔹 Si entrás por URL → fetch completo
@@ -262,6 +296,7 @@ export default function ReservationDetailPage() {
           transfers,
           excursions,
           medicalAssists,
+          carRentals, // 🆕 Fetch Car Rentals
         ] = await Promise.all([
           fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
           fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
@@ -269,6 +304,7 @@ export default function ReservationDetailPage() {
           fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
           fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
           fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
+          fetchAPI<CarRental[]>(`/car-rentals/reservation/${id}`), // 🆕
         ])
 
         const normalized = normalizeReservation({
@@ -279,9 +315,14 @@ export default function ReservationDetailPage() {
           transfers,
           excursions,
           medicalAssists,
+          // Nota: Si normalizeReservation aún no soporta carRentals,
+          // lo agregamos manualmente abajo o actualizamos el helper.
+          // Aquí asumo que lo agregamos al objeto final.
         })
 
-        setReservation(normalized)
+        // 🆕 Inyectamos carRentals si normalizeReservation no lo hace
+        setReservation({ ...normalized, carRentals })
+
       } catch (err) {
         console.error("Error al cargar reserva:", err)
         setError("No se pudo cargar la reserva")
@@ -306,6 +347,9 @@ export default function ReservationDetailPage() {
         amountPaid?: number | string | null
       }[]
     ) => {
+      // Protección contra items undefined o null
+      if (!items) return; 
+
       for (const item of items) {
         const currency = item.currency ?? "USD"
         const totalPrice = Number(item.totalPrice ?? 0)
@@ -325,6 +369,7 @@ export default function ReservationDetailPage() {
     addTotals(reservation.transfers)
     addTotals(reservation.excursions)
     addTotals(reservation.medicalAssists)
+    addTotals(reservation.carRentals) // 🆕 Sumar totales de Autos
 
     // 🔸 Crear nuevo array de currencyTotals
     const recalculatedTotals: ReservationCurrencyTotal[] = Array.from(totalsMap.entries()).map(
@@ -363,6 +408,7 @@ export default function ReservationDetailPage() {
     reservation?.transfers,
     reservation?.excursions,
     reservation?.medicalAssists,
+    reservation?.carRentals, // 🆕 Dependencia nueva
   ])
 
 
@@ -543,6 +589,27 @@ export default function ReservationDetailPage() {
         ? prev.medicalAssists.map((a) => (a.id === savedAssist.id ? savedAssist : a))
         : [...prev.medicalAssists, savedAssist];
       return { ...prev, medicalAssists: updatedAssists };
+    });
+  };
+
+  // 🆕 Car Rentals Handlers
+  const handleCreateCarRental = () => {
+    setSelectedCarRental(undefined);
+    setCarRentalDialogOpen(true);
+  };
+
+  const handleEditCarRental = (item: Record<string, unknown>) => {
+    setSelectedCarRental(item as unknown as CarRental);
+    setCarRentalDialogOpen(true);
+  };
+
+  const handleSaveCarRental = (saved: CarRental) => {
+    setReservation((prev) => {
+      const exists = prev.carRentals?.some((c) => c.id === saved.id);
+      const updated = exists
+        ? prev.carRentals?.map((c) => (c.id === saved.id ? saved : c))
+        : [...(prev.carRentals ?? []), saved];
+      return { ...prev, carRentals: updated };
     });
   };
 
@@ -820,6 +887,68 @@ export default function ReservationDetailPage() {
     },
   ];
 
+  // 🆕 Car Rental Columns
+  const carRentalColumns: Column[] = [
+    { key: "provider", label: "Proveedor" },
+    { 
+      key: "carCategory", 
+      label: "Vehículo",
+      render: (_v, row) => {
+        // ✅ Aserción de tipo segura: row -> unknown -> CarRental
+        const item = row as unknown as CarRental;
+        return (
+          <div className="text-sm">
+            <div className="font-medium">{item.carCategory}</div>
+            {item.carModel && <div className="text-muted-foreground">{item.carModel}</div>}
+          </div>
+        )
+      }
+    },
+    {
+      key: "pickupDate",
+      label: "Retiro / Devolución",
+      render: (_v, row) => {
+        const item = row as unknown as CarRental;
+        return (
+          <div className="text-sm">
+            <div>{fmt(item.pickupDate)}</div>
+            <div className="text-muted-foreground">{fmt(item.dropoffDate)}</div>
+          </div>
+        )
+      },
+    },
+    {
+      key: "pickupLocation",
+      label: "Lugar",
+      render: (_v, row) => {
+        const item = row as unknown as CarRental;
+        return (
+          <div className="text-sm">
+            <div>Ret: {item.pickupLocation}</div>
+            <div className="text-muted-foreground">Dev: {item.dropoffLocation}</div>
+          </div>
+        )
+      },
+    },
+    {
+      key: "totalPrice",
+      label: "Precio",
+      render: (_v, row) => {
+        const item = row as unknown as CarRental;
+        return (
+          <div className="text-sm">
+            <div className="font-medium">
+              {formatCurrency(Number(item.amountPaid ?? 0), String(item.currency ?? "USD"))}
+            </div>
+            <div className="text-muted-foreground">
+              de {formatCurrency(Number(item.totalPrice ?? 0), String(item.currency ?? "USD"))}
+            </div>
+          </div>
+        )
+      },
+    },
+  ];
+
 
   // ---------------- Render ----------------
   return (
@@ -840,7 +969,8 @@ export default function ReservationDetailPage() {
             />
 
             <Tabs defaultValue="hotels" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              {/* ⚠️ Actualizado a grid-cols-7 para acomodar el nuevo tab */}
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="hotels" className="gap-2">
                   <Hotel className="h-4 w-4" /> Hoteles
                 </TabsTrigger>
@@ -852,6 +982,10 @@ export default function ReservationDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger value="transfers" className="gap-2">
                   <Car className="h-4 w-4" /> Traslados
+                </TabsTrigger>
+                {/* 🆕 Tab Autos */}
+                <TabsTrigger value="carRentals" className="gap-2">
+                  <CarFront className="h-4 w-4" /> Autos
                 </TabsTrigger>
                 <TabsTrigger value="excursions" className="gap-2">
                   <Compass className="h-4 w-4" /> Excursiones
@@ -915,6 +1049,20 @@ export default function ReservationDetailPage() {
                   onEdit={handleEditTransfer}
                   onDelete={handleDeleteTransferServer}
                   emptyMessage="No hay traslados agregados aún"
+                />
+              </TabsContent>
+
+              {/* 🆕 TabContent Autos */}
+              <TabsContent value="carRentals" className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateCarRental}>Crear Auto</Button>
+                </div>
+                <EntityTable
+                  data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
+                  columns={carRentalColumns}
+                  onEdit={handleEditCarRental}
+                  onDelete={handleDeleteCarRentalServer}
+                  emptyMessage="No hay alquileres de autos agregados aún"
                 />
               </TabsContent>
 
@@ -1000,7 +1148,19 @@ export default function ReservationDetailPage() {
           onSave={handleSaveTransfer}
           onDelete={handleDeleteTransferLocal}
         />
+      )}
 
+      {/* 🆕 Dialog Car Rental */}
+      {carRentalDialogOpen && (
+        <CarRentalDialog
+          key="car-rental-dialog"
+          open={carRentalDialogOpen}
+          onOpenChange={setCarRentalDialogOpen}
+          carRental={selectedCarRental}
+          reservationId={id}
+          onSave={handleSaveCarRental}
+          onDelete={handleDeleteCarRentalLocal}
+        />
       )}
 
       {excursionDialogOpen && (
