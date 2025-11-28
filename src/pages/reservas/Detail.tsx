@@ -959,8 +959,9 @@ export default function ReservationDetailPage() {
           Volver a reservas
         </Button>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          {/* Main */}
+        <div className="flex flex-col gap-8"> 
+          
+          {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
           <div className="space-y-6">
             <ReservationDetailHeader
               reservation={reservation}
@@ -969,7 +970,6 @@ export default function ReservationDetailPage() {
             />
 
             <Tabs defaultValue="hotels" className="w-full">
-              {/* ⚠️ Actualizado a grid-cols-7 para acomodar el nuevo tab */}
               <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="hotels" className="gap-2">
                   <Hotel className="h-4 w-4" /> Hoteles
@@ -983,7 +983,6 @@ export default function ReservationDetailPage() {
                 <TabsTrigger value="transfers" className="gap-2">
                   <Car className="h-4 w-4" /> Traslados
                 </TabsTrigger>
-                {/* 🆕 Tab Autos */}
                 <TabsTrigger value="carRentals" className="gap-2">
                   <CarFront className="h-4 w-4" /> Autos
                 </TabsTrigger>
@@ -995,15 +994,15 @@ export default function ReservationDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
+              {/* ... (Aquí van todos tus TabsContent: hotels, planes, cruises, etc. sin cambios) ... */}
+              
               <TabsContent value="hotels" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateHotel}>Crear Hotel</Button>
                 </div>
-
                 <div className="text-xs text-muted-foreground mb-2">
                   Total de hotels en estado: {reservation.hotels.length}
                 </div>
-
                 <EntityTable
                   data={reservation.hotels as unknown as Record<string, unknown>[]}
                   columns={hotelColumns}
@@ -1014,8 +1013,8 @@ export default function ReservationDetailPage() {
               </TabsContent>
 
               <TabsContent value="planes" className="space-y-4">
-                <div className="flex justify-end">
-                  <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
+                <div className="flex mt-2 justify-start">
+                   <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
                 </div>
                 <EntityTable
                   data={reservation.planes as unknown as Record<string, unknown>[]}
@@ -1027,7 +1026,7 @@ export default function ReservationDetailPage() {
               </TabsContent>
 
               <TabsContent value="cruises" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateCruise}>Crear Crucero</Button>
                 </div>
                 <EntityTable
@@ -1040,7 +1039,7 @@ export default function ReservationDetailPage() {
               </TabsContent>
 
               <TabsContent value="transfers" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateTransfer}>Crear Traslado</Button>
                 </div>
                 <EntityTable
@@ -1052,9 +1051,8 @@ export default function ReservationDetailPage() {
                 />
               </TabsContent>
 
-              {/* 🆕 TabContent Autos */}
               <TabsContent value="carRentals" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateCarRental}>Crear Auto</Button>
                 </div>
                 <EntityTable
@@ -1067,7 +1065,7 @@ export default function ReservationDetailPage() {
               </TabsContent>
 
               <TabsContent value="excursions" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateExcursion}>Crear Excursión</Button>
                 </div>
                 <EntityTable
@@ -1080,7 +1078,7 @@ export default function ReservationDetailPage() {
               </TabsContent>
 
               <TabsContent value="medical" className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateMedicalAssist}>Crear Asistencia</Button>
                 </div>
                 <EntityTable
@@ -1094,14 +1092,17 @@ export default function ReservationDetailPage() {
             </Tabs>
           </div>
 
-          {/* Audit Panel */}
-          <div className="lg:sticky lg:top-20 lg:h-fit">
+          {/* --- BLOQUE INFERIOR: Audit Panel --- */}
+          <div className="w-full mt-4 border-t pt-8">
+            <h3 className="mb-4 text-lg font-semibold">Historial de Cambios</h3>
             <AuditPanel reservation={reservation} />
           </div>
+
         </div>
       </div>
 
-      {/* Dialogs */}
+      {/* Dialogs (sin cambios) */}
+      {/* ... tus dialogos aquí ... */}
       {hotelDialogOpen && (
         <HotelDialog
           key="hotel-dialog"
@@ -1113,7 +1114,7 @@ export default function ReservationDetailPage() {
           onDelete={handleDeleteHotelLocal}
         />
       )}
-
+      {/* ... resto de dialogos ... */}
       {planeDialogOpen && (
         <PlaneDialog
           key="plane-dialog"
@@ -1150,7 +1151,6 @@ export default function ReservationDetailPage() {
         />
       )}
 
-      {/* 🆕 Dialog Car Rental */}
       {carRentalDialogOpen && (
         <CarRentalDialog
           key="car-rental-dialog"

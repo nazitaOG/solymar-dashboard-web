@@ -21,7 +21,7 @@ export function AuditPanel({ reservation }: AuditPanelProps) {
   }
 
   return (
-    <Card>
+    <Card className="w-fit">
       <CardHeader>
         <CardTitle className="text-base">Auditoría</CardTitle>
       </CardHeader>
