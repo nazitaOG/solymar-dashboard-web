@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ 1. Importar el componente
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import { fetchAPI } from "@/lib/api/fetchApi";
-// ⚠️ Asumo que crearás este archivo de schemas similar al de transfer
 import {
   createCarRentalSchema,
   updateCarRentalSchema,
@@ -37,10 +39,16 @@ interface CarRentalDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// Generamos el tipo FormData basado en el schema (o manual si no usas zod aun)
-type FormData = Omit<z.input<typeof createCarRentalSchema>, "reservationId">;
+// ✅ 2. Ajustar FormData para manejar Date objects
+type FormData = Omit<
+  z.input<typeof createCarRentalSchema>,
+  "reservationId" | "pickupDate" | "dropoffDate"
+> & {
+  pickupDate: Date | undefined;
+  dropoffDate: Date | undefined;
+};
 
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
@@ -57,8 +65,8 @@ export function CarRentalDialog({
     bookingReference: "",
     pickupLocation: "",
     dropoffLocation: "",
-    pickupDate: "",
-    dropoffDate: "",
+    pickupDate: undefined, // Inicializar como undefined
+    dropoffDate: undefined,
     carCategory: "",
     carModel: "",
     totalPrice: 0,
@@ -70,21 +78,6 @@ export function CarRentalDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  // 🧩 Funciones utilitarias para datetime-local
-  // Formato requerido por el input: "YYYY-MM-DDTHH:mm"
-  const toDatetimeInput = (iso?: string | null) => {
-    if (!iso) return "";
-    //const date = new Date(iso);
-    // Ajuste simple para que el input muestre la hora local correctamente o UTC según tu lógica
-    // Aquí tomamos los primeros 16 caracteres de la ISO string si ya viene formateada, 
-    // o formateamos manualmente. 
-    // Opción segura:
-    return iso.slice(0, 16); 
-  };
-
-  const toIso = (localDate: string) =>
-    localDate ? new Date(localDate).toISOString() : "";
-
   // 🔄 Prellenar datos
   useEffect(() => {
     if (carRental) {
@@ -93,9 +86,9 @@ export function CarRentalDialog({
         bookingReference: carRental.bookingReference ?? "",
         pickupLocation: carRental.pickupLocation ?? "",
         dropoffLocation: carRental.dropoffLocation ?? "",
-        // Usamos la función adaptada para datetime-local
-        pickupDate: toDatetimeInput(carRental.pickupDate),
-        dropoffDate: toDatetimeInput(carRental.dropoffDate),
+        // ✅ Convertir ISO string a Date
+        pickupDate: carRental.pickupDate ? new Date(carRental.pickupDate) : undefined,
+        dropoffDate: carRental.dropoffDate ? new Date(carRental.dropoffDate) : undefined,
         carCategory: carRental.carCategory ?? "",
         carModel: carRental.carModel ?? "",
         totalPrice: carRental.totalPrice,
@@ -108,8 +101,8 @@ export function CarRentalDialog({
         bookingReference: "",
         pickupLocation: "",
         dropoffLocation: "",
-        pickupDate: "",
-        dropoffDate: "",
+        pickupDate: undefined,
+        dropoffDate: undefined,
         carCategory: "",
         carModel: "",
         totalPrice: 0,
@@ -117,18 +110,24 @@ export function CarRentalDialog({
         currency: Currency.USD,
       });
     }
+    setErrors({}); // Limpiar errores al abrir/cerrar
   }, [carRental, open]);
 
-  // 🧭 Detectar cambios
+  // 🧭 Detectar cambios (comparando timestamps)
   const hasChanges = useMemo(() => {
     if (!carRental) return true;
+
+    // Helper para comparar fechas con seguridad
+    const getTime = (d?: Date) => d?.getTime() ?? 0;
+    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+
     return !(
       formData.provider === carRental.provider &&
       formData.bookingReference === (carRental.bookingReference ?? "") &&
       formData.pickupLocation === carRental.pickupLocation &&
       formData.dropoffLocation === carRental.dropoffLocation &&
-      formData.pickupDate === toDatetimeInput(carRental.pickupDate) &&
-      formData.dropoffDate === toDatetimeInput(carRental.dropoffDate) &&
+      getTime(formData.pickupDate) === getIsoTime(carRental.pickupDate) &&
+      getTime(formData.dropoffDate) === getIsoTime(carRental.dropoffDate) &&
       formData.carCategory === carRental.carCategory &&
       formData.carModel === (carRental.carModel ?? "") &&
       Number(formData.totalPrice) === Number(carRental.totalPrice) &&
@@ -142,6 +141,15 @@ export function CarRentalDialog({
     const isEdit = Boolean(carRental);
     const schema = isEdit ? updateCarRentalSchema : createCarRentalSchema;
 
+    // 1. Validar fechas manualmente antes de Zod
+    if (!formData.pickupDate || !formData.dropoffDate) {
+      setErrors({
+        pickupDate: !formData.pickupDate ? "Requerido" : undefined,
+        dropoffDate: !formData.dropoffDate ? "Requerido" : undefined,
+      });
+      return;
+    }
+
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -149,27 +157,28 @@ export function CarRentalDialog({
       return;
     }
 
-    // Validación Zod
-    const result = schema.safeParse({
+    // 2. Preparar payload validable (convertir Dates a ISO strings para Zod)
+    const payloadToValidate = {
       ...formData,
-      ...(isEdit ? {} : { reservationId }),
+      pickupDate: formData.pickupDate.toISOString(),
+      dropoffDate: formData.dropoffDate.toISOString(),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-      // Validamos que sean fechas válidas antes de enviar al schema si este espera Date objects
-      // O dejamos strings si el schema espera strings ISO.
-    });
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
-        const key = err.path[0] as keyof FormData;
+        const key = err.path[0] as string;
         fieldErrors[key] = err.message;
       }
       setErrors(fieldErrors);
       return;
     }
 
-    // Validación Manual Lógica
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
       setErrors({
         amountPaid: "El monto pagado no puede ser mayor que el total.",
@@ -177,14 +186,14 @@ export function CarRentalDialog({
       return;
     }
 
-    // Construcción del Payload
-    const payload = {
+    // 3. Payload final para la API
+    const finalPayload = {
       provider: formData.provider,
       bookingReference: formData.bookingReference || null,
       pickupLocation: formData.pickupLocation,
       dropoffLocation: formData.dropoffLocation,
-      pickupDate: toIso(formData.pickupDate),
-      dropoffDate: toIso(formData.dropoffDate),
+      pickupDate: formData.pickupDate.toISOString(),
+      dropoffDate: formData.dropoffDate.toISOString(),
       carCategory: formData.carCategory,
       carModel: formData.carModel || null,
       totalPrice: Number(formData.totalPrice),
@@ -204,11 +213,11 @@ export function CarRentalDialog({
 
       const savedCarRental = await fetchAPI<CarRental>(endpoint, {
         method,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
 
-      onSave(savedCarRental);
-      setTimeout(() => onOpenChange(false), 100);
+      onOpenChange(false);
+      setTimeout(() => onSave(savedCarRental), 150);
     } catch {
       setErrors({
         _general: "Ocurrió un error al guardar el alquiler. Inténtalo nuevamente.",
@@ -267,38 +276,42 @@ export function CarRentalDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string}
+                value={(formData[f.id as keyof FormData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
+              {errors[f.id] && (
+                <p className="text-sm text-red-500">{errors[f.id]}</p>
               )}
             </div>
           ))}
 
-          {/* Fila 2: Fechas (datetime-local) */}
-          {[
-            { id: "pickupDate", label: "Fecha/Hora Retiro *" },
-            { id: "dropoffDate", label: "Fecha/Hora Devolución *" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
-              <Input
-                id={f.id}
-                type="datetime-local" // ⚠️ Cambio importante respecto a transfer
-                value={formData[f.id as keyof FormData] as string}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
-              )}
-            </div>
-          ))}
+          {/* ✅ Fila 2: Fechas con DateTimePicker */}
+          <div className="space-y-1">
+            <Label>Fecha/Hora Retiro *</Label>
+            <DateTimePicker
+              date={formData.pickupDate}
+              setDate={(date) => setFormData({ ...formData, pickupDate: date })}
+              includeTime={true}
+            />
+            {errors.pickupDate && (
+              <p className="text-sm text-red-500">{errors.pickupDate}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label>Fecha/Hora Devolución *</Label>
+            <DateTimePicker
+              date={formData.dropoffDate}
+              setDate={(date) => setFormData({ ...formData, dropoffDate: date })}
+              includeTime={true}
+            />
+            {errors.dropoffDate && (
+              <p className="text-sm text-red-500">{errors.dropoffDate}</p>
+            )}
+          </div>
 
           {/* Fila 3: Proveedor y Referencia */}
           {[
@@ -309,14 +322,14 @@ export function CarRentalDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string}
+                value={(formData[f.id as keyof FormData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
+              {errors[f.id] && (
+                <p className="text-sm text-red-500">{errors[f.id]}</p>
               )}
             </div>
           ))}
@@ -330,14 +343,14 @@ export function CarRentalDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string}
+                value={(formData[f.id as keyof FormData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
+              {errors[f.id] && (
+                <p className="text-sm text-red-500">{errors[f.id]}</p>
               )}
             </div>
           ))}
@@ -372,15 +385,15 @@ export function CarRentalDialog({
               <Input
                 id={f.id}
                 type="number"
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as number) || 0}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>
@@ -413,9 +426,7 @@ export function CarRentalDialog({
               {loading
                 ? "Guardando..."
                 : carRental
-                ? hasChanges
-                  ? "Guardar cambios"
-                  : "Sin cambios"
+                ? "Guardar cambios"
                 : "Crear"}
             </Button>
           </div>

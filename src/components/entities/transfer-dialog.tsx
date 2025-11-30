@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ Importamos el componente DateTimePicker
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   createTransferSchema,
@@ -36,8 +39,16 @@ interface TransferDialogProps {
   onDelete?: (id: string) => void;
 }
 
-type FormData = Omit<z.input<typeof createTransferSchema>, "reservationId">;
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+// ⚠️ Ajustamos el tipo para que las fechas sean Date | undefined en el estado local
+type FormData = Omit<
+  z.input<typeof createTransferSchema>,
+  "reservationId" | "departureDate" | "arrivalDate"
+> & {
+  departureDate: Date | undefined;
+  arrivalDate: Date | undefined;
+};
+
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
@@ -52,8 +63,8 @@ export function TransferDialog({
   const [formData, setFormData] = useState<FormData>({
     origin: "",
     destination: "",
-    departureDate: "",
-    arrivalDate: "",
+    departureDate: undefined,
+    arrivalDate: undefined,
     provider: "",
     bookingReference: "",
     transportType: TransportType.TRANSFER,
@@ -66,21 +77,15 @@ export function TransferDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  // 🧩 Funciones utilitarias
-  const toYmd = (iso?: string | null) =>
-    iso ? new Date(iso).toISOString().split("T")[0] : "";
-
-  const toIso = (ymd: string) =>
-    ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "";
-
   // 🔄 Prellenar datos
   useEffect(() => {
     if (transfer) {
       setFormData({
         origin: transfer.origin ?? "",
         destination: transfer.destination ?? "",
-        departureDate: toYmd(transfer.departureDate),
-        arrivalDate: toYmd(transfer.arrivalDate),
+        // ✅ Convertimos string ISO a Date
+        departureDate: transfer.departureDate ? new Date(transfer.departureDate) : undefined,
+        arrivalDate: transfer.arrivalDate ? new Date(transfer.arrivalDate) : undefined,
         provider: transfer.provider ?? "",
         bookingReference: transfer.bookingReference ?? "",
         transportType: transfer.transportType ?? TransportType.OTHER,
@@ -89,11 +94,12 @@ export function TransferDialog({
         currency: transfer.currency ?? Currency.USD,
       });
     } else {
+      // Reset form
       setFormData({
         origin: "",
         destination: "",
-        departureDate: "",
-        arrivalDate: "",
+        departureDate: undefined,
+        arrivalDate: undefined,
         provider: "",
         bookingReference: "",
         transportType: TransportType.TRANSFER,
@@ -102,16 +108,22 @@ export function TransferDialog({
         currency: Currency.USD,
       });
     }
+    setErrors({});
   }, [transfer, open]);
 
-  // 🧭 Detectar cambios
+  // 🧭 Detectar cambios (comparando timestamps)
   const hasChanges = useMemo(() => {
     if (!transfer) return true;
+    
+    // Helper para comparar fechas con seguridad
+    const getTime = (d?: Date) => d?.getTime() ?? 0;
+    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+
     return !(
       formData.origin === transfer.origin &&
       formData.destination === (transfer.destination ?? "") &&
-      formData.departureDate === toYmd(transfer.departureDate) &&
-      formData.arrivalDate === toYmd(transfer.arrivalDate) &&
+      getTime(formData.departureDate) === getIsoTime(transfer.departureDate) &&
+      getTime(formData.arrivalDate) === getIsoTime(transfer.arrivalDate) &&
       formData.provider === transfer.provider &&
       formData.bookingReference === (transfer.bookingReference ?? "") &&
       formData.transportType === transfer.transportType &&
@@ -126,6 +138,15 @@ export function TransferDialog({
     const isEdit = Boolean(transfer);
     const schema = isEdit ? updateTransferSchema : createTransferSchema;
 
+    // 1. Validar fechas manualmente antes de Zod
+    if (!formData.departureDate || !formData.arrivalDate) {
+      setErrors({
+        departureDate: !formData.departureDate ? "Requerido" : undefined,
+        arrivalDate: !formData.arrivalDate ? "Requerido" : undefined,
+      });
+      return;
+    }
+
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -133,17 +154,22 @@ export function TransferDialog({
       return;
     }
 
-    const result = schema.safeParse({
+    // 2. Preparar payload validable (convertir Dates a ISO strings)
+    const payloadToValidate = {
       ...formData,
-      ...(isEdit ? {} : { reservationId }),
+      departureDate: formData.departureDate.toISOString(),
+      arrivalDate: formData.arrivalDate.toISOString(),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-    });
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
-        const key = err.path[0] as keyof FormData;
+        const key = err.path[0] as string;
         fieldErrors[key] = err.message;
       }
       setErrors(fieldErrors);
@@ -157,11 +183,12 @@ export function TransferDialog({
       return;
     }
 
-    const payload = {
+    // 3. Payload final para la API
+    const finalPayload = {
       origin: formData.origin,
       destination: formData.destination || null,
-      departureDate: toIso(formData.departureDate),
-      arrivalDate: toIso(formData.arrivalDate),
+      departureDate: formData.departureDate.toISOString(),
+      arrivalDate: formData.arrivalDate.toISOString(),
       provider: formData.provider,
       bookingReference: formData.bookingReference || null,
       transportType: formData.transportType,
@@ -182,11 +209,13 @@ export function TransferDialog({
 
       const savedTransfer = await fetchAPI<Transfer>(endpoint, {
         method,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
 
-      onSave(savedTransfer);
-      setTimeout(() => onOpenChange(false), 100);
+      // Cerramos primero, luego actualizamos
+      onOpenChange(false);
+      setTimeout(() => onSave(savedTransfer), 150);
+      
     } catch {
       setErrors({
         _general: "Ocurrió un error al guardar el traslado. Inténtalo nuevamente.",
@@ -236,6 +265,7 @@ export function TransferDialog({
 
         {/* Formulario */}
         <div className="grid gap-3 md:grid-cols-2">
+          {/* Inputs de Texto normales */}
           {[
             { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
             { id: "destination", label: "Destino", placeholder: "Hotel Alvear" },
@@ -246,37 +276,43 @@ export function TransferDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof typeof formData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
+              {errors[f.id] && (
+                <p className="text-sm text-red-500">{errors[f.id]}</p>
               )}
             </div>
           ))}
 
-          {[
-            { id: "departureDate", label: "Fecha de salida *" },
-            { id: "arrivalDate", label: "Fecha de llegada *" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
-              <Input
-                id={f.id}
-                type="date"
-                value={formData[f.id as keyof FormData] as string}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">{errors[f.id as keyof FormData]}</p>
-              )}
-            </div>
-          ))}
+          {/* ✅ DATE TIME PICKERS (REEMPLAZO) */}
+          <div className="space-y-1">
+            <Label>Fecha de salida *</Label>
+            <DateTimePicker
+              date={formData.departureDate}
+              setDate={(date) => setFormData({ ...formData, departureDate: date })}
+              includeTime={true}
+            />
+            {errors.departureDate && (
+              <p className="text-sm text-red-500">{errors.departureDate}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label>Fecha de llegada *</Label>
+            <DateTimePicker
+              date={formData.arrivalDate}
+              setDate={(date) => setFormData({ ...formData, arrivalDate: date })}
+              includeTime={true}
+            />
+            {errors.arrivalDate && (
+              <p className="text-sm text-red-500">{errors.arrivalDate}</p>
+            )}
+          </div>
+
 
           {/* Tipo de transporte */}
           <div className="space-y-1">
@@ -330,15 +366,15 @@ export function TransferDialog({
               <Input
                 id={f.id}
                 type="number"
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as number) || 0}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>
@@ -366,14 +402,12 @@ export function TransferDialog({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={loading || (transfer && !hasChanges)}
+              disabled={loading}
             >
               {loading
                 ? "Guardando..."
                 : transfer
-                ? hasChanges
-                  ? "Guardar cambios"
-                  : "Sin cambios"
+                ? "Guardar cambios"
                 : "Crear"}
             </Button>
           </div>

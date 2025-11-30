@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ 1. Importar el componente
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   createExcursionSchema,
@@ -36,9 +39,15 @@ interface ExcursionDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// 🧠 Tipos derivados del schema
-type FormData = Omit<z.input<typeof createExcursionSchema>, "reservationId">;
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+// ✅ 2. Ajustar FormData para usar Date | undefined
+type FormData = Omit<
+  z.input<typeof createExcursionSchema>,
+  "reservationId" | "excursionDate"
+> & {
+  excursionDate: Date | undefined;
+};
+
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
@@ -55,7 +64,7 @@ export function ExcursionDialog({
     origin: "",
     provider: "",
     bookingReference: "",
-    excursionDate: "",
+    excursionDate: undefined, // Inicializar como undefined
     totalPrice: 0,
     amountPaid: 0,
     currency: Currency.USD,
@@ -65,13 +74,6 @@ export function ExcursionDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  // 🧩 Utilidades
-  const toYmd = (iso?: string | null) =>
-    iso ? new Date(iso).toISOString().split("T")[0] : "";
-
-  const toIso = (ymd: string) =>
-    ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "";
-
   // 🔄 Cargar datos si se está editando
   useEffect(() => {
     if (excursion) {
@@ -80,7 +82,8 @@ export function ExcursionDialog({
         origin: excursion.origin ?? "",
         provider: excursion.provider ?? "",
         bookingReference: excursion.bookingReference ?? "",
-        excursionDate: toYmd(excursion.excursionDate),
+        // ✅ Convertir ISO string a Date
+        excursionDate: excursion.excursionDate ? new Date(excursion.excursionDate) : undefined,
         totalPrice: excursion.totalPrice ?? 0,
         amountPaid: excursion.amountPaid ?? 0,
         currency: excursion.currency ?? Currency.USD,
@@ -91,23 +94,29 @@ export function ExcursionDialog({
         origin: "",
         provider: "",
         bookingReference: "",
-        excursionDate: "",
+        excursionDate: undefined,
         totalPrice: 0,
         amountPaid: 0,
         currency: Currency.USD,
       });
     }
+    setErrors({});
   }, [excursion, open]);
 
   // 🧭 Detectar cambios
   const hasChanges = useMemo(() => {
     if (!excursion) return true;
+
+    // Helper para comparar fechas
+    const getTime = (d?: Date) => d?.getTime() ?? 0;
+    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+
     return !(
       formData.excursionName === excursion.excursionName &&
       formData.origin === excursion.origin &&
       formData.provider === excursion.provider &&
       formData.bookingReference === (excursion.bookingReference ?? "") &&
-      formData.excursionDate === toYmd(excursion.excursionDate) &&
+      getTime(formData.excursionDate) === getIsoTime(excursion.excursionDate) &&
       Number(formData.totalPrice) === Number(excursion.totalPrice) &&
       Number(formData.amountPaid) === Number(excursion.amountPaid) &&
       formData.currency === excursion.currency
@@ -119,6 +128,12 @@ export function ExcursionDialog({
     const isEdit = Boolean(excursion);
     const schema = isEdit ? updateExcursionSchema : createExcursionSchema;
 
+    // 1. Validar fecha manualmente
+    if (!formData.excursionDate) {
+      setErrors({ excursionDate: "La fecha y hora son obligatorias." });
+      return;
+    }
+
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -126,17 +141,21 @@ export function ExcursionDialog({
       return;
     }
 
-    const result = schema.safeParse({
+    // 2. Preparar payload validable
+    const payloadToValidate = {
       ...formData,
-      ...(isEdit ? {} : { reservationId }),
+      excursionDate: formData.excursionDate.toISOString(),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-    });
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
-        const key = err.path[0] as keyof FormData;
+        const key = err.path[0] as string;
         fieldErrors[key] = err.message;
       }
       setErrors(fieldErrors);
@@ -150,12 +169,13 @@ export function ExcursionDialog({
       return;
     }
 
+    // 3. Payload final
     const payload = {
       excursionName: formData.excursionName,
       origin: formData.origin,
       provider: formData.provider,
       bookingReference: formData.bookingReference || null,
-      excursionDate: toIso(formData.excursionDate),
+      excursionDate: formData.excursionDate.toISOString(),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
       ...(isEdit
@@ -176,8 +196,8 @@ export function ExcursionDialog({
         body: JSON.stringify(payload),
       });
 
-      onSave(savedExcursion);
-      setTimeout(() => onOpenChange(false), 100);
+      onOpenChange(false);
+      setTimeout(() => onSave(savedExcursion), 150);
     } catch {
       setErrors({
         _general:
@@ -240,29 +260,27 @@ export function ExcursionDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>
           ))}
 
+          {/* ✅ Fechas con DateTimePicker (includeTime={true}) */}
           <div className="space-y-1">
-            <Label htmlFor="excursionDate">Fecha de la excursión *</Label>
-            <Input
-              id="excursionDate"
-              type="date"
-              value={formData.excursionDate}
-              onChange={(e) =>
-                setFormData({ ...formData, excursionDate: e.target.value })
-              }
+            <Label htmlFor="excursionDate">Fecha y hora *</Label>
+            <DateTimePicker
+              date={formData.excursionDate}
+              setDate={(date) => setFormData({ ...formData, excursionDate: date })}
+              includeTime={true} // 👈 Con hora
             />
             {errors.excursionDate && (
               <p className="text-sm text-red-500">{errors.excursionDate}</p>
@@ -299,15 +317,15 @@ export function ExcursionDialog({
               <Input
                 id={f.id}
                 type="number"
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as number) || 0}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>

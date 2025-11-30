@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ 1. Importar el componente
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   createCruiseSchema,
@@ -36,8 +39,16 @@ interface CruiseDialogProps {
   onDelete?: (id: string) => void;
 }
 
-type FormData = Omit<z.input<typeof createCruiseSchema>, "reservationId">;
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+// ✅ 2. Ajustar FormData para usar Date | undefined
+type FormData = Omit<
+  z.input<typeof createCruiseSchema>,
+  "reservationId" | "startDate" | "endDate"
+> & {
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+};
+
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
@@ -54,8 +65,8 @@ export function CruiseDialog({
     embarkationPort: "",
     arrivalPort: "",
     bookingReference: "",
-    startDate: "",
-    endDate: "",
+    startDate: undefined,
+    endDate: undefined,
     totalPrice: 0,
     amountPaid: 0,
     currency: Currency.USD,
@@ -65,20 +76,7 @@ export function CruiseDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  // Utilidades fecha
-  const toYmd = (d?: string | null) => {
-    if (!d) return "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-    const dt = new Date(d);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(
-      dt.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const toIso = (ymd: string) =>
-    ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "";
-
-  // 🧩 Prellenar datos al abrir
+  // 🔄 Prellenar datos
   useEffect(() => {
     if (cruise) {
       setFormData({
@@ -86,8 +84,9 @@ export function CruiseDialog({
         embarkationPort: cruise.embarkationPort ?? "",
         arrivalPort: cruise.arrivalPort ?? "",
         bookingReference: cruise.bookingReference ?? "",
-        startDate: toYmd(cruise.startDate),
-        endDate: toYmd(cruise.endDate),
+        // ✅ Convertir ISO string a Date
+        startDate: cruise.startDate ? new Date(cruise.startDate) : undefined,
+        endDate: cruise.endDate ? new Date(cruise.endDate) : undefined,
         totalPrice: cruise.totalPrice,
         amountPaid: cruise.amountPaid,
         currency: cruise.currency,
@@ -98,25 +97,31 @@ export function CruiseDialog({
         embarkationPort: "",
         arrivalPort: "",
         bookingReference: "",
-        startDate: "",
-        endDate: "",
+        startDate: undefined,
+        endDate: undefined,
         totalPrice: 0,
         amountPaid: 0,
         currency: Currency.USD,
       });
     }
+    setErrors({});
   }, [cruise, open]);
 
   // 🧭 Detectar cambios
   const hasChanges = useMemo(() => {
     if (!cruise) return true;
+
+    // Helper para comparar fechas
+    const getTime = (d?: Date) => d?.getTime() ?? 0;
+    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+
     return !(
       formData.provider === (cruise.provider ?? "") &&
       formData.embarkationPort === (cruise.embarkationPort ?? "") &&
       formData.arrivalPort === (cruise.arrivalPort ?? "") &&
       formData.bookingReference === (cruise.bookingReference ?? "") &&
-      formData.startDate === toYmd(cruise.startDate) &&
-      formData.endDate === toYmd(cruise.endDate) &&
+      getTime(formData.startDate) === getIsoTime(cruise.startDate) &&
+      getTime(formData.endDate) === getIsoTime(cruise.endDate) &&
       Number(formData.totalPrice) === Number(cruise.totalPrice) &&
       Number(formData.amountPaid) === Number(cruise.amountPaid) &&
       formData.currency === cruise.currency
@@ -128,6 +133,12 @@ export function CruiseDialog({
     const isEdit = Boolean(cruise);
     const schema = isEdit ? updateCruiseSchema : createCruiseSchema;
 
+    // 1. Validar fecha de inicio manualmente
+    if (!formData.startDate) {
+      setErrors({ startDate: "La fecha de salida es obligatoria." });
+      return;
+    }
+
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -135,17 +146,22 @@ export function CruiseDialog({
       return;
     }
 
-    const result = schema.safeParse({
+    // 2. Preparar payload validable
+    const payloadToValidate = {
       ...formData,
-      ...(isEdit ? {} : { reservationId }),
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate ? formData.endDate.toISOString() : undefined,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-    });
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
-        const key = err.path[0] as keyof FormData;
+        const key = err.path[0] as string;
         fieldErrors[key] = err.message;
       }
       setErrors(fieldErrors);
@@ -159,13 +175,14 @@ export function CruiseDialog({
       return;
     }
 
-    const payload = {
+    // 3. Payload final
+    const finalPayload = {
       provider: formData.provider,
       embarkationPort: formData.embarkationPort,
       arrivalPort: formData.arrivalPort || null,
       bookingReference: formData.bookingReference || null,
-      startDate: toIso(formData.startDate),
-      endDate: formData.endDate ? toIso(formData.endDate) : null,
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate ? formData.endDate.toISOString() : null,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
       ...(isEdit
@@ -183,11 +200,11 @@ export function CruiseDialog({
 
       const savedCruise = await fetchAPI<Cruise>(endpoint, {
         method,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
 
-      onSave(savedCruise);
-      setTimeout(() => onOpenChange(false), 100);
+      onOpenChange(false);
+      setTimeout(() => onSave(savedCruise), 150);
     } catch {
       setErrors({
         _general: "Ocurrió un error al guardar el crucero. Inténtalo nuevamente.",
@@ -247,41 +264,44 @@ export function CruiseDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>
           ))}
 
-          {[
-            { id: "startDate", label: "Fecha de salida *" },
-            { id: "endDate", label: "Fecha de llegada" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
-              <Input
-                id={f.id}
-                type="date"
-                value={formData[f.id as keyof FormData] as string}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
-                </p>
-              )}
-            </div>
-          ))}
+          {/* ✅ Fechas con DateTimePicker (includeTime={false}) */}
+          <div className="space-y-1">
+            <Label>Fecha de salida *</Label>
+            <DateTimePicker
+              date={formData.startDate}
+              setDate={(date) => setFormData({ ...formData, startDate: date })}
+              includeTime={false} // 👈 Solo fecha
+            />
+            {errors.startDate && (
+              <p className="text-sm text-red-500">{errors.startDate}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label>Fecha de llegada</Label>
+            <DateTimePicker
+              date={formData.endDate}
+              setDate={(date) => setFormData({ ...formData, endDate: date })}
+              includeTime={false} // 👈 Solo fecha
+            />
+            {errors.endDate && (
+              <p className="text-sm text-red-500">{errors.endDate}</p>
+            )}
+          </div>
 
           {/* Moneda (solo en creación) */}
           {!cruise && (
@@ -316,15 +336,15 @@ export function CruiseDialog({
               <Input
                 id={f.id}
                 type="number"
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as number) || 0}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>

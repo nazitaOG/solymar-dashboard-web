@@ -103,6 +103,8 @@ export default function ReservationDetailPage() {
   };
 
 
+
+
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
   const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
     try {
@@ -348,7 +350,7 @@ export default function ReservationDetailPage() {
       }[]
     ) => {
       // Protección contra items undefined o null
-      if (!items) return; 
+      if (!items) return;
 
       for (const item of items) {
         const currency = item.currency ?? "USD"
@@ -408,7 +410,7 @@ export default function ReservationDetailPage() {
     reservation?.transfers,
     reservation?.excursions,
     reservation?.medicalAssists,
-    reservation?.carRentals, // 🆕 Dependencia nueva
+    reservation?.carRentals,
   ])
 
 
@@ -495,6 +497,9 @@ export default function ReservationDetailPage() {
         : [...prev.planes, savedPlane];
       return { ...prev, planes: updatedPlanes };
     });
+
+    // FIX CRÍTICO: Actualizar selectedPlane con los datos frescos
+    setSelectedPlane(savedPlane);
   };
 
 
@@ -618,21 +623,35 @@ export default function ReservationDetailPage() {
   function formatCurrency(
     value?: number | null,
     currency?: string,
-    locale = "es-AR"
   ): string {
+    const safeValue = typeof value === "number" ? value : 0;
+    // Aseguramos que la moneda sea válida, default a USD
     const safeCurrency =
       currency && typeof currency === "string" && currency.length === 3
         ? currency
         : "USD";
-    const safeValue = typeof value === "number" ? value : 0;
 
+    // ✅ CASO ESPECIAL: Pesos Argentinos
+    // Forzamos el prefijo "AR$" formateando como decimal
+    if (safeCurrency === "ARS") {
+      const number = new Intl.NumberFormat("es-AR", {
+        style: "decimal",
+        minimumFractionDigits: 2, // Usamos 2 decimales para precisión en tablas
+        maximumFractionDigits: 2,
+      }).format(safeValue);
+      return `AR$ ${number}`;
+    }
+
+    // ✅ CASO ESTÁNDAR: USD y otras monedas
+    // Usa el formato de moneda nativo (ej: US$ para USD en locale es-AR)
     try {
-      return new Intl.NumberFormat(locale, {
+      return new Intl.NumberFormat("es-AR", {
         style: "currency",
         currency: safeCurrency,
         minimumFractionDigits: 2,
       }).format(safeValue);
     } catch {
+      // Fallback por si la moneda es rara
       return `${safeCurrency} ${safeValue.toFixed(2)}`;
     }
   }
@@ -706,10 +725,10 @@ export default function ReservationDetailPage() {
         const plane = row as unknown as PlaneType;
         const segs = plane.segments ?? [];
         if (segs.length === 0) return <span className="text-muted-foreground">—</span>;
-  
+
         const first = segs[0];
         const last = segs[segs.length - 1];
-  
+
         return (
           <div className="text-sm">
             <div>{fmt(first.departureDate)}</div>
@@ -729,29 +748,16 @@ export default function ReservationDetailPage() {
     {
       key: "totalPrice",
       label: "Precio",
-      render: (_value: unknown, row: Record<string, unknown>) => {
-        const plane = row as unknown as PlaneType;
-  
-        return (
-          <div className="text-sm">
-            <div className="font-medium">
-              {plane.amountPaid.toLocaleString("es-AR", {
-                style: "currency",
-                currency: plane.currency,
-                minimumFractionDigits: 2,
-              })}
-            </div>
-            <div className="text-muted-foreground">
-              de{" "}
-              {plane.totalPrice.toLocaleString("es-AR", {
-                style: "currency",
-                currency: plane.currency,
-                minimumFractionDigits: 2,
-              })}
-            </div>
+      render: (_v, row) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
-        );
-      },
+          <div className="text-muted-foreground">
+            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
+          </div>
+        </div>
+      ),
     },
   ];
 
@@ -890,8 +896,8 @@ export default function ReservationDetailPage() {
   // 🆕 Car Rental Columns
   const carRentalColumns: Column[] = [
     { key: "provider", label: "Proveedor" },
-    { 
-      key: "carCategory", 
+    {
+      key: "carCategory",
       label: "Vehículo",
       render: (_v, row) => {
         // ✅ Aserción de tipo segura: row -> unknown -> CarRental
@@ -959,8 +965,8 @@ export default function ReservationDetailPage() {
           Volver a reservas
         </Button>
 
-        <div className="flex flex-col gap-8"> 
-          
+        <div className="flex flex-col gap-8">
+
           {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
           <div className="space-y-6">
             <ReservationDetailHeader
@@ -995,7 +1001,7 @@ export default function ReservationDetailPage() {
               </TabsList>
 
               {/* ... (Aquí van todos tus TabsContent: hotels, planes, cruises, etc. sin cambios) ... */}
-              
+
               <TabsContent value="hotels" className="space-y-4">
                 <div className="flex mt-2 justify-start">
                   <Button onClick={handleCreateHotel}>Crear Hotel</Button>
@@ -1014,7 +1020,7 @@ export default function ReservationDetailPage() {
 
               <TabsContent value="planes" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                   <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
+                  <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
                 </div>
                 <EntityTable
                   data={reservation.planes as unknown as Record<string, unknown>[]}
@@ -1117,7 +1123,7 @@ export default function ReservationDetailPage() {
       {/* ... resto de dialogos ... */}
       {planeDialogOpen && (
         <PlaneDialog
-          key="plane-dialog"
+          key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : 'new-plane'}
           open={planeDialogOpen}
           onOpenChange={setPlaneDialogOpen}
           plane={selectedPlane}

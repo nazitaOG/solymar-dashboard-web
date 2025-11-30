@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ 1. Importar el componente
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import {
   createHotelSchema,
   updateHotelSchema,
@@ -36,9 +39,16 @@ interface HotelDialogProps {
   onDelete?: (id: string) => void;
 }
 
-type FormData = Omit<z.input<typeof createHotelSchema>, "reservationId">;
+// ✅ 2. Ajustar FormData para manejar Date | undefined
+type FormData = Omit<
+  z.input<typeof createHotelSchema>,
+  "reservationId" | "startDate" | "endDate"
+> & {
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+};
 
-interface FormErrors extends Partial<Record<keyof FormData, string>> {
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
@@ -51,8 +61,8 @@ export function HotelDialog({
   onDelete,
 }: HotelDialogProps) {
   const [formData, setFormData] = useState<FormData>({
-    startDate: "",
-    endDate: "",
+    startDate: undefined, // Inicializar como undefined
+    endDate: undefined,
     city: "",
     hotelName: "",
     bookingReference: "",
@@ -67,24 +77,13 @@ export function HotelDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  const toYmd = (d?: string): string => {
-    if (!d) return "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-    const dt = new Date(d);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(
-      dt.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const toIso = (ymd: string): string =>
-    ymd ? new Date(`${ymd}T12:00:00`).toISOString() : "";
-
-  // 🧩 Prellenar datos al abrir
+  // 🔄 Prellenar datos al abrir
   useEffect(() => {
     if (hotel) {
       setFormData({
-        startDate: toYmd(hotel.startDate),
-        endDate: toYmd(hotel.endDate),
+        // ✅ Convertir ISO string a Date
+        startDate: hotel.startDate ? new Date(hotel.startDate) : undefined,
+        endDate: hotel.endDate ? new Date(hotel.endDate) : undefined,
         city: hotel.city,
         hotelName: hotel.hotelName,
         bookingReference: hotel.bookingReference,
@@ -96,8 +95,8 @@ export function HotelDialog({
       });
     } else {
       setFormData({
-        startDate: "",
-        endDate: "",
+        startDate: undefined,
+        endDate: undefined,
         city: "",
         hotelName: "",
         bookingReference: "",
@@ -108,14 +107,20 @@ export function HotelDialog({
         currency: Currency.USD,
       });
     }
+    setErrors({});
   }, [hotel, open]);
 
   // 🧭 Comparar si hubo cambios (solo modo edición)
   const hasChanges = useMemo(() => {
-    if (!hotel) return true; // si es creación, siempre hay "cambios"
+    if (!hotel) return true;
+
+    // Helper para comparar fechas con seguridad
+    const getTime = (d?: Date) => d?.getTime() ?? 0;
+    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+
     return !(
-      formData.startDate === toYmd(hotel.startDate) &&
-      formData.endDate === toYmd(hotel.endDate) &&
+      getTime(formData.startDate) === getIsoTime(hotel.startDate) &&
+      getTime(formData.endDate) === getIsoTime(hotel.endDate) &&
       formData.city === hotel.city &&
       formData.hotelName === hotel.hotelName &&
       formData.bookingReference === hotel.bookingReference &&
@@ -131,6 +136,15 @@ export function HotelDialog({
     const isEdit = Boolean(hotel);
     const schema = isEdit ? updateHotelSchema : createHotelSchema;
 
+    // 1. Validar fechas manualmente
+    if (!formData.startDate || !formData.endDate) {
+      setErrors({
+        startDate: !formData.startDate ? "Requerido" : undefined,
+        endDate: !formData.endDate ? "Requerido" : undefined,
+      });
+      return;
+    }
+
     // 🚫 Si es edición y no hay cambios
     if (isEdit && !hasChanges) {
       setErrors({
@@ -139,17 +153,22 @@ export function HotelDialog({
       return;
     }
 
-    const result = schema.safeParse({
+    // 2. Preparar payload validable
+    const payloadToValidate = {
       ...formData,
-      ...(isEdit ? {} : { reservationId }),
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate.toISOString(),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-    });
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
-        const key = err.path[0] as keyof FormData;
+        const key = err.path[0] as string;
         fieldErrors[key] = err.message;
       }
       setErrors(fieldErrors);
@@ -163,9 +182,10 @@ export function HotelDialog({
       return;
     }
 
+    // 3. Payload final
     const payload = {
-      startDate: toIso(formData.startDate),
-      endDate: toIso(formData.endDate),
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate.toISOString(),
       city: formData.city,
       hotelName: formData.hotelName,
       bookingReference: formData.bookingReference,
@@ -252,42 +272,44 @@ export function HotelDialog({
               <Label htmlFor={f.id}>{f.label}</Label>
               <Input
                 id={f.id}
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof typeof formData] as string) || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>
           ))}
 
-          {/* Fechas */}
-          {[
-            { id: "startDate", label: "Fecha de entrada *" },
-            { id: "endDate", label: "Fecha de salida *" },
-          ].map((f) => (
-            <div key={f.id}>
-              <Label htmlFor={f.id}>{f.label}</Label>
-              <Input
-                id={f.id}
-                type="date"
-                value={formData[f.id as keyof FormData] as string}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
-                </p>
-              )}
-            </div>
-          ))}
+          {/* ✅ Fechas con DateTimePicker (includeTime={false}) */}
+          <div className="space-y-1">
+            <Label>Fecha de entrada *</Label>
+            <DateTimePicker
+              date={formData.startDate}
+              setDate={(date) => setFormData({ ...formData, startDate: date })}
+              includeTime={false} // 👈 Sin hora
+            />
+            {errors.startDate && (
+              <p className="text-sm text-red-500">{errors.startDate}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label>Fecha de salida *</Label>
+            <DateTimePicker
+              date={formData.endDate}
+              setDate={(date) => setFormData({ ...formData, endDate: date })}
+              includeTime={false} // 👈 Sin hora
+            />
+            {errors.endDate && (
+              <p className="text-sm text-red-500">{errors.endDate}</p>
+            )}
+          </div>
 
           {/* Moneda solo en creación */}
           {!hotel && (
@@ -323,15 +345,15 @@ export function HotelDialog({
               <Input
                 id={f.id}
                 type="number"
-                value={formData[f.id as keyof FormData] as string | number}
+                value={(formData[f.id as keyof FormData] as number) || 0}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
               />
-              {errors[f.id as keyof FormData] && (
+              {errors[f.id] && (
                 <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
+                  {errors[f.id]}
                 </p>
               )}
             </div>

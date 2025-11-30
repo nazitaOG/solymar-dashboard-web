@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+
 import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   createPlaneSchema,
@@ -37,12 +39,22 @@ interface PlaneDialogProps {
   onDelete?: (id: string) => void;
 }
 
-type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId">;
+// Tipado estricto del Formulario
+type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId" | "segments"> & {
+  segments: {
+    segmentOrder: number;
+    departure: string;
+    arrival: string;
+    departureDate: Date | undefined;
+    arrivalDate: Date | undefined;
+    airline?: string;
+    flightNumber?: string;
+  }[];
+};
 
-interface FormErrors extends Partial<Record<keyof FormData | "segments", string>> {
+interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
-
 
 export function PlaneDialog({
   open,
@@ -67,6 +79,20 @@ export function PlaneDialog({
   const deleteLock = useRef(false);
 
   useEffect(() => {
+    if (!open) {
+      setFormData({
+        bookingReference: "",
+        provider: "",
+        totalPrice: 0,
+        amountPaid: 0,
+        notes: "",
+        currency: Currency.USD,
+        segments: [],
+      });
+      setErrors({});
+      return;
+    }
+  
     if (plane) {
       setFormData({
         bookingReference: plane.bookingReference ?? "",
@@ -79,8 +105,8 @@ export function PlaneDialog({
           segmentOrder: s.segmentOrder,
           departure: s.departure,
           arrival: s.arrival,
-          departureDate: s.departureDate,
-          arrivalDate: s.arrivalDate,
+          departureDate: s.departureDate ? new Date(s.departureDate) : undefined,
+          arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
           airline: s.airline ?? "",
           flightNumber: s.flightNumber ?? "",
         })),
@@ -96,78 +122,70 @@ export function PlaneDialog({
         segments: [],
       });
     }
-  }, [plane, open]);
+    setErrors({});
+  }, [open, plane]);
 
-  // Update a segment
   const updateSegment = (
     index: number,
     field: keyof FormData["segments"][number],
-    value: string,
+    value: string | Date | undefined,
   ) => {
-    setFormData({
-      ...formData,
-      segments: formData.segments!.map((s, i) =>
+    setFormData((prev) => ({
+      ...prev,
+      segments: prev.segments.map((s, i) =>
         i === index ? { ...s, [field]: value } : s,
       ),
-    });
+    }));
   };
 
   const removeSegment = (index: number) => {
     setFormData({
       ...formData,
-      segments: formData.segments!
+      segments: formData.segments
         .filter((_, i) => i !== index)
         .map((s, i) => ({ ...s, segmentOrder: i + 1 })),
     });
   };
 
   const handleSave = async () => {
+    const hasInvalidDates = formData.segments.some(
+      s => !s.departureDate || !s.arrivalDate
+    );
+    if (hasInvalidDates) {
+      setErrors({ segments: "Todas las fechas son obligatorias." });
+      return;
+    }
+
     const isEdit = Boolean(plane);
     const schema = isEdit ? updatePlaneSchema : createPlaneSchema;
 
-    const result = schema.safeParse({
+    const payloadToValidate = {
       ...formData,
-      segments: formData.segments.map((s, i) => ({
-        ...s,
-        segmentOrder: i + 1,
-      })),
-      ...(isEdit ? {} : { reservationId }),
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-    });
+      segments: formData.segments.map((s, i) => ({
+        segmentOrder: i + 1,
+        departure: s.departure,
+        arrival: s.arrival,
+        departureDate: s.departureDate!.toISOString(),
+        arrivalDate: s.arrivalDate!.toISOString(),
+        airline: s.airline || undefined,
+        flightNumber: s.flightNumber || undefined,
+      })),
+      ...(isEdit ? {} : { reservationId }),
+    };
+
+    const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const issue of result.error.issues) {
-        const key = issue.path[0] as keyof FormData;
+        const key = issue.path[0] as string;
         if (key) fieldErrors[key] = issue.message;
       }
       setErrors(fieldErrors);
       return;
     }
-
-    const payload = {
-      bookingReference: formData.bookingReference,
-      provider: formData.provider || null,
-      totalPrice: Number(formData.totalPrice),
-      amountPaid: Number(formData.amountPaid),
-      notes: formData.notes || null,
-      segments: formData.segments.map((s, i) => ({
-        segmentOrder: i + 1,
-        departure: s.departure,
-        arrival: s.arrival,
-        departureDate: new Date(s.departureDate).toISOString(),
-        arrivalDate: new Date(s.arrivalDate).toISOString(),
-        airline: s.airline || null,
-        flightNumber: s.flightNumber || null,
-      })),
-      ...(isEdit
-        ? {}
-        : {
-          reservationId,
-          currency: formData.currency,
-        }),
-    };
 
     try {
       setLoading(true);
@@ -176,11 +194,14 @@ export function PlaneDialog({
 
       const saved = await fetchAPI<Plane>(endpoint, {
         method,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payloadToValidate),
       });
 
-      onSave(saved);
-      setTimeout(() => onOpenChange(false), 100);
+      onOpenChange(false);
+      setTimeout(() => {
+        onSave(saved);
+      }, 150);
+
     } catch {
       setErrors({ _general: "Error al guardar el vuelo." });
     } finally {
@@ -219,45 +240,39 @@ export function PlaneDialog({
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          {[
-            { id: "bookingReference", label: "Referencia *" },
-            { id: "provider", label: "Proveedor (opcional)" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+          {(["bookingReference", "provider"] as const).map((key) => (
+            <div key={key} className="space-y-1">
+              <Label htmlFor={key}>
+                {key === "bookingReference" ? "Referencia *" : "Proveedor (opcional)"}
+              </Label>
               <Input
-                id={f.id}
-                value={formData[f.id as keyof FormData] as string}
+                id={key}
+                value={formData[key]}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
+                  setFormData({ ...formData, [key]: e.target.value })
                 }
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
-                </p>
+              {errors[key] && (
+                <p className="text-sm text-red-500">{errors[key]}</p>
               )}
             </div>
           ))}
 
-          {[
-            { id: "totalPrice", label: "Precio total *" },
-            { id: "amountPaid", label: "Monto pagado *" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+          {(["totalPrice", "amountPaid"] as const).map((key) => (
+            <div key={key} className="space-y-1">
+              <Label htmlFor={key}>
+                {key === "totalPrice" ? "Precio total *" : "Monto pagado *"}
+              </Label>
               <Input
-                id={f.id}
+                id={key}
                 type="number"
-                value={formData[f.id as keyof FormData] as number}
+                value={formData[key as keyof FormData] as string | number}
                 onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
+                  setFormData({ ...formData, [key]: Number(e.target.value) })
                 }
               />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
-                  {errors[f.id as keyof FormData]}
-                </p>
+              {errors[key] && (
+                <p className="text-sm text-red-500">{errors[key]}</p>
               )}
             </div>
           ))}
@@ -279,9 +294,6 @@ export function PlaneDialog({
                   <SelectItem value="ARS">ARS</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.currency && (
-                <p className="text-sm text-red-500">{errors.currency}</p>
-              )}
             </div>
           )}
         </div>
@@ -295,7 +307,6 @@ export function PlaneDialog({
           />
         </div>
 
-        {/* SEGMENTS */}
         <div className="mt-5 space-y-3">
           <div>
             <div className="flex justify-between items-center">
@@ -313,8 +324,8 @@ export function PlaneDialog({
                         segmentOrder: formData.segments.length + 1,
                         departure: "",
                         arrival: "",
-                        departureDate: "",
-                        arrivalDate: "",
+                        departureDate: undefined,
+                        arrivalDate: undefined,
                         airline: "",
                         flightNumber: "",
                       },
@@ -326,72 +337,88 @@ export function PlaneDialog({
               </Button>
             </div>
             {errors.segments && (
-              <p className="text-sm text-red-500">{errors.segments}</p>
+              <p className="text-sm text-red-500 mt-1">{errors.segments}</p>
             )}
           </div>
+
           {formData.segments.map((seg, index) => (
-            <div key={index} className="border p-3 rounded-md space-y-2">
-              <p className="text-sm font-semibold">
-                Tramo #{index + 1}
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Origen (EZE)"
-                  value={seg.departure}
-                  onChange={(e) =>
-                    updateSegment(index, "departure", e.target.value)
-                  }
-                />
-                <Input
-                  placeholder="Destino (MIA)"
-                  value={seg.arrival}
-                  onChange={(e) =>
-                    updateSegment(index, "arrival", e.target.value)
-                  }
-                />
+            <div key={index} className="border p-4 rounded-md space-y-4 bg-muted/10">
+              <div className="flex justify-between items-center">
+                <p className="text-sm font-semibold">
+                  Tramo #{index + 1}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 h-8 hover:text-red-600"
+                  onClick={() => removeSegment(index)}
+                >
+                  Eliminar
+                </Button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="datetime-local"
-                  value={seg.departureDate}
-                  onChange={(e) =>
-                    updateSegment(index, "departureDate", e.target.value)
-                  }
-                />
-                <Input
-                  type="datetime-local"
-                  value={seg.arrivalDate}
-                  onChange={(e) =>
-                    updateSegment(index, "arrivalDate", e.target.value)
-                  }
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Origen</Label>
+                  <Input
+                    placeholder="EZE"
+                    value={seg.departure}
+                    onChange={(e) =>
+                      updateSegment(index, "departure", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Destino</Label>
+                  <Input
+                    placeholder="MIA"
+                    value={seg.arrival}
+                    onChange={(e) =>
+                      updateSegment(index, "arrival", e.target.value)
+                    }
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Salida</Label>
+                  {/* 🔴 CORREGIDO: key estable basada en el índice, NO en la fecha */}
+                  <DateTimePicker
+                    key={`departure-${index}`} 
+                    date={seg.departureDate}
+                    setDate={(date) => updateSegment(index, "departureDate", date)}
+                    includeTime={true}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Llegada</Label>
+                   {/* 🔴 CORREGIDO: key estable basada en el índice */}
+                  <DateTimePicker
+                    key={`arrival-${index}`}
+                    date={seg.arrivalDate}
+                    setDate={(date) => updateSegment(index, "arrivalDate", date)}
+                    includeTime={true}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <Input
-                  placeholder="Aerolínea (opcional)"
+                  placeholder="Aerolínea"
                   value={seg.airline ?? ""}
                   onChange={(e) =>
                     updateSegment(index, "airline", e.target.value)
                   }
                 />
                 <Input
-                  placeholder="Vuelo (opcional)"
+                  placeholder="Nro. Vuelo"
                   value={seg.flightNumber ?? ""}
                   onChange={(e) =>
                     updateSegment(index, "flightNumber", e.target.value)
                   }
                 />
               </div>
-
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => removeSegment(index)}
-              >
-                Eliminar tramo
-              </Button>
             </div>
           ))}
         </div>
