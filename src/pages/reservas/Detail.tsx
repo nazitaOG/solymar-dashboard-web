@@ -102,7 +102,24 @@ export default function ReservationDetailPage() {
     return format(d, "dd MMM yyyy HH:mm", { locale: es });
   };
 
-
+  // 🔥 Helper: Refrescar solo la data "meta" de la reserva (fechas, usuario que modificó)
+  // Esto asegura que el AuditPanel muestre la info real del servidor
+  const updateReservationMetadata = useCallback(async () => {
+    if (!id) return;
+    try {
+      // Pedimos la reserva actualizada al backend
+      const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}`);
+      
+      setReservation((prev) => ({
+        ...prev,
+        updatedAt: freshData.updatedAt,
+        updatedBy: freshData.updatedBy,
+        // Si el backend recalcula estado o totales, podrías actualizar más cosas aquí
+      }));
+    } catch (err) {
+      console.error("⚠️ No se pudo actualizar la metadata de la reserva:", err);
+    }
+  }, [id]);
 
 
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
@@ -113,11 +130,12 @@ export default function ReservationDetailPage() {
         ...prev,
         hotels: prev.hotels.filter((h) => h.id !== hotelId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar hotel (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
   const handleDeleteHotelLocal = useCallback((hotelId: string) => {
@@ -125,7 +143,8 @@ export default function ReservationDetailPage() {
       ...prev,
       hotels: prev.hotels.filter((h) => h.id !== hotelId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
   const handleDeletePlaneServer = useCallback(async (planeId: string) => {
@@ -135,11 +154,12 @@ export default function ReservationDetailPage() {
         ...prev,
         planes: prev.planes.filter((p) => p.id !== planeId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar vuelo (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
   const handleDeletePlaneLocal = useCallback((planeId: string) => {
@@ -147,7 +167,8 @@ export default function ReservationDetailPage() {
       ...prev,
       planes: prev.planes.filter((p) => p.id !== planeId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
   const handleDeleteCruiseServer = useCallback(async (cruiseId: string) => {
@@ -157,11 +178,12 @@ export default function ReservationDetailPage() {
         ...prev,
         cruises: prev.cruises.filter((c) => c.id !== cruiseId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar crucero (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // ✅ 2) Borrado disparado por el diálogo (ya hizo DELETE → solo actualiza estado)
   const handleDeleteCruiseLocal = useCallback((cruiseId: string) => {
@@ -169,7 +191,8 @@ export default function ReservationDetailPage() {
       ...prev,
       cruises: prev.cruises.filter((c) => c.id !== cruiseId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
   const handleDeleteTransferServer = useCallback(async (transferId: string) => {
@@ -179,11 +202,12 @@ export default function ReservationDetailPage() {
         ...prev,
         transfers: prev.transfers.filter((t) => t.id !== transferId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar traslado (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // 🗑️ DELETE desde el diálogo (ya lo borró, actualiza estado)
   const handleDeleteTransferLocal = useCallback((transferId: string) => {
@@ -191,7 +215,8 @@ export default function ReservationDetailPage() {
       ...prev,
       transfers: prev.transfers.filter((t) => t.id !== transferId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
   const handleDeleteExcursionServer = useCallback(async (excursionId: string) => {
@@ -201,11 +226,12 @@ export default function ReservationDetailPage() {
         ...prev,
         excursions: prev.excursions.filter((e) => e.id !== excursionId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar excursión (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // 🗑️ DELETE desde el diálogo (ya lo borró → solo actualiza estado)
   const handleDeleteExcursionLocal = useCallback((excursionId: string) => {
@@ -213,7 +239,8 @@ export default function ReservationDetailPage() {
       ...prev,
       excursions: prev.excursions.filter((e) => e.id !== excursionId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // ✅ DELETE desde la tabla (real al backend + estado)
   const handleDeleteMedicalAssistServer = useCallback(async (assistId: string) => {
@@ -223,11 +250,12 @@ export default function ReservationDetailPage() {
         ...prev,
         medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar asistencia médica (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // ✅ DELETE desde el diálogo (ya se eliminó en backend → solo actualizar estado local)
   const handleDeleteMedicalAssistLocal = useCallback((assistId: string) => {
@@ -235,7 +263,8 @@ export default function ReservationDetailPage() {
       ...prev,
       medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
   // 🆕 ✅ DELETE Car Rental (Server)
   const handleDeleteCarRentalServer = useCallback(async (id: string) => {
@@ -245,11 +274,12 @@ export default function ReservationDetailPage() {
         ...prev,
         carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
       }));
+      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
     } catch (err) {
       console.error("❌ Error al eliminar alquiler (server):", err);
       if (err instanceof Error) alert(err.message);
     }
-  }, []);
+  }, [updateReservationMetadata]);
 
   // 🆕 ✅ DELETE Car Rental (Local)
   const handleDeleteCarRentalLocal = useCallback((id: string) => {
@@ -257,7 +287,8 @@ export default function ReservationDetailPage() {
       ...prev,
       carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
     }));
-  }, []);
+    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
+  }, [updateReservationMetadata]);
 
 
   // 🧭 Fetch detalle de reserva
@@ -430,6 +461,7 @@ export default function ReservationDetailPage() {
   // ---------------- Handlers ----------------
   const handleStateChange = (state: ReservationState) => {
     setReservation({ ...reservation, state });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
   const handlePassengersChange = async (passengers: PaxType[]) => {
@@ -447,6 +479,9 @@ export default function ReservationDetailPage() {
       setReservation((prev) => ({
         ...prev,
         paxReservations: updated.paxReservations ?? passengers.map((p) => ({ pax: p })),
+        // Aquí SÍ tenemos la data fresca porque updated ya viene del PATCH
+        updatedAt: updated.updatedAt,
+        updatedBy: updated.updatedBy,
       }));
 
     } catch (error) {
@@ -475,6 +510,7 @@ export default function ReservationDetailPage() {
         : [...prev.hotels, savedHotel];
       return { ...prev, hotels: updatedHotels };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
   // Planes
@@ -500,6 +536,7 @@ export default function ReservationDetailPage() {
 
     // FIX CRÍTICO: Actualizar selectedPlane con los datos frescos
     setSelectedPlane(savedPlane);
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
 
@@ -522,6 +559,7 @@ export default function ReservationDetailPage() {
         : [...prev.cruises, savedCruise];
       return { ...prev, cruises: updatedCruises };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
 
@@ -546,6 +584,7 @@ export default function ReservationDetailPage() {
         : [...prev.transfers, savedTransfer];
       return { ...prev, transfers: updatedTransfers };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
   // Excursions
@@ -571,6 +610,7 @@ export default function ReservationDetailPage() {
         : [...prev.excursions, savedExcursion];
       return { ...prev, excursions: updatedExcursions };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
   // Medical Assists
@@ -595,6 +635,7 @@ export default function ReservationDetailPage() {
         : [...prev.medicalAssists, savedAssist];
       return { ...prev, medicalAssists: updatedAssists };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
   // 🆕 Car Rentals Handlers
@@ -616,6 +657,7 @@ export default function ReservationDetailPage() {
         : [...(prev.carRentals ?? []), saved];
       return { ...prev, carRentals: updated };
     });
+    updateReservationMetadata(); // 🔄 Actualizar auditoría
   };
 
 
