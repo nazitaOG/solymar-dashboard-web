@@ -814,8 +814,8 @@ export default function ReservationDetailPage() {
       label: "Salida / Llegada",
       render: (_value, row) => (
         <div className="text-sm">
-          <div>{formatDate(String(row.departureDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.arrivalDate))}</div>
+          <div>{fmt(String(row.departureDate))}</div>
+          <div className="text-muted-foreground">{fmt(String(row.arrivalDate))}</div>
         </div>
       ),
     },
@@ -844,7 +844,7 @@ export default function ReservationDetailPage() {
       key: "excursionDate",
       label: "Fecha",
       render: (_value, row) => (
-        <div className="text-sm">{formatDate(String(row.excursionDate))}</div>
+        <div className="text-sm">{fmt(String(row.excursionDate))}</div>
       ),
     },
     { key: "provider", label: "Proveedor" },
