@@ -201,14 +201,10 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
     setDate(newDate);
   };
 
-  const handleWheel = (e: React.WheelEvent, type: "hours" | "minutes" | "ampm") => {
-    e.preventDefault();
-    if (!date) return;
-    adjustTime(type, e.deltaY < 0 ? 1 : -1);
-  };
+  // 🗑️ ELIMINADO: handleWheel ya no se usa
 
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -221,7 +217,14 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
           }
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      
+      {/* Mantenemos las mejoras de CSS: max-h-[380px] y overflow-y-auto */}
+      <PopoverContent 
+        className="w-auto p-0 max-h-[380px] overflow-y-auto z-[9999]" 
+        align="start"
+        side="bottom"
+        collisionPadding={16}
+      >
         <Calendar
           mode="single"
           selected={date} 
@@ -231,12 +234,12 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
         />
 
         {includeTime && (
-          <div className="p-6 border-t border-border flex flex-col items-center gap-4 bg-muted/5">
+          <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hora</Label>
             <div className="flex items-center gap-3">
               
-              {/* Horas */}
-              <div onWheel={(e) => handleWheel(e, "hours")}>
+              {/* Horas - SIN onWheel */}
+              <div>
                 <TimePeriod onUp={() => adjustTime("hours", 1)} onDown={() => adjustTime("hours", -1)} disabled={!date}>
                   <TimePickerInput
                     picker="hours"
@@ -251,8 +254,8 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
 
               <span className="text-xl font-bold text-muted-foreground pb-2">:</span>
 
-              {/* Minutos */}
-              <div onWheel={(e) => handleWheel(e, "minutes")}>
+              {/* Minutos - SIN onWheel */}
+              <div>
                 <TimePeriod onUp={() => adjustTime("minutes", 1)} onDown={() => adjustTime("minutes", -1)} disabled={!date}>
                   <TimePickerInput
                     picker="minutes"
@@ -267,8 +270,8 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
 
               <div className="w-4"></div>
 
-              {/* AM/PM */}
-              <div onWheel={(e) => handleWheel(e, "ampm")}>
+              {/* AM/PM - SIN onWheel */}
+              <div>
                 <TimePeriod onUp={() => adjustTime("ampm", 1)} onDown={() => adjustTime("ampm", -1)} disabled={!date}>
                   <div className={cn("flex items-center justify-center h-8 w-[48px] rounded-md border border-input bg-background font-mono text-sm font-medium", !date && "opacity-50")}>
                     {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}

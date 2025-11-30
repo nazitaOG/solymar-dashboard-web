@@ -264,7 +264,7 @@ export function TransferDialog({
         )}
 
         {/* Formulario */}
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2 ">
           {/* Inputs de Texto normales */}
           {[
             { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
