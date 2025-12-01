@@ -1,9 +1,20 @@
-import { NavLink, useLocation } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import { cn } from "@/lib/utils/class_value.utils";
-import { Calendar, Users, BarChart3, Settings, Plane, X, Sun, Moon } from "lucide-react";
+import { 
+  Calendar, 
+  Users, 
+  BarChart3, 
+  Settings, 
+  Plane, 
+  X, 
+  Sun, 
+  Moon, 
+  LogOut 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";
 import { useTheme } from "../theme-context";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 type NavItem = {
   name: string;
@@ -41,7 +52,16 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  
+  // 🔐 Obtener la función logout del store
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/"); // Redirigir al login (asumiendo que '/' es el login)
+  };
 
   return (
     <>
@@ -61,6 +81,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="flex h-full flex-col">
+          {/* Header del Sidebar */}
           <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-6">
             <div className="flex items-center gap-2">
               <Plane className="h-6 w-6 text-primary" />
@@ -71,7 +92,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Button>
           </div>
 
-          <nav className="flex-1 space-y-1 p-4">
+          {/* Navegación Principal */}
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const starts = pathname.startsWith(item.href);
@@ -111,19 +133,40 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
           </nav>
-          {/* Tema claro/oscuro */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        aria-label="Cambiar tema"
-      >
-        <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-        <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      </Button>
 
+          {/* Footer del Sidebar: Tema y Logout */}
           <div className="border-t border-border p-4">
-            <p className="text-xs text-muted-foreground">Dashboard v1.0</p>
+            <div className="flex items-center justify-between">
+              {/* Texto de versión a la izquierda */}
+              <p className="text-xs text-muted-foreground">Dashboard v1.0</p>
+
+              {/* Botones a la derecha */}
+              <div className="flex items-center gap-1">
+                {/* Botón Tema */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  aria-label="Cambiar tema"
+                >
+                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                </Button>
+
+                {/* Botón Logout */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
