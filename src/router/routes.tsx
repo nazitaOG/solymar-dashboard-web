@@ -2,6 +2,7 @@ import { ReactNode, lazy, Suspense } from "react";
 import { Navigate, RouteObject } from "react-router";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { ProtectedRoute } from "@/router/ProtectedRoute";
+import { GuestRoute } from "@/router/GuestRoute";
 
 interface AppRoute {
   path: string;
@@ -69,11 +70,19 @@ export const routes: AppRoute[] = [
   },
   {
     path: "/",
-    element: <Navigate to="/login" replace />,
+    element: (
+      <GuestRoute>
+        <Navigate to="/login" replace />
+      </GuestRoute>
+    ),
   },
   {
     path: "/login",
     name: "Login",
-    element: withSuspense(AdminLogin),
+    element: (
+      <GuestRoute>
+        {withSuspense(AdminLogin)}
+      </GuestRoute>
+    ),
   },
 ];
