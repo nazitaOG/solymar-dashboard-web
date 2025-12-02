@@ -1,11 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { Users, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, AlertCircle, CheckCircle2, Pencil } from "lucide-react";
 import { EditPassengersDialog } from "./edit-passengers-dialog";
 import { fetchAPI } from "@/lib/api/fetchApi";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+// 1️⃣ Importamos nuestro Schema separado
+import { 
+  updateReservationNameSchema 
+} from "@/lib/schemas/reservation/update-reservation-name.schema";
+
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,14 +30,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-// import { ScrollArea } from "@/components/ui/scroll-area"; // 🗑️ Lo quitamos para usar scroll nativo más seguro
 
 import type { ReservationDetail, Reservation } from "@/lib/interfaces/reservation/reservation.interface";
 import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 
+// Definición de tipos locales para el componente
 export interface FinancialItem {
   id: string;
   type: string;
@@ -43,6 +52,7 @@ interface ReservationDetailHeaderProps {
   reservation: ReservationDetail;
   onStateChange: (state: ReservationState) => void;
   onPassengersChange: (passengers: Pax[]) => void;
+  onNameChange?: (newName: string) => void; 
   paymentItems: FinancialItem[];
 }
 
@@ -50,14 +60,65 @@ export function ReservationDetailHeader({
   reservation,
   onStateChange,
   onPassengersChange,
+  onNameChange,
   paymentItems,
 }: ReservationDetailHeaderProps) {
   const [editPassengersOpen, setEditPassengersOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false);
+  
+  // 2️⃣ Estados manuales para el formulario de nombre
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isSavingName, setIsSavingName] = useState(false);
+
   const [pendingState, setPendingState] = useState<ReservationState | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+
+  // 🔄 Efecto: Prellenar datos al abrir el modal y limpiar errores
+  useEffect(() => {
+    if (editNameOpen) {
+      setTempName(reservation.name || "");
+      setNameError(null); // Limpiar error anterior
+    }
+  }, [editNameOpen, reservation.name]);
+
+  // 3️⃣ Handler de Guardado Manual con Zod
+  const handleSaveName = async () => {
+    // A. Validar con Zod manualmente
+    const result = updateReservationNameSchema.safeParse({ name: tempName });
+
+    if (!result.success) {
+      // Extraemos el primer error del campo 'name'
+      const error = result.error.issues.find((issue) => issue.path[0] === "name");
+      setNameError(error?.message || "Error en el nombre");
+      return; // Detenemos la ejecución
+    }
+
+    // B. Si pasa la validación, procedemos
+    try {
+      setIsSavingName(true);
+      await fetchAPI<Reservation>(`/reservations/${reservation.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: result.data.name }), // Usamos result.data (datos saneados/trim)
+      });
+
+      // Actualizar estado en el padre
+      if (onNameChange) {
+        onNameChange(result.data.name);
+      }
+
+      toast({ title: "Nombre actualizado correctamente" });
+      setEditNameOpen(false);
+    } catch (error) {
+      console.error("Error updating name:", error);
+      toast({ title: "Error al actualizar el nombre", variant: "destructive" });
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   const getStateBadge = (state: ReservationState) => {
     const variants = {
@@ -149,9 +210,21 @@ export function ReservationDetailHeader({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold tracking-tight font-mono">
-              {reservation.name}-{String(reservation.code).padStart(5, "0")}
-            </h1>
+            
+            {/* Header con el botón del lápiz */}
+            <div className="flex items-baseline gap-2 group">
+                <h1 className="text-3xl font-bold tracking-tight font-mono">
+                {reservation.name}-{String(reservation.code).padStart(5, "0")}
+                </h1>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setEditNameOpen(true)}
+                >
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            </div>
 
             <Select
               value={reservation.state}
@@ -177,6 +250,7 @@ export function ReservationDetailHeader({
           </div>
         </div>
 
+        {/* Totales y Link de Detalle */}
         <div className="flex flex-col w-fit sm:flex-row items-start sm:items-end gap-2">
           <div className="flex flex-wrap gap-4 w-fit">
             {reservation.currencyTotals.map((ct, idx) => (
@@ -259,11 +333,9 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 💰 Dialog de Detalles de Pago (CORREGIDO FINAL) */}
+      {/* Dialog de Detalles de Pago (Scroll Nativo) */}
       <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-          
-          {/* Header fijo (con padding propio) */}
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -276,14 +348,7 @@ export function ReservationDetailHeader({
             </DialogHeader>
           </div>
           
-          {/* Body scrolleable: 
-            - 'flex-1': Toma todo el espacio restante disponible.
-            - 'overflow-y-auto': Habilita el scroll nativo cuando el contenido excede la altura.
-            - 'min-h-0': Crucial en flexbox anidados para permitir que el scroll funcione.
-          */}
           <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
-                
-                {/* 1. Resumen General */}
                 {Object.entries(totalsByCurrency).map(([currency, totals]) => (
                     <div key={currency} className="p-4 rounded-lg bg-muted/50 space-y-2 text-sm border border-border/50">
                         <div className="flex justify-between items-center mb-1">
@@ -304,7 +369,6 @@ export function ReservationDetailHeader({
                     </div>
                 ))}
 
-                {/* 2. Lista de Items */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium leading-none">Desglose de items</h4>
                     {paymentItems.length === 0 ? (
@@ -356,6 +420,50 @@ export function ReservationDetailHeader({
                     )}
                 </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4️⃣ Dialog para Editar Nombre (VALIDACIÓN MANUAL) */}
+      <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar nombre de la reserva</DialogTitle>
+            <DialogDescription>
+              Cambia el nombre descriptivo de la reserva.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* No usamos <form> nativo para evitar submit por enter si no queremos, o usamos inputs controlados */}
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nombre</Label>
+              <Input
+                id="name"
+                placeholder="Ej: Viaje a Disney 2024"
+                value={tempName}
+                onChange={(e) => {
+                    setTempName(e.target.value);
+                    if (nameError) setNameError(null); // Limpiar error al escribir
+                }}
+              />
+              {/* Mostramos el error si existe */}
+              {nameError && (
+                <p className="text-sm text-red-500 font-medium">
+                  {nameError}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditNameOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveName} disabled={isSavingName}>
+                {isSavingName ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+
         </DialogContent>
       </Dialog>
     </>

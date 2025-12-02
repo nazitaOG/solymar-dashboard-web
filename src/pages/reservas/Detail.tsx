@@ -109,7 +109,7 @@ export default function ReservationDetailPage() {
     try {
       // Pedimos la reserva actualizada al backend
       const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}`);
-      
+
       setReservation((prev) => ({
         ...prev,
         updatedAt: freshData.updatedAt,
@@ -462,6 +462,10 @@ export default function ReservationDetailPage() {
   const handleStateChange = (state: ReservationState) => {
     setReservation({ ...reservation, state });
     updateReservationMetadata(); // 🔄 Actualizar auditoría
+  };
+
+  const handleNameChange = (newName: string) => {
+    setReservation(prev => ({ ...prev, name: newName }));
   };
 
   const handlePassengersChange = async (passengers: PaxType[]) => {
@@ -1075,6 +1079,7 @@ export default function ReservationDetailPage() {
               onStateChange={handleStateChange}
               onPassengersChange={handlePassengersChange}
               paymentItems={financialItems}
+              onNameChange={handleNameChange}
             />
 
             <Tabs defaultValue="hotels" className="w-full">

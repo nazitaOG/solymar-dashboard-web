@@ -52,7 +52,8 @@ type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId" | "segme
   }[];
 };
 
-interface FormErrors extends Partial<Record<string, string>> {
+// Permitimos claves dinámicas para los errores de segmentos (ej: "segments.0.departure")
+interface FormErrors extends Record<string, string | undefined> {
   _general?: string;
 }
 
@@ -136,6 +137,15 @@ export function PlaneDialog({
         i === index ? { ...s, [field]: value } : s,
       ),
     }));
+    
+    // Limpiar error específico al editar (opcional pero recomendado)
+    if (errors[`segments.${index}.${field}`]) {
+        setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors[`segments.${index}.${field}`];
+            return newErrors;
+        });
+    }
   };
 
   const removeSegment = (index: number) => {
@@ -145,20 +155,41 @@ export function PlaneDialog({
         .filter((_, i) => i !== index)
         .map((s, i) => ({ ...s, segmentOrder: i + 1 })),
     });
+    // Limpiar errores globales si cambian los segmentos para evitar desajustes de índices
+    setErrors({});
   };
 
   const handleSave = async () => {
-    const hasInvalidDates = formData.segments.some(
-      s => !s.departureDate || !s.arrivalDate
-    );
-    if (hasInvalidDates) {
-      setErrors({ segments: "Todas las fechas son obligatorias." });
-      return;
-    }
+    // Objeto acumulador de errores
+    const allErrors: FormErrors = {};
+
+    // 1. Validaciones manuales (Lógica de negocio)
+    formData.segments.forEach((s, index) => {
+        // A. Validar fechas obligatorias (Mensaje personalizado)
+        if (!s.departureDate) {
+            allErrors[`segments.${index}.departureDate`] = "La fecha de salida es obligatoria";
+        }
+        if (!s.arrivalDate) {
+            allErrors[`segments.${index}.arrivalDate`] = "La fecha de llegada es obligatoria";
+        }
+
+        // B. Validar continuidad de ruta (Ruta cortada)
+        if (index > 0) {
+            const prev = formData.segments[index - 1];
+            const prevArrival = prev.arrival?.trim().toUpperCase();
+            const currDeparture = s.departure?.trim().toUpperCase();
+
+            // Solo validamos si ambos tienen valor para no pisar el error de "Requerido"
+            if (prevArrival && currDeparture && prevArrival !== currDeparture) {
+                allErrors[`segments.${index}.departure`] = `Ruta cortada: El tramo anterior termina en ${prev.arrival} pero este empieza en ${s.departure}`;
+            }
+        }
+    });
 
     const isEdit = Boolean(plane);
     const schema = isEdit ? updatePlaneSchema : createPlaneSchema;
 
+    // 2. Preparar payload seguro para Zod (evitando crash por fechas undefined)
     const payloadToValidate = {
       ...formData,
       totalPrice: Number(formData.totalPrice),
@@ -167,24 +198,33 @@ export function PlaneDialog({
         segmentOrder: i + 1,
         departure: s.departure,
         arrival: s.arrival,
-        departureDate: s.departureDate!.toISOString(),
-        arrivalDate: s.arrivalDate!.toISOString(),
+        // Si es undefined mandamos string vacío para que Zod detecte error de tipo/formato sin crashear aquí
+        departureDate: s.departureDate?.toISOString() ?? "", 
+        arrivalDate: s.arrivalDate?.toISOString() ?? "",
         airline: s.airline || undefined,
         flightNumber: s.flightNumber || undefined,
       })),
       ...(isEdit ? {} : { reservationId }),
     };
 
+    // 3. Ejecutar validación Zod
     const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
-      const fieldErrors: FormErrors = {};
       for (const issue of result.error.issues) {
-        const key = issue.path[0] as string;
-        if (key) fieldErrors[key] = issue.message;
+        const key = issue.path.join("."); 
+        // Solo agregamos el error de Zod si NO existe ya un error manual más específico para ese campo
+        // (Por ejemplo, preferimos "Ruta cortada..." sobre "Formato inválido")
+        if (!allErrors[key]) {
+            allErrors[key] = issue.message;
+        }
       }
-      setErrors(fieldErrors);
-      return;
+    }
+
+    // 4. Si hay errores (manuales O de Zod), mostrar y detener
+    if (Object.keys(allErrors).length > 0) {
+        setErrors(allErrors);
+        return;
     }
 
     try {
@@ -336,6 +376,7 @@ export function PlaneDialog({
                 + Agregar tramo
               </Button>
             </div>
+            {/* Si Zod devuelve un error general para el array de segmentos */}
             {errors.segments && (
               <p className="text-sm text-red-500 mt-1">{errors.segments}</p>
             )}
@@ -367,6 +408,10 @@ export function PlaneDialog({
                       updateSegment(index, "departure", e.target.value)
                     }
                   />
+                  {/* 👇 Error específico de Origen */}
+                  {errors[`segments.${index}.departure`] && (
+                    <p className="text-xs text-red-500">{errors[`segments.${index}.departure`]}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Destino</Label>
@@ -377,47 +422,69 @@ export function PlaneDialog({
                       updateSegment(index, "arrival", e.target.value)
                     }
                   />
+                  {/* 👇 Error específico de Destino */}
+                  {errors[`segments.${index}.arrival`] && (
+                    <p className="text-xs text-red-500">{errors[`segments.${index}.arrival`]}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Salida</Label>
-                  {/* 🔴 CORREGIDO: key estable basada en el índice, NO en la fecha */}
                   <DateTimePicker
                     key={`departure-${index}`} 
                     date={seg.departureDate}
                     setDate={(date) => updateSegment(index, "departureDate", date)}
                     includeTime={true}
                   />
+                  {/* 👇 Error específico de Fecha Salida */}
+                  {errors[`segments.${index}.departureDate`] && (
+                    <p className="text-xs text-red-500">{errors[`segments.${index}.departureDate`]}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Llegada</Label>
-                   {/* 🔴 CORREGIDO: key estable basada en el índice */}
                   <DateTimePicker
                     key={`arrival-${index}`}
                     date={seg.arrivalDate}
                     setDate={(date) => updateSegment(index, "arrivalDate", date)}
                     includeTime={true}
                   />
+                   {/* 👇 Error específico de Fecha Llegada */}
+                  {errors[`segments.${index}.arrivalDate`] && (
+                    <p className="text-xs text-red-500">{errors[`segments.${index}.arrivalDate`]}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Aerolínea"
-                  value={seg.airline ?? ""}
-                  onChange={(e) =>
-                    updateSegment(index, "airline", e.target.value)
-                  }
-                />
-                <Input
-                  placeholder="Nro. Vuelo"
-                  value={seg.flightNumber ?? ""}
-                  onChange={(e) =>
-                    updateSegment(index, "flightNumber", e.target.value)
-                  }
-                />
+                <div className="space-y-1">
+                    <Input
+                    placeholder="Aerolínea"
+                    value={seg.airline ?? ""}
+                    onChange={(e) =>
+                        updateSegment(index, "airline", e.target.value)
+                    }
+                    />
+                    {/* 👇 Error específico de Aerolínea */}
+                    {errors[`segments.${index}.airline`] && (
+                        <p className="text-xs text-red-500">{errors[`segments.${index}.airline`]}</p>
+                    )}
+                </div>
+                <div className="space-y-1">
+                    <Input
+                    placeholder="Nro. Vuelo"
+                    value={seg.flightNumber ?? ""}
+                    onChange={(e) =>
+                        updateSegment(index, "flightNumber", e.target.value)
+                    }
+                    />
+                     {/* 👇 Error específico de Nro Vuelo */}
+                    {errors[`segments.${index}.flightNumber`] && (
+                        <p className="text-xs text-red-500">{errors[`segments.${index}.flightNumber`]}</p>
+                    )}
+                </div>
               </div>
             </div>
           ))}
