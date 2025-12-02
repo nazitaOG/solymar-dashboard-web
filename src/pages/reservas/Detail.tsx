@@ -997,6 +997,65 @@ export default function ReservationDetailPage() {
     },
   ];
 
+  const financialItems = [
+    ...reservation.hotels.map((h) => ({
+      id: h.id,
+      type: "Hotel",
+      label: h.hotelName || "Hotel sin nombre",
+      totalPrice: Number(h.totalPrice ?? 0),
+      amountPaid: Number(h.amountPaid ?? 0),
+      currency: h.currency || "USD",
+    })),
+    ...reservation.planes.map((p) => ({
+      id: p.id,
+      type: "Vuelo",
+      label: p.provider ? `Vuelo: ${p.provider}` : "Vuelo",
+      totalPrice: Number(p.totalPrice ?? 0),
+      amountPaid: Number(p.amountPaid ?? 0),
+      currency: p.currency || "USD",
+    })),
+    ...reservation.cruises.map((c) => ({
+      id: c.id,
+      type: "Crucero",
+      label: c.provider ? `Crucero: ${c.provider}` : "Crucero",
+      totalPrice: Number(c.totalPrice ?? 0),
+      amountPaid: Number(c.amountPaid ?? 0),
+      currency: c.currency || "USD",
+    })),
+    ...reservation.transfers.map((t) => ({
+      id: t.id,
+      type: "Traslado",
+      label: `Traslado: ${t.origin} -> ${t.destination}`,
+      totalPrice: Number(t.totalPrice ?? 0),
+      amountPaid: Number(t.amountPaid ?? 0),
+      currency: t.currency || "USD",
+    })),
+    ...reservation.excursions.map((e) => ({
+      id: e.id,
+      type: "Excursión",
+      label: e.excursionName || "Excursión",
+      totalPrice: Number(e.totalPrice ?? 0),
+      amountPaid: Number(e.amountPaid ?? 0),
+      currency: e.currency || "USD",
+    })),
+    ...reservation.medicalAssists.map((m) => ({
+      id: m.id,
+      type: "Asistencia",
+      label: m.assistType ? `Asistencia: ${m.assistType}` : "Asistencia Médica",
+      totalPrice: Number(m.totalPrice ?? 0),
+      amountPaid: Number(m.amountPaid ?? 0),
+      currency: m.currency || "USD",
+    })),
+    ...(reservation.carRentals ?? []).map((c) => ({
+      id: c.id,
+      type: "Auto",
+      label: c.carCategory ? `Auto: ${c.carCategory}` : "Alquiler de Auto",
+      totalPrice: Number(c.totalPrice ?? 0),
+      amountPaid: Number(c.amountPaid ?? 0),
+      currency: c.currency || "USD",
+    })),
+  ];
+
 
   // ---------------- Render ----------------
   return (
@@ -1015,6 +1074,7 @@ export default function ReservationDetailPage() {
               reservation={reservation}
               onStateChange={handleStateChange}
               onPassengersChange={handlePassengersChange}
+              paymentItems={financialItems}
             />
 
             <Tabs defaultValue="hotels" className="w-full">
