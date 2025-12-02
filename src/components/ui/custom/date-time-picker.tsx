@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
+import { DateRange } from "react-day-picker"; // Importante para el tipado
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,15 +11,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Definimos las props extendidas para soportar rango
 interface DateTimePickerProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
+  // Modo simple
+  date?: Date | undefined;
+  setDate?: (date: Date | undefined) => void;
+  
+  // Modo rango
+  dateRange?: DateRange | undefined;
+  setDateRange?: (range: DateRange | undefined) => void;
+  withRange?: boolean;
+
   label?: string;
   includeTime?: boolean;
 }
 
 // -----------------------------------------------------------------------------
-// Componente Auxiliar: Input de Tiempo Controlado (FOCUS LOCK FIX)
+// Componente Auxiliar: Input de Tiempo Controlado
 // -----------------------------------------------------------------------------
 interface TimePickerInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   picker: "hours" | "minutes";
@@ -30,11 +39,8 @@ interface TimePickerInputProps extends React.InputHTMLAttributes<HTMLInputElemen
 
 const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>(
   ({ className, picker, date, onDateChange, onRightFocus, onLeftFocus, onFocus, onBlur, ...props }, ref) => {
-    
-    // Flag para saber si el usuario está escribiendo
     const [hasFocus, setHasFocus] = React.useState(false);
 
-    // Helper para formatear (ej: 5 -> "05")
     const getDateValue = React.useCallback(() => {
         if (!date) return "00";
         const val = picker === "hours" 
@@ -45,38 +51,26 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
 
     const [localValue, setLocalValue] = React.useState(getDateValue());
 
-    // 🔄 EFECTO DE SINCRONIZACIÓN INTELIGENTE
-    // SOLO actualizamos el valor local desde las props SI EL USUARIO NO TIENE EL FOCO.
-    // Esto evita que el input "salte" o se borre mientras escribes.
     React.useEffect(() => {
         if (!hasFocus) {
             setLocalValue(getDateValue());
         }
     }, [date, getDateValue, hasFocus]);
 
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
-      
-      // Permitir borrar todo
       if (v === "") {
         setLocalValue("");
         return;
       }
-      
-      // Solo números
       if (!/^\d+$/.test(v)) return;
 
       const intVal = parseInt(v, 10);
-      
-      // Validaciones de rango
-      if (picker === "hours" && intVal > 12) return; // No dejar escribir > 12 en horas
-      if (picker === "minutes" && intVal > 59) return; // No dejar escribir > 59 en minutos
+      if (picker === "hours" && intVal > 12) return;
+      if (picker === "minutes" && intVal > 59) return;
 
-      // 1. Actualización visual inmediata (sin esperar a React)
       setLocalValue(v);
 
-      // 2. Actualización del padre (ESTADO REAL)
       if (date) {
         const newDate = new Date(date);
         if (picker === "hours") {
@@ -91,13 +85,11 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
         onDateChange(newDate);
       }
 
-      // Auto-focus UX: Si escribes 2 dígitos en horas, pasa a minutos
       if (picker === "hours" && v.length === 2) {
         onRightFocus?.();
       }
     };
 
-    // Manejo del Foco
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
         setHasFocus(true);
         if (onFocus) onFocus(e);
@@ -105,7 +97,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         setHasFocus(false);
-        setLocalValue(getDateValue()); // Al salir, formateamos bonito (ej: "1" -> "01")
+        setLocalValue(getDateValue());
         if (onBlur) onBlur(e);
     };
 
@@ -163,11 +155,21 @@ const TimePeriod = ({
 // -----------------------------------------------------------------------------
 // Componente Principal
 // -----------------------------------------------------------------------------
-export function DateTimePicker({ date, setDate, label, includeTime = true }: DateTimePickerProps) {
+export function DateTimePicker({ 
+  date, 
+  setDate, 
+  dateRange,
+  setDateRange,
+  withRange = false,
+  label, 
+  includeTime = true 
+}: DateTimePickerProps) {
   const hourRef = React.useRef<HTMLInputElement>(null);
   const minuteRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSelect = (day: Date | undefined) => {
+  // Manejo de selección (Solo para Single Mode con preservación de hora)
+  const handleSelectSingle = (day: Date | undefined) => {
+    if (!setDate) return;
     if (!day) {
       setDate(undefined);
       return;
@@ -185,7 +187,7 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
   };
 
   const adjustTime = (type: "hours" | "minutes" | "ampm", step: number) => {
-    if (!date) return;
+    if (!date || !setDate) return;
     const newDate = new Date(date);
 
     if (type === "hours") {
@@ -201,76 +203,99 @@ export function DateTimePicker({ date, setDate, label, includeTime = true }: Dat
     setDate(newDate);
   };
 
-  // 🗑️ ELIMINADO: handleWheel ya no se usa
+  // Renderizado del texto del botón
+  const renderButtonText = () => {
+    if (withRange) {
+      if (dateRange?.from) {
+        if (dateRange.to) {
+          return `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(dateRange.to, "dd/MM/yyyy", { locale: es })}`;
+        }
+        return format(dateRange.from, "dd/MM/yyyy", { locale: es });
+      }
+      return label || "Seleccionar rango";
+    }
+
+    // Modo Single
+    if (date) {
+      return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es });
+    }
+    return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
+  };
+
+  // Si usamos rango, desactivamos el tiempo para simplificar la UI por ahora
+  const showTimePicker = includeTime && !withRange;
 
   return (
     <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
-          className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            ((!withRange && !date) || (withRange && !dateRange?.from)) && "text-muted-foreground"
+          )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date 
-            ? format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es }) 
-            : <span>{label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha")}</span>
-          }
+          <span>{renderButtonText()}</span>
         </Button>
       </PopoverTrigger>
       
-      {/* Mantenemos las mejoras de CSS: max-h-[380px] y overflow-y-auto */}
       <PopoverContent 
-        className="w-auto p-0 max-h-[380px] overflow-y-auto z-[9999]" 
+        className="w-auto p-0 max-h-[420px] overflow-y-auto z-[9999]" 
         align="start"
         side="bottom"
         collisionPadding={16}
       >
-        <Calendar
-          mode="single"
-          selected={date} 
-          onSelect={handleSelect}
-          initialFocus
-          locale={es}
-        />
+        {withRange ? (
+          <Calendar
+            mode="range"
+            selected={dateRange}
+            onSelect={setDateRange}
+            initialFocus
+            locale={es}
+            numberOfMonths={2}
+          />
+        ) : (
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={handleSelectSingle}
+            initialFocus
+            locale={es}
+            numberOfMonths={1}
+          />
+        )}
 
-        {includeTime && (
+        {showTimePicker && (
           <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hora</Label>
             <div className="flex items-center gap-3">
-              
-              {/* Horas - SIN onWheel */}
               <div>
                 <TimePeriod onUp={() => adjustTime("hours", 1)} onDown={() => adjustTime("hours", -1)} disabled={!date}>
                   <TimePickerInput
                     picker="hours"
                     date={date}
-                    onDateChange={setDate}
+                    onDateChange={setDate!}
                     ref={hourRef}
                     onRightFocus={() => minuteRef.current?.focus()}
                     disabled={!date}
                   />
                 </TimePeriod>
               </div>
-
               <span className="text-xl font-bold text-muted-foreground pb-2">:</span>
-
-              {/* Minutos - SIN onWheel */}
               <div>
                 <TimePeriod onUp={() => adjustTime("minutes", 1)} onDown={() => adjustTime("minutes", -1)} disabled={!date}>
                   <TimePickerInput
                     picker="minutes"
                     date={date}
-                    onDateChange={setDate}
+                    onDateChange={setDate!}
                     ref={minuteRef}
                     onLeftFocus={() => hourRef.current?.focus()}
                     disabled={!date}
                   />
                 </TimePeriod>
               </div>
-
               <div className="w-4"></div>
-
-              {/* AM/PM - SIN onWheel */}
               <div>
                 <TimePeriod onUp={() => adjustTime("ampm", 1)} onDown={() => adjustTime("ampm", -1)} disabled={!date}>
                   <div className={cn("flex items-center justify-center h-8 w-[48px] rounded-md border border-input bg-background font-mono text-sm font-medium", !date && "opacity-50")}>

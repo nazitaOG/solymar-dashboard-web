@@ -20,6 +20,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils/class_value.utils";
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
+import type { DateRange } from "react-day-picker";
+
 import type { ReservationFilters } from "@/lib/interfaces/reservation/reservation.interface";
 import type { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type { Currency } from "@/lib/interfaces/currency/currency.interface";
@@ -44,6 +47,10 @@ export function ReservationFiltersComponent({
   const [selectedStates, setSelectedStates] = useState<ReservationState[]>([]);
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [currency, setCurrency] = useState<Currency | undefined>();
+  
+  // 🆕 Estado para el rango de fechas
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
   const [openPassengers, setOpenPassengers] = useState(false);
   const [openStates, setOpenStates] = useState(false);
 
@@ -57,6 +64,8 @@ export function ReservationFiltersComponent({
       sortBy,
       states: selectedStates.length > 0 ? selectedStates : undefined,
       currency,
+      dateFrom: dateRange?.from,
+      dateTo: dateRange?.to,
     });
   };
 
@@ -65,6 +74,7 @@ export function ReservationFiltersComponent({
     setSelectedStates([]);
     setSortBy("newest");
     setCurrency(undefined);
+    setDateRange(undefined); // Limpiar fechas
     onFilterChange({ sortBy: "newest" });
   };
 
@@ -94,7 +104,20 @@ export function ReservationFiltersComponent({
 
       {/* 🔹 Contenedor de filtros principales */}
       <div className="flex flex-wrap justify-start gap-6">
-        {/* Passenger Filter */}
+        
+        {/* 1. Date Range Filter (NUEVO) */}
+        <div className="flex flex-col gap-2 w-[260px]">
+          <Label className="text-sm">Rango de fechas</Label>
+          <DateTimePicker
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            withRange={true}
+            label="Filtrar por fecha"
+            includeTime={false} // Desactivar hora para rangos
+          />
+        </div>
+
+        {/* 2. Passenger Filter */}
         <div className="flex flex-col gap-2 w-[260px]">
           <Label className="text-sm">Buscar por pasajero</Label>
           <Popover open={openPassengers} onOpenChange={setOpenPassengers}>
@@ -161,7 +184,7 @@ export function ReservationFiltersComponent({
           )}
         </div>
 
-        {/* Sort By */}
+        {/* 3. Sort By */}
         <div className="flex flex-col gap-2 w-[220px]">
           <Label className="text-sm">Ordenar por fecha</Label>
           <Select
@@ -178,7 +201,7 @@ export function ReservationFiltersComponent({
           </Select>
         </div>
 
-        {/* State Filter */}
+        {/* 4. State Filter */}
         <div className="flex flex-col gap-2 w-[220px]">
           <Label className="text-sm">Estado</Label>
           <Popover open={openStates} onOpenChange={setOpenStates}>
