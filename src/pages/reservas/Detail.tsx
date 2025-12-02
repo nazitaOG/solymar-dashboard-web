@@ -11,12 +11,10 @@ import { CruiseDialog } from "@/components/entities/cruise-dialog";
 import { TransferDialog } from "@/components/entities/transfer-dialog";
 import { ExcursionDialog } from "@/components/entities/excursion-dialog";
 import { MedicalAssistDialog } from "@/components/entities/medical-assist-dialog";
-// 🆕 Importar el nuevo Dialog
 import { CarRentalDialog } from "@/components/entities/car-rental-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// 🆕 Importar CarFront para diferenciar de Traslados
 import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart, CarFront } from "lucide-react";
 import { FullPageLoader } from "@/components/FullPageLoader";
 
@@ -35,7 +33,6 @@ import type { Cruise as CruiseType } from "@/lib/interfaces/cruise/cruise.interf
 import type { Transfer as TransferType } from "@/lib/interfaces/transfer/transfer.interface";
 import type { Excursion as ExcursionType } from "@/lib/interfaces/excursion/excursion.interface";
 import type { MedicalAssist as MedicalAssistType } from "@/lib/interfaces/medical_assist/medical_assist.interface";
-// 🆕 Importar interfaz CarRental
 import type { CarRental } from "@/lib/interfaces/car_rental/car_rental.interface";
 import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 
@@ -772,13 +769,15 @@ export default function ReservationDetailPage() {
         const segs = plane.segments ?? [];
         if (segs.length === 0) return <span className="text-muted-foreground">—</span>;
 
-        const first = segs[0];
-        const last = segs[segs.length - 1];
-
         return (
-          <div className="text-sm">
-            <div>{fmt(first.departureDate)}</div>
-            <div className="text-muted-foreground">{fmt(last.arrivalDate)}</div>
+          <div className="text-sm space-y-1">
+            {segs.map((s) => (
+              <div key={s.segmentOrder} className="flex gap-2">
+                <span>{fmt(s.departureDate)}</span>
+                <span className="text-muted-foreground">→</span>
+                <span className="text-muted-foreground">{fmt(s.arrivalDate)}</span>
+              </div>
+            ))}
           </div>
         );
       },
@@ -1214,8 +1213,6 @@ export default function ReservationDetailPage() {
         </div>
       </div>
 
-      {/* Dialogs (sin cambios) */}
-      {/* ... tus dialogos aquí ... */}
       {hotelDialogOpen && (
         <HotelDialog
           key="hotel-dialog"
@@ -1227,7 +1224,6 @@ export default function ReservationDetailPage() {
           onDelete={handleDeleteHotelLocal}
         />
       )}
-      {/* ... resto de dialogos ... */}
       {planeDialogOpen && (
         <PlaneDialog
           key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : 'new-plane'}

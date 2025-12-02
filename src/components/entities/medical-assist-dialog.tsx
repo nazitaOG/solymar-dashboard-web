@@ -139,7 +139,9 @@ export function MedicalAssistDialog({
 
     const payload = {
       bookingReference: formData.bookingReference || null,
-      assistType: formData.assistType || null,
+      // ⬇️ CAMBIO IMPORTANTE: Quitamos "|| null" para permitir enviar string vacío ("")
+      // Esto asegura que pase la validación @IsString() del backend
+      assistType: formData.assistType, 
       provider: formData.provider,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),

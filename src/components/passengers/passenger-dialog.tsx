@@ -19,6 +19,8 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker" // ✅ Importar Custom Picker
+
 import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
 import { fetchAPI } from "@/lib/api/fetchApi"
@@ -40,6 +42,17 @@ interface PassengerDialogProps {
 
 // ----------------------------------------------------
 
+// 🛠️ Definimos el tipo del estado local
+interface FormDataState {
+  name: string
+  birthDate: Date | undefined // ✅ Cambio a Date object
+  nationality: string
+  dniNum: string
+  dniExpirationDate: Date | undefined // ✅ Cambio a Date object
+  passportNum: string
+  passportExpirationDate: Date | undefined // ✅ Cambio a Date object
+}
+
 export function PassengerDialog({
   open,
   onOpenChange,
@@ -49,14 +62,14 @@ export function PassengerDialog({
   onSave,
   onDelete,
 }: PassengerDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     name: "",
-    birthDate: "",
+    birthDate: undefined,
     nationality: "Argentina",
     dniNum: "",
-    dniExpirationDate: "",
+    dniExpirationDate: undefined,
     passportNum: "",
-    passportExpirationDate: "",
+    passportExpirationDate: undefined,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
@@ -74,42 +87,40 @@ export function PassengerDialog({
   const resetForm = () => {
     setFormData({
       name: "",
-      birthDate: "",
+      birthDate: undefined,
       nationality: "Argentina",
       dniNum: "",
-      dniExpirationDate: "",
+      dniExpirationDate: undefined,
       passportNum: "",
-      passportExpirationDate: "",
+      passportExpirationDate: undefined,
     })
   }
 
   // 🧭 Precarga de datos al abrir o cambiar pasajero
   useEffect(() => {
-    const formatDate = (value?: string | Date | null) => {
-      if (!value) return ""
-      const date = typeof value === "string" ? new Date(value) : value
-      if (isNaN(date.getTime())) return ""
-      return date.toISOString().split("T")[0]
+    // Helper para convertir string ISO o Date a objeto Date
+    const toDate = (value?: string | Date | null): Date | undefined => {
+      if (!value) return undefined
+      const d = typeof value === "string" ? new Date(value) : value
+      return isNaN(d.getTime()) ? undefined : d
     }
 
     if (passenger) {
       const normalizeNationality = (n?: string) => {
         if (!n) return "Argentina"
-        // capitaliza la primera letra
         return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
       }
 
       setFormData({
         name: passenger.name,
-        birthDate: formatDate(passenger.birthDate),
+        birthDate: toDate(passenger.birthDate),
         nationality: normalizeNationality(passenger.nationality),
         dniNum: passenger.dni?.dniNum || "",
-        dniExpirationDate: formatDate(passenger.dni?.expirationDate),
+        dniExpirationDate: toDate(passenger.dni?.expirationDate),
         passportNum: passenger.passport?.passportNum || "",
-        passportExpirationDate: formatDate(passenger.passport?.expirationDate),
+        passportExpirationDate: toDate(passenger.passport?.expirationDate),
       })
-    }
-    else {
+    } else {
       resetForm()
     }
   }, [passenger, open])
@@ -124,15 +135,16 @@ export function PassengerDialog({
 
   // 💾 Guardar (crear / editar)
   const handleSave = () => {
-    // Prepara los datos
+    // Prepara los datos para Zod
+    // Nota: Convertimos Date a ISO string para asegurar compatibilidad si el schema espera strings
     const zodData = {
       name: formData.name,
-      birthDate: formData.birthDate,
+      birthDate: formData.birthDate?.toISOString(),
       nationality: formData.nationality,
       dniNum: formData.dniNum || undefined,
-      dniExpirationDate: formData.dniExpirationDate || undefined,
+      dniExpirationDate: formData.dniExpirationDate?.toISOString() || undefined,
       passportNum: formData.passportNum || undefined,
-      passportExpirationDate: formData.passportExpirationDate || undefined,
+      passportExpirationDate: formData.passportExpirationDate?.toISOString() || undefined,
     }
   
     // 1️⃣ Validación con Zod
@@ -145,10 +157,10 @@ export function PassengerDialog({
         fieldErrors[field] = issue.message
       }
       setErrors(fieldErrors)
-      return // 🚫 corta inmediatamente, no se llama al backend
+      return
     }
   
-    // 2️⃣ Si pasa Zod, se limpian errores y recién ahí se hace el fetch
+    // 2️⃣ Si pasa Zod
     setErrors({})
   
     startTransition(async () => {
@@ -177,7 +189,6 @@ export function PassengerDialog({
 
         const requestBody: CreatePaxRequest = paxToRequest(normalized)
 
-        // 3️⃣ Envío seguro al backend
         let saved: Pax
         if (mode === "create") {
           saved = await fetchAPI<Pax>("/pax", {
@@ -193,7 +204,6 @@ export function PassengerDialog({
           throw new Error("Modo no válido o pasajero sin ID")
         }
 
-        // ✅ Solo cerrar si fue exitoso
         onSave?.(saved)
         onOpenChange(false)
       } catch (error) {
@@ -206,11 +216,9 @@ export function PassengerDialog({
     })
   }
   
-
   const isViewMode = mode === "view"
   const isCreateMode = mode === "create"
 
-  // 🖼️ UI
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -229,6 +237,7 @@ export function PassengerDialog({
           <div className="space-y-3">
             <h4 className="font-medium">Información básica</h4>
             <div className="grid gap-3 md:grid-cols-2">
+              
               {/* Nombre */}
               <div className="space-y-1">
                 <Label htmlFor="name">Nombre completo *</Label>
@@ -243,25 +252,23 @@ export function PassengerDialog({
                 {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
               </div>
 
-              {/* Fecha de nacimiento */}
+              {/* ✅ Fecha de nacimiento con Custom Picker */}
               <div className="space-y-1">
                 <Label htmlFor="birthDate">Fecha de nacimiento *</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={formData.birthDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthDate: e.target.value })
-                  }
-                  disabled={isViewMode}
-                  className={errors.birthDate ? "border-red-500" : ""}
-                />
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                  <DateTimePicker
+                    date={formData.birthDate}
+                    setDate={(date) => setFormData({ ...formData, birthDate: date })}
+                    includeTime={false} // Solo fecha
+                    label="Seleccionar fecha"
+                  />
+                </div>
                 {errors.birthDate && (
                   <p className="text-red-500 text-sm">{errors.birthDate}</p>
                 )}
               </div>
 
-              {/* 🌎 Nacionalidad */}
+              {/* Nacionalidad */}
               <div className="space-y-1">
                 <Label htmlFor="nationality">Nacionalidad *</Label>
                 <Select
@@ -271,11 +278,9 @@ export function PassengerDialog({
                   }
                   disabled={isViewMode}
                 >
-
                   <SelectTrigger
                     id="nationality"
-                    className={`bg-transparent ${errors.nationality ? "border-red-500" : ""
-                      }`}
+                    className={`bg-transparent ${errors.nationality ? "border-red-500" : ""}`}
                   >
                     <SelectValue placeholder="Argentina" />
                   </SelectTrigger>
@@ -290,7 +295,6 @@ export function PassengerDialog({
                     <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
-
                 {errors.nationality && (
                   <p className="text-red-500 text-sm">{errors.nationality}</p>
                 )}
@@ -320,18 +324,17 @@ export function PassengerDialog({
                 )}
               </div>
 
+              {/* ✅ Vencimiento DNI */}
               <div className="space-y-1">
                 <Label htmlFor="dniExpiration">Fecha de vencimiento (Opcional)</Label>
-                <Input
-                  id="dniExpiration"
-                  type="date"
-                  value={formData.dniExpirationDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dniExpirationDate: e.target.value })
-                  }
-                  disabled={isViewMode}
-                  className={errors.dniExpirationDate ? "border-red-500" : ""}
-                />
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                  <DateTimePicker
+                    date={formData.dniExpirationDate}
+                    setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
+                    includeTime={false}
+                    label="Seleccionar fecha"
+                  />
+                </div>
                 {errors.dniExpirationDate && (
                   <p className="text-red-500 text-sm">{errors.dniExpirationDate}</p>
                 )}
@@ -362,21 +365,17 @@ export function PassengerDialog({
                 )}
               </div>
 
+              {/* ✅ Vencimiento Pasaporte */}
               <div className="space-y-1">
                 <Label htmlFor="passportExpiration">Fecha de vencimiento (Opcional)</Label>
-                <Input
-                  id="passportExpiration"
-                  type="date"
-                  value={formData.passportExpirationDate}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      passportExpirationDate: e.target.value,
-                    })
-                  }
-                  disabled={isViewMode}
-                  className={errors.passportExpirationDate ? "border-red-500" : ""}
-                />
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                  <DateTimePicker
+                    date={formData.passportExpirationDate}
+                    setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
+                    includeTime={false}
+                    label="Seleccionar fecha"
+                  />
+                </div>
                 {errors.passportExpirationDate && (
                   <p className="text-red-500 text-sm">
                     {errors.passportExpirationDate}
