@@ -68,7 +68,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && (
         <div
           aria-hidden="true"
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          // CAMBIO: lg:hidden (antes md:hidden).
+          // El fondo oscuro se verá en móviles y tablets.
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
@@ -76,7 +78,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 h-screen w-64 border-r border-border bg-card transition-transform duration-300 ease-in-out",
-          "md:translate-x-0",
+          // CAMBIO: lg:translate-x-0 (antes md:translate-x-0).
+          // Solo se queda fijo en pantallas grandes (Desktop).
+          "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -87,7 +91,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Plane className="h-6 w-6 text-primary" />
               <span className="text-lg font-semibold">Solymar Travel</span>
             </div>
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={onClose}>
+            {/* CAMBIO: lg:hidden (antes md:hidden).
+                El botón "X" aparece en móviles y tablets para poder cerrar el menú. */}
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClose}>
               <X className="h-5 w-5" />
             </Button>
           </div>

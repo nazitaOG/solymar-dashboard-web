@@ -3,15 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { Users, AlertCircle, CheckCircle2, Pencil } from "lucide-react";
+import { AlertCircle, CheckCircle2, Pencil, Users } from "lucide-react";
 import { EditPassengersDialog } from "./edit-passengers-dialog";
 import { fetchAPI } from "@/lib/api/fetchApi";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// 1️⃣ Importamos nuestro Schema separado
-import { 
-  updateReservationNameSchema 
+import {
+  updateReservationNameSchema
 } from "@/lib/schemas/reservation/update-reservation-name.schema";
 
 import {
@@ -52,7 +51,7 @@ interface ReservationDetailHeaderProps {
   reservation: ReservationDetail;
   onStateChange: (state: ReservationState) => void;
   onPassengersChange: (passengers: Pax[]) => void;
-  onNameChange?: (newName: string) => void; 
+  onNameChange?: (newName: string) => void;
   paymentItems: FinancialItem[];
 }
 
@@ -66,8 +65,8 @@ export function ReservationDetailHeader({
   const [editPassengersOpen, setEditPassengersOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false);
-  
-  // 2️⃣ Estados manuales para el formulario de nombre
+
+  // Estados manuales para el formulario de nombre
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [tempName, setTempName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -77,35 +76,31 @@ export function ReservationDetailHeader({
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  // 🔄 Efecto: Prellenar datos al abrir el modal y limpiar errores
+  // Efecto: Prellenar datos al abrir el modal y limpiar errores
   useEffect(() => {
     if (editNameOpen) {
       setTempName(reservation.name || "");
-      setNameError(null); // Limpiar error anterior
+      setNameError(null);
     }
   }, [editNameOpen, reservation.name]);
 
-  // 3️⃣ Handler de Guardado Manual con Zod
+  // Handler de Guardado Manual con Zod
   const handleSaveName = async () => {
-    // A. Validar con Zod manualmente
     const result = updateReservationNameSchema.safeParse({ name: tempName });
 
     if (!result.success) {
-      // Extraemos el primer error del campo 'name'
       const error = result.error.issues.find((issue) => issue.path[0] === "name");
       setNameError(error?.message || "Error en el nombre");
-      return; // Detenemos la ejecución
+      return;
     }
 
-    // B. Si pasa la validación, procedemos
     try {
       setIsSavingName(true);
       await fetchAPI<Reservation>(`/reservations/${reservation.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: result.data.name }), // Usamos result.data (datos saneados/trim)
+        body: JSON.stringify({ name: result.data.name }),
       });
 
-      // Actualizar estado en el padre
       if (onNameChange) {
         onNameChange(result.data.name);
       }
@@ -155,7 +150,7 @@ export function ReservationDetailHeader({
 
   const totalsByCurrency = useMemo(() => {
     const acc: Record<string, { total: number; paid: number; missing: number }> = {};
-    
+
     paymentItems.forEach(item => {
       const curr = item.currency;
       if (!acc[curr]) {
@@ -166,7 +161,7 @@ export function ReservationDetailHeader({
     });
 
     Object.keys(acc).forEach(key => {
-        acc[key].missing = acc[key].total - acc[key].paid;
+      acc[key].missing = acc[key].total - acc[key].paid;
     });
 
     return acc;
@@ -207,25 +202,27 @@ export function ReservationDetailHeader({
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            
-            {/* Header con el botón del lápiz */}
-            <div className="flex items-baseline gap-2 group">
-                <h1 className="text-3xl font-bold tracking-tight font-mono">
+      <div className=" w-[90vw] sm:w-full">
+        {/* --- Header Principal --- */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+          <div className="flex flex-col items-start sm:flex-row sm:items-center gap-4 w-fit sm:w-auto">
+
+            {/* Título y Lápiz */}
+            <div className="flex items-baseline gap-2 group w-full sm:w-auto">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-mono break-all sm:break-normal">
                 {reservation.name}-{String(reservation.code).padStart(5, "0")}
-                </h1>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setEditNameOpen(true)}
-                >
-                    <Pencil className="h-4 w-4" />
-                </Button>
+              </h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity shrink-0"
+                onClick={() => setEditNameOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             </div>
 
+            {/* Selector de Estado */}
             <Select
               value={reservation.state}
               onValueChange={(value) => {
@@ -250,58 +247,81 @@ export function ReservationDetailHeader({
           </div>
         </div>
 
-        {/* Totales y Link de Detalle */}
-        <div className="flex flex-col w-fit sm:flex-row items-start sm:items-end gap-2">
-          <div className="flex flex-wrap gap-4 w-fit">
-            {reservation.currencyTotals.map((ct, idx) => (
-              <Card className="w-fit" key={idx}>
-                <CardContent className="p-6">
-                  <div className="w-fit space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">{ct.currency}</p>
-                    <div className="space-y-1">
-                      <p className="text-3xl font-bold">{formatCurrency(ct.amountPaid, ct.currency)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        de {formatCurrency(ct.totalPrice, ct.currency)} total
-                      </p>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-emerald-500"
-                        style={{ width: `${(ct.amountPaid / ct.totalPrice) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        {/* --- Sección de Totales y Link --- */}
+        <div className="flex flex-col w-fit sm:w-full items-center sm:items-start gap-2">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 w-fit sm:w-full">
 
-           <a
+            {/* Cards de Moneda */}
+            <div className="flex flex-col pt-5 sm:flex-row sm:flex-wrap gap-4 items-center sm:items-start">
+              {reservation.currencyTotals.map((ct, idx) => (
+                <Card className="w-fit shadow-sm px-4" key={idx}>
+                  <CardContent className="p-2 sm:p-6">
+                    <div className="w-full space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">{ct.currency}</p>
+                      <div className="space-y-1">
+                        <p className="text-2xl sm:text-3xl font-bold truncate">
+                          {formatCurrency(ct.amountPaid, ct.currency)}
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground break-words">
+                          de {formatCurrency(ct.totalPrice, ct.currency)} total
+                        </p>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted">
+                        <div
+                          className="h-2 rounded-full bg-emerald-500"
+                          style={{ width: `${(ct.amountPaid / ct.totalPrice) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+          <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               setPaymentDetailsOpen(true);
             }}
-            className="text-sm font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1"
+            className="text-sm self-start py-3 pl-1 font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
           >
             <AlertCircle className="h-4 w-4" />
             ¿Qué falta pagar?
           </a>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex flex-wrap gap-2">
+        {/* --- Sección de Pasajeros (CORREGIDA) --- */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center w-full">
+
+          {/* CAMBIO 2: w-full explícito aquí. Al estar en columna, tomará el ancho exacto del padre y hará wrap */}
+          <div className="flex flex-wrap gap-2 w-full">
             {currentPassengers.map((passenger) => (
-              <Badge key={passenger.id} variant="outline" className="gap-2 py-1.5">
-                <Users className="h-3 w-3" />
-                {passenger.name}
+              <Badge
+                key={passenger.id}
+                variant="outline"
+                className="gap-2 py-1.5 px-3 max-w-full"
+              >
+                <Users className="md:!h-4 md:!w-4 text-muted-foreground shrink-0" />
+                <span className="truncate text-xs md:text-sm">{passenger.name}</span>
               </Badge>
             ))}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditPassengersOpen(true)}>
+
+          {/* Botón: Ancho completo en móvil para que sea fácil de clickear, auto en desktop */}
+          <Button
+            variant="outline"
+            onClick={() => setEditPassengersOpen(true)}
+            className="w-full mt-3 sm:mt-0 sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
+          >
             Editar pasajeros
           </Button>
         </div>
+
+
+
+
+
       </div>
 
       <EditPassengersDialog
@@ -333,9 +353,9 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Detalles de Pago (Scroll Nativo) */}
+      {/* Dialog de Detalles de Pago */}
       <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden w-[95vw] sm:w-full">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -347,93 +367,92 @@ export function ReservationDetailHeader({
               </DialogDescription>
             </DialogHeader>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
-                {Object.entries(totalsByCurrency).map(([currency, totals]) => (
-                    <div key={currency} className="p-4 rounded-lg bg-muted/50 space-y-2 text-sm border border-border/50">
-                        <div className="flex justify-between items-center mb-1">
-                            <Badge variant="outline" className="bg-background">{currency}</Badge>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Total del plan:</span>
-                            <span className="font-medium">{formatCurrency(totals.total, currency)}</span>
-                        </div>
-                        <div className="flex justify-between text-emerald-600">
-                            <span>Pagado:</span>
-                            <span className="font-bold">{formatCurrency(totals.paid, currency)}</span>
-                        </div>
-                        <div className="flex justify-between text-red-600 border-t pt-2 mt-2 border-border/50">
-                            <span className="font-bold">Falta pagar:</span>
-                            <span className="font-bold">{formatCurrency(totals.missing, currency)}</span>
-                        </div>
-                    </div>
-                ))}
-
-                <div className="space-y-3">
-                    <h4 className="text-sm font-medium leading-none">Desglose de items</h4>
-                    {paymentItems.length === 0 ? (
-                        <p className="text-sm text-muted-foreground italic">No hay servicios cargados en esta reserva.</p>
-                    ) : (
-                        <ul className="grid gap-2">
-                            {paymentItems.map((item) => {
-                                const missing = item.totalPrice - item.amountPaid;
-                                const isMissing = missing > 0.01; 
-
-                                return (
-                                    <li key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded border ${isMissing ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-transparent border-transparent opacity-70'}`}>
-                                        <div className="flex items-start gap-2 mb-2 sm:mb-0">
-                                            {isMissing ? (
-                                                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />
-                                            ) : (
-                                                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
-                                            )}
-                                            <div className="flex flex-col">
-                                                <span className={`text-sm ${isMissing ? 'font-medium text-red-900 dark:text-red-200' : 'text-muted-foreground'}`}>
-                                                    {item.label}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground/70">
-                                                    {item.type}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-col items-end gap-0.5 pl-6 sm:pl-0">
-                                            {isMissing ? (
-                                                <>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Faltan:
-                                                    </span>
-                                                    <span className="text-sm font-mono font-bold text-red-600 dark:text-red-400">
-                                                        {formatCurrency(missing, item.currency)}
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-                                                    Pagado
-                                                </span>
-                                            )}
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
+            {Object.entries(totalsByCurrency).map(([currency, totals]) => (
+              <div key={currency} className="p-4 rounded-lg bg-muted/50 space-y-2 text-sm border border-border/50">
+                <div className="flex justify-between items-center mb-1">
+                  <Badge variant="outline" className="bg-background">{currency}</Badge>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total del plan:</span>
+                  <span className="font-medium">{formatCurrency(totals.total, currency)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-600">
+                  <span>Pagado:</span>
+                  <span className="font-bold">{formatCurrency(totals.paid, currency)}</span>
+                </div>
+                <div className="flex justify-between text-red-600 border-t pt-2 mt-2 border-border/50">
+                  <span className="font-bold">Falta pagar:</span>
+                  <span className="font-bold">{formatCurrency(totals.missing, currency)}</span>
+                </div>
+              </div>
+            ))}
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium leading-none">Desglose de items</h4>
+              {paymentItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No hay servicios cargados en esta reserva.</p>
+              ) : (
+                <ul className="grid gap-2">
+                  {paymentItems.map((item) => {
+                    const missing = item.totalPrice - item.amountPaid;
+                    const isMissing = missing > 0.01;
+
+                    return (
+                      <li key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded border ${isMissing ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-transparent border-transparent opacity-70'}`}>
+                        <div className="flex items-start gap-2 mb-2 sm:mb-0">
+                          {isMissing ? (
+                            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                          )}
+                          <div className="flex flex-col">
+                            <span className={`text-sm ${isMissing ? 'font-medium text-red-900 dark:text-red-200' : 'text-muted-foreground'}`}>
+                              {item.label}
+                            </span>
+                            <span className="text-xs text-muted-foreground/70">
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-0.5 pl-6 sm:pl-0">
+                          {isMissing ? (
+                            <>
+                              <span className="text-xs text-muted-foreground">
+                                Faltan:
+                              </span>
+                              <span className="text-sm font-mono font-bold text-red-600 dark:text-red-400">
+                                {formatCurrency(missing, item.currency)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+                              Pagado
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* 4️⃣ Dialog para Editar Nombre (VALIDACIÓN MANUAL) */}
+      {/* Dialog para Editar Nombre */}
       <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Editar nombre de la reserva</DialogTitle>
             <DialogDescription>
               Cambia el nombre descriptivo de la reserva.
             </DialogDescription>
           </DialogHeader>
-          
-          {/* No usamos <form> nativo para evitar submit por enter si no queremos, o usamos inputs controlados */}
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nombre</Label>
@@ -442,11 +461,10 @@ export function ReservationDetailHeader({
                 placeholder="Ej: Viaje a Disney 2024"
                 value={tempName}
                 onChange={(e) => {
-                    setTempName(e.target.value);
-                    if (nameError) setNameError(null); // Limpiar error al escribir
+                  setTempName(e.target.value);
+                  if (nameError) setNameError(null);
                 }}
               />
-              {/* Mostramos el error si existe */}
               {nameError && (
                 <p className="text-sm text-red-500 font-medium">
                   {nameError}
@@ -454,13 +472,13 @@ export function ReservationDetailHeader({
               )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditNameOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSaveName} disabled={isSavingName}>
-                {isSavingName ? "Guardando..." : "Guardar cambios"}
+              {isSavingName ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>
 

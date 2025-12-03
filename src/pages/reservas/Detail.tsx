@@ -1072,7 +1072,7 @@ export default function ReservationDetailPage() {
         <div className="flex flex-col gap-8">
 
           {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
-          <div className="space-y-6">
+          <div className="space-y-6 ">
             <ReservationDetailHeader
               reservation={reservation}
               onStateChange={handleStateChange}
