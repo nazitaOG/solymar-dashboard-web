@@ -1082,29 +1082,38 @@ export default function ReservationDetailPage() {
             />
 
             <Tabs defaultValue="hotels" className="w-full">
-              <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="hotels" className="gap-2">
-                  <Hotel className="h-4 w-4" /> Hoteles
-                </TabsTrigger>
-                <TabsTrigger value="planes" className="gap-2">
-                  <Plane className="h-4 w-4" /> Vuelos
-                </TabsTrigger>
-                <TabsTrigger value="cruises" className="gap-2">
-                  <Ship className="h-4 w-4" /> Cruceros
-                </TabsTrigger>
-                <TabsTrigger value="transfers" className="gap-2">
-                  <Car className="h-4 w-4" /> Traslados
-                </TabsTrigger>
-                <TabsTrigger value="carRentals" className="gap-2">
-                  <CarFront className="h-4 w-4" /> Autos
-                </TabsTrigger>
-                <TabsTrigger value="excursions" className="gap-2">
-                  <Compass className="h-4 w-4" /> Excursiones
-                </TabsTrigger>
-                <TabsTrigger value="medical" className="gap-2">
-                  <Heart className="h-4 w-4" /> Asistencias
-                </TabsTrigger>
-              </TabsList>
+              <div className="grid grid-cols-1 w-full">
+                {/* 2. max-w-[calc(100vw-2rem)]: OBLIGA al contenedor a no ser más ancho que la pantalla del móvil.
+             (El -2rem es por el padding de la página, ajústalo si usas p-6 o p-8).
+         3. overflow-x-auto: Habilita el scroll. */}
+                <div className="overflow-x-auto pb-2 w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
+
+                  <TabsList className="flex h-auto w-max min-w-full justify-start sm:grid sm:w-full sm:grid-cols-7">
+                    <TabsTrigger value="hotels" className="gap-2">
+                      <Hotel className="h-4 w-4" /> Hoteles
+                    </TabsTrigger>
+                    <TabsTrigger value="planes" className="gap-2">
+                      <Plane className="h-4 w-4" /> Vuelos
+                    </TabsTrigger>
+                    <TabsTrigger value="cruises" className="gap-2">
+                      <Ship className="h-4 w-4" /> Cruceros
+                    </TabsTrigger>
+                    <TabsTrigger value="transfers" className="gap-2">
+                      <Car className="h-4 w-4" /> Traslados
+                    </TabsTrigger>
+                    <TabsTrigger value="carRentals" className="gap-2">
+                      <CarFront className="h-4 w-4" /> Autos
+                    </TabsTrigger>
+                    <TabsTrigger value="excursions" className="gap-2">
+                      <Compass className="h-4 w-4" /> Excursiones
+                    </TabsTrigger>
+                    <TabsTrigger value="medical" className="gap-2">
+                      <Heart className="h-4 w-4" /> Asistencias
+                    </TabsTrigger>
+                  </TabsList>
+
+                </div>
+              </div>
 
               {/* ... (Aquí van todos tus TabsContent: hotels, planes, cruises, etc. sin cambios) ... */}
 

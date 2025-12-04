@@ -202,13 +202,13 @@ export function ReservationDetailHeader({
 
   return (
     <>
-      <div className=" w-[90vw] sm:w-full">
-        {/* --- Header Principal --- */}
+      <div className="pl-4 md:pl-0 w-[90vw] sm:w-full">
+        {/* --- Header principal --- */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-          <div className="flex flex-col items-start sm:flex-row sm:items-center gap-4 w-fit sm:w-auto">
+          <div className="flex flex-row flex-wrap items-start gap-4 w-full sm:w-auto">
 
             {/* Título y Lápiz */}
-            <div className="flex items-baseline gap-2 group w-full sm:w-auto">
+            <div className="flex items-baseline gap-2 group w-fit sm:w-auto">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-mono break-all sm:break-normal">
                 {reservation.name}-{String(reservation.code).padStart(5, "0")}
               </h1>
@@ -248,13 +248,13 @@ export function ReservationDetailHeader({
         </div>
 
         {/* --- Sección de Totales y Link --- */}
-        <div className="flex flex-col w-fit sm:w-full items-center sm:items-start gap-2">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 w-fit sm:w-full">
+        <div className="flex flex-col w-full pr-4 sm:w-full items-center sm:items-start gap-2">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 w-full sm:w-full">
 
             {/* Cards de Moneda */}
-            <div className="flex flex-col pt-5 sm:flex-row sm:flex-wrap gap-4 items-center sm:items-start">
+            <div className="flex w-full flex-col pt-5 sm:flex-row sm:flex-wrap gap-4 items-center sm:items-start">
               {reservation.currencyTotals.map((ct, idx) => (
-                <Card className="w-fit shadow-sm px-4" key={idx}>
+                <Card className=" sm:w-fit w-full shadow-sm px-4" key={idx}>
                   <CardContent className="p-2 sm:p-6">
                     <div className="w-full space-y-2">
                       <p className="text-sm font-medium text-muted-foreground">{ct.currency}</p>
@@ -284,7 +284,7 @@ export function ReservationDetailHeader({
               e.preventDefault();
               setPaymentDetailsOpen(true);
             }}
-            className="text-sm self-start py-3 pl-1 font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
+            className="text-sm self-start pb-3 pl-1 font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
           >
             <AlertCircle className="h-4 w-4" />
             ¿Qué falta pagar?
@@ -292,10 +292,14 @@ export function ReservationDetailHeader({
         </div>
 
         {/* --- Sección de Pasajeros (CORREGIDA) --- */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center w-full">
+        {/* Agregamos gap-4 al padre */}
+        <div className="flex flex-col h-fit justify-between sm:flex-row items-start sm:items-center w-full gap-4">
 
-          {/* CAMBIO 2: w-full explícito aquí. Al estar en columna, tomará el ancho exacto del padre y hará wrap */}
-          <div className="flex flex-wrap gap-2 w-full">
+          {/* CAMBIO IMPORTANTE: 
+    1. w-full: Para que ocupe todo en móvil.
+    2. sm:w-auto sm:flex-1: En escritorio, dejamos que ocupe el espacio sobrante pero sin forzar el 100% para no aplastar al botón.
+*/}
+          <div className="flex gap-2 flex-wrap w-full sm:w-auto sm:flex-1">
             {currentPassengers.map((passenger) => (
               <Badge
                 key={passenger.id}
@@ -308,11 +312,12 @@ export function ReservationDetailHeader({
             ))}
           </div>
 
-          {/* Botón: Ancho completo en móvil para que sea fácil de clickear, auto en desktop */}
+          {/* Botón */}
           <Button
             variant="outline"
             onClick={() => setEditPassengersOpen(true)}
-            className="w-full mt-3 sm:mt-0 sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
+            // En escritorio (sm), el botón toma su tamaño natural (w-auto) y no se encoge (shrink-0)
+            className="w-full sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
           >
             Editar pasajeros
           </Button>

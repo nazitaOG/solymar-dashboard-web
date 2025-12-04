@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
+// ... (Interfaces Column y Props iguales) ...
 export interface Column {
   key: string
   label: string
@@ -19,12 +20,6 @@ interface EntityTableProps {
   emptyMessage?: string
 }
 
-/**
- * ✅ EntityTable con:
- * - Filtrado basado solo en ID (más confiable)
- * - Fallbacks seguros para valores null/undefined
- * - Debug logs para troubleshooting
- */
 export function EntityTable({
   data,
   columns,
@@ -32,6 +27,7 @@ export function EntityTable({
   onDelete,
   emptyMessage = "No hay datos",
 }: EntityTableProps) {
+  // ... (Funciones formatDate y defaultRender iguales) ...
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—"
     const date = new Date(dateString)
@@ -48,7 +44,6 @@ export function EntityTable({
     return String(value)
   }
 
-  // 🔑 Filtrado seguro: Solo verificamos que sea un objeto válido con ID
   const filteredData = Array.isArray(data)
     ? data.filter((item) => {
         if (!item || typeof item !== 'object') return false
@@ -56,73 +51,74 @@ export function EntityTable({
         return hasValidId
       })
     : []
-  
-    console.log("🟨 EntityTable data filtrada:", filteredData)
-
-  // Debug solo si hay problemas (comentar en producción)
-  // console.log("🔍 EntityTable data recibida:", data)
-  // console.log("✅ EntityTable data filtrada:", filteredData)
 
   const noData = filteredData.length === 0
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((col) => (
-              <TableHead key={col.key} className="whitespace-nowrap">
-                {col.label}
-              </TableHead>
-            ))}
-            <TableHead className="text-right whitespace-nowrap">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {noData ? (
+    // TRUCO 1: 'grid grid-cols-1' fuerza al contenedor a no crecer más allá de su padre en layouts Flex.
+    // TRUCO 2: 'max-w-[90vw]' o similar asegura que en móviles el contenedor tenga un límite físico 
+    // relativo a la pantalla, obligando al contenido interno a hacer scroll.
+    <div className="w-full grid grid-cols-1">
+      <div className="rounded-lg border border-border bg-card w-full overflow-x-auto max-w-[calc(100vw-2rem)] sm:max-w-full">
+        
+        {/* min-w-[800px] fuerza a la tabla a ser ancha. */}
+        <Table className="min-w-[800px] w-full">
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={columns.length + 1} className="h-24 text-center">
-                <p className="text-muted-foreground">{emptyMessage}</p>
-              </TableCell>
+              {columns.map((col) => (
+                <TableHead key={col.key} className="whitespace-nowrap px-4">
+                  {col.label}
+                </TableHead>
+              ))}
+              <TableHead className="text-right whitespace-nowrap px-4">Acciones</TableHead>
             </TableRow>
-          ) : (
-            filteredData.map((item, idx) => (
-              <TableRow key={`${String(item.id)}-${idx}`}>
-                {columns.map((col) => {
-                  const value = item[col.key]
-                  return (
-                    <TableCell key={col.key}>
-                      {col.render
-                        ? col.render(value ?? "—", item)
-                        : defaultRender(value, col.key)}
-                    </TableCell>
-                  )
-                })}
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(item)}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(String(item.id))}
-                      aria-label="Eliminar"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+          </TableHeader>
+          <TableBody>
+            {noData ? (
+              <TableRow>
+                <TableCell colSpan={columns.length + 1} className="h-24 text-center">
+                  <p className="text-muted-foreground">{emptyMessage}</p>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              filteredData.map((item, idx) => (
+                <TableRow key={`${String(item.id)}-${idx}`}>
+                  {columns.map((col) => {
+                    const value = item[col.key]
+                    return (
+                      <TableCell key={col.key} className="whitespace-nowrap px-4">
+                        {col.render
+                          ? col.render(value ?? "—", item)
+                          : defaultRender(value, col.key)}
+                      </TableCell>
+                    )
+                  })}
+                  <TableCell className="text-right whitespace-nowrap px-4">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(item)}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(String(item.id))}
+                        aria-label="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
