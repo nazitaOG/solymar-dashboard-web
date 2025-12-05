@@ -25,7 +25,6 @@ interface LoginResponse {
 }
 
 export default function AdminLogin() {
-  // 🔹 Estados controlados
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
@@ -33,14 +32,10 @@ export default function AdminLogin() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 🔹 Auth y navegación
   const { setToken } = useAuthStore()
   const navigate = useNavigate()
-
-  // 🔹 React 19 — Transiciones para “loading state”
   const [isPending, startTransition] = useTransition()
 
-  // Handler de login
   const handleLogin = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
@@ -51,8 +46,7 @@ export default function AdminLogin() {
       setError(parsed.error.issues[0].message)
       return
     }
-    
-    // Ejecutamos dentro de una transición: mantiene la UI fluida
+
     startTransition(async () => {
       try {
         const res = await fetchAPI<LoginResponse>("/auth/login", {
@@ -67,24 +61,23 @@ export default function AdminLogin() {
 
         navigate("/reservas", { replace: true })
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message)
-        } else {
-          setError("Error inesperado. Contacta con el administrador.")
-        }
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Error inesperado. Contacta con el administrador."
+        )
       }
     })
   }
 
-  // 🎞️ Slideshow de imágenes
   useEffect(() => {
-    const id = setInterval(() => {
-      setCurrentImageIndex((i) => (i + 1) % travelImages.length)
-    }, 4000)
+    const id = setInterval(
+      () => setCurrentImageIndex((i) => (i + 1) % travelImages.length),
+      4000
+    )
     return () => clearInterval(id)
   }, [])
 
-  // 🔄 Cargar email recordado
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberEmail")
     if (savedEmail) {
@@ -94,12 +87,12 @@ export default function AdminLogin() {
   }, [])
 
   return (
-    <div className="flex justify-center h-screen bg-[#17151f]/96 items-center">
-      <div className="h-[80vh] w-[80vw] grid md:grid-cols-2 bg-[#17151f] text-white rounded-md overflow-hidden">
-        {/* 🌅 Izquierda: slideshow */}
-        <div className="m-3 relative hidden md:block overflow-hidden rounded-md">
-          <div className="absolute top-6 left-6 flex items-center gap-2 text-white/90 z-10">
-            <Globe className="w-6 h-6" />
+    <div className="min-h-screen w-full flex justify-center bg-[#17151f]/96 px-4 py-8 md:py-12">
+      <div className="w-full max-w-5xl bg-[#17151f] text-white rounded-none md:rounded-md overflow-hidden shadow-xl border border-white/5 flex flex-col md:grid md:grid-cols-2">
+        {/* Slideshow */}
+        <div className="relative w-full h-48 sm:h-64 md:h-full md:m-3 md:rounded-md overflow-hidden">
+          <div className="absolute top-3 left-3 flex items-center gap-2 text-white/90 z-10">
+            <Globe className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
             <span className="font-semibold">Sol y Mar Viajes y Turismo</span>
           </div>
 
@@ -107,14 +100,17 @@ export default function AdminLogin() {
             {travelImages.map((image, index) => (
               <div
                 key={index}
-                className={`absolute inset-0 transition-opacity duration-1000 ${
-                  index === currentImageIndex ? "opacity-100" : "opacity-0"
-                }`}
+                className={`absolute inset-0 transition-opacity duration-1000 ${index === currentImageIndex ? "opacity-100" : "opacity-0"
+                  }`}
               >
-                <img src={image.url} alt={image.location} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-6 right-6 text-white">
-                  <p className="text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
+                <img
+                  src={image.url}
+                  alt={image.location}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-3 right-3 text-white">
+                  <p className="text-xs bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
                     Ahora mostrando: {image.location}
                   </p>
                 </div>
@@ -123,19 +119,40 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {/* 🔐 Derecha: formulario */}
-        <form onSubmit={handleLogin} className="p-8 md:p-12 flex items-center">
-          <div className="w-full max-w-md mx-auto">
-            <h1 className="text-3xl font-semibold mb-2">Inicia sesión</h1>
-            <p className="text-sm text-white/70 mb-6">
-              ¿No tienes cuenta?{" "}
-              <a className="underline" href="/contact">
-                Contacta con nosotros
-              </a>
-            </p>
+        {/* Formulario */}
+        <form
+          onSubmit={handleLogin}
+          className="flex-1 p-6 sm:p-8 md:p-12 flex items-center justify-center"
+        >
+          <div className="w-full max-w-md mx-auto space-y-6">
+            <div>
+              <h1 className="text-3xl font-semibold mb-1">Inicia sesión</h1>
+              <p className="text-sm text-white/70">
+                ¿No tienes cuenta?{" "}
+                <a
+                  className="underline"
+                  href={
+                    "mailto:solymarbue@hotmail.com" +
+                    "?subject=" +
+                    encodeURIComponent("Solicitud de creación de cuenta – Sol y Mar Viajes") +
+                    "&body=" +
+                    encodeURIComponent(
+                      "Hola, quisiera crear una cuenta para acceder al sistema de reservas.\n\n" +
+                      "Mis datos son:\n" +
+                      "- Nombre:\n" +
+                      "- Email:\n" +
+                      "Gracias."
+                    )
+                  }
+                >
+                  Contacta con nosotros
+                </a>
+
+
+              </p>
+            </div>
 
             <div className="grid gap-4">
-              {/* Email */}
               <div>
                 <Label htmlFor="email" className="text-white/80 mb-1">
                   Email
@@ -155,7 +172,6 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              {/* Contraseña */}
               <div>
                 <Label htmlFor="password" className="text-white/80 mb-1">
                   Contraseña
@@ -183,8 +199,7 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              {/* Recordarme */}
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   className="rounded-sm border-none bg-white/5 cursor-pointer"
                   checked={rememberMe}
@@ -193,16 +208,13 @@ export default function AdminLogin() {
                 <span>Recordarme en este dispositivo</span>
               </label>
 
-              {/* Error */}
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
-              {/* Botón */}
               <Button
                 type="submit"
                 disabled={isPending}
-                className={`w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${
-                  isPending ? "opacity-70 cursor-wait" : "cursor-pointer"
-                }`}
+                className={`w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${isPending ? "opacity-70 cursor-wait" : ""
+                  }`}
               >
                 {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>

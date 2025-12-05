@@ -2,9 +2,9 @@ import * as React from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils/utils";
 import { DateRange } from "react-day-picker";
 
+import { cn } from "@/lib/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,10 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface DateTimePickerProps {
-  date?: Date | undefined;
+  date?: Date;
   setDate?: (date: Date | undefined) => void;
 
-  dateRange?: DateRange | undefined;
+  dateRange?: DateRange;
   setDateRange?: (range: DateRange | undefined) => void;
   withRange?: boolean;
 
@@ -23,10 +23,8 @@ interface DateTimePickerProps {
   includeTime?: boolean;
 }
 
-// -----------------------------------------------------------------------------
-// Input de tiempo
-// -----------------------------------------------------------------------------
-interface TimePickerInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface TimePickerInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
   picker: "hours" | "minutes";
   date: Date | undefined;
   onDateChange: (date: Date) => void;
@@ -54,18 +52,14 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
     const getDateValue = React.useCallback(() => {
       if (!date) return "00";
       const val =
-        picker === "hours"
-          ? date.getHours() % 12 || 12
-          : date.getMinutes();
+        picker === "hours" ? date.getHours() % 12 || 12 : date.getMinutes();
       return val.toString().padStart(2, "0");
     }, [date, picker]);
 
-    const [localValue, setLocalValue] = React.useState(getDateValue());
+    const [localValue, setLocalValue] = React.useState(getDateValue);
 
     React.useEffect(() => {
-      if (!hasFocus) {
-        setLocalValue(getDateValue());
-      }
+      if (!hasFocus) setLocalValue(getDateValue());
     }, [date, getDateValue, hasFocus]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,9 +90,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
         onDateChange(newDate);
       }
 
-      if (picker === "hours" && v.length === 2) {
-        onRightFocus?.();
-      }
+      if (picker === "hours" && v.length === 2) onRightFocus?.();
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -128,7 +120,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
         type="text"
         inputMode="numeric"
         className={cn(
-          "w-[44px] md:w-[52px] text-center font-mono text-xs md:text-sm p-0 h-8 md:h-9 focus:ring-0 focus-visible:ring-1",
+          "w-[38px] md:w-[52px] text-center font-mono text-[11px] md:text-sm p-0 h-7 md:h-9 focus:ring-0 focus-visible:ring-1",
           className,
         )}
         value={localValue}
@@ -144,9 +136,6 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
 );
 TimePickerInput.displayName = "TimePickerInput";
 
-// -----------------------------------------------------------------------------
-// Botones Up/Down
-// -----------------------------------------------------------------------------
 const TimePeriod = ({
   onUp,
   onDown,
@@ -162,28 +151,25 @@ const TimePeriod = ({
     <Button
       variant="ghost"
       size="icon"
-      className="h-6 w-6 md:h-7 md:w-7"
+      className="h-5 w-5 md:h-7 md:w-7"
       onClick={onUp}
       disabled={disabled}
     >
-      <ChevronUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
+      <ChevronUp className="h-3 w-3 md:h-4 md:w-4" />
     </Button>
     {children}
     <Button
       variant="ghost"
       size="icon"
-      className="h-6 w-6 md:h-7 md:w-7"
+      className="h-5 w-5 md:h-7 md:w-7"
       onClick={onDown}
       disabled={disabled}
     >
-      <ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
+      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
     </Button>
   </div>
 );
 
-// -----------------------------------------------------------------------------
-// Componente Principal
-// -----------------------------------------------------------------------------
 export function DateTimePicker({
   date,
   setDate,
@@ -219,11 +205,9 @@ export function DateTimePicker({
     const newDate = new Date(date);
 
     if (type === "hours") {
-      const current = newDate.getHours();
-      newDate.setHours((current + step + 24) % 24);
+      newDate.setHours((newDate.getHours() + step + 24) % 24);
     } else if (type === "minutes") {
-      const current = newDate.getMinutes();
-      newDate.setMinutes((current + step + 60) % 60);
+      newDate.setMinutes((newDate.getMinutes() + step + 60) % 60);
     } else {
       const current = newDate.getHours();
       newDate.setHours(current >= 12 ? current - 12 : current + 12);
@@ -233,52 +217,48 @@ export function DateTimePicker({
 
   const renderButtonText = () => {
     if (withRange) {
-      if (dateRange?.from) {
-        if (dateRange.to) {
-          return `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(
-            dateRange.to,
-            "dd/MM/yyyy",
-            { locale: es },
-          )}`;
-        }
+      if (!dateRange?.from) return label || "Seleccionar rango";
+      if (!dateRange.to)
         return format(dateRange.from, "dd/MM/yyyy", { locale: es });
-      }
-      return label || "Seleccionar rango";
+      return `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(
+        dateRange.to,
+        "dd/MM/yyyy",
+        { locale: es },
+      )}`;
     }
 
-    if (date) {
-      return format(
-        date,
-        includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy",
-        { locale: es },
-      );
-    }
-    return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
+    if (!date)
+      return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
+
+    return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", {
+      locale: es,
+    });
   };
 
   const showTimePicker = includeTime && !withRange;
 
   return (
-    <Popover modal={true}>
+    <Popover modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal h-8 md:h-9 text-xs md:text-sm",
+            "w-full justify-start text-left font-normal h-7 md:h-9 text-[10px] md:text-sm",
             ((!withRange && !date) || (withRange && !dateRange?.from)) &&
               "text-muted-foreground",
           )}
         >
-          <CalendarIcon className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
+          <CalendarIcon className="mr-2 h-3 w-3 md:h-4 md:w-4" />
           <span className="truncate">{renderButtonText()}</span>
         </Button>
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[280px] md:w-auto p-0 max-h-[420px] overflow-y-auto z-[9999] text-xs md:text-sm"
+        className=" z-10 w-[250px] md:w-auto p-0 text-[10px] md:text-sm max-h-[calc(100vh-80px)] overflow-y-auto"
         align="start"
         side="bottom"
-        collisionPadding={16}
+        sideOffset={4}
+        avoidCollisions={false}
       >
         {withRange ? (
           <Calendar
@@ -287,7 +267,7 @@ export function DateTimePicker({
             onSelect={setDateRange}
             initialFocus
             locale={es}
-            numberOfMonths={2}
+            numberOfMonths={1}
           />
         ) : (
           <Calendar
@@ -302,62 +282,60 @@ export function DateTimePicker({
 
         {showTimePicker && (
           <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
-            <Label className="text-[11px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Label className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Hora
             </Label>
             <div className="flex items-center gap-3">
-              <div>
-                <TimePeriod
-                  onUp={() => adjustTime("hours", 1)}
-                  onDown={() => adjustTime("hours", -1)}
+              <TimePeriod
+                onUp={() => adjustTime("hours", 1)}
+                onDown={() => adjustTime("hours", -1)}
+                disabled={!date}
+              >
+                <TimePickerInput
+                  picker="hours"
+                  date={date}
+                  onDateChange={setDate!}
+                  ref={hourRef}
+                  onRightFocus={() => minuteRef.current?.focus()}
                   disabled={!date}
-                >
-                  <TimePickerInput
-                    picker="hours"
-                    date={date}
-                    onDateChange={setDate!}
-                    ref={hourRef}
-                    onRightFocus={() => minuteRef.current?.focus()}
-                    disabled={!date}
-                  />
-                </TimePeriod>
-              </div>
+                />
+              </TimePeriod>
+
               <span className="text-lg md:text-xl font-bold text-muted-foreground pb-2">
                 :
               </span>
-              <div>
-                <TimePeriod
-                  onUp={() => adjustTime("minutes", 1)}
-                  onDown={() => adjustTime("minutes", -1)}
+
+              <TimePeriod
+                onUp={() => adjustTime("minutes", 1)}
+                onDown={() => adjustTime("minutes", -1)}
+                disabled={!date}
+              >
+                <TimePickerInput
+                  picker="minutes"
+                  date={date}
+                  onDateChange={setDate!}
+                  ref={minuteRef}
+                  onLeftFocus={() => hourRef.current?.focus()}
                   disabled={!date}
-                >
-                  <TimePickerInput
-                    picker="minutes"
-                    date={date}
-                    onDateChange={setDate!}
-                    ref={minuteRef}
-                    onLeftFocus={() => hourRef.current?.focus()}
-                    disabled={!date}
-                  />
-                </TimePeriod>
-              </div>
+                />
+              </TimePeriod>
+
               <div className="w-3 md:w-4" />
-              <div>
-                <TimePeriod
-                  onUp={() => adjustTime("ampm", 1)}
-                  onDown={() => adjustTime("ampm", -1)}
-                  disabled={!date}
+
+              <TimePeriod
+                onUp={() => adjustTime("ampm", 1)}
+                onDown={() => adjustTime("ampm", -1)}
+                disabled={!date}
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-center h-7 md:h-8 w-[40px] md:w-[52px] rounded-md border border-input bg-background font-mono text-[11px] md:text-sm font-medium",
+                    !date && "opacity-50",
+                  )}
                 >
-                  <div
-                    className={cn(
-                      "flex items-center justify-center h-7 md:h-8 w-[44px] md:w-[52px] rounded-md border border-input bg-background font-mono text-xs md:text-sm font-medium",
-                      !date && "opacity-50",
-                    )}
-                  >
-                    {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}
-                  </div>
-                </TimePeriod>
-              </div>
+                  {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}
+                </div>
+              </TimePeriod>
             </div>
           </div>
         )}

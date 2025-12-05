@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* --- Topbar / Header --- */}
         {/* Ajuste de altura: h-14 en móvil (56px) / h-16 en desktop (64px) */}
         {/* Ajuste de padding: px-4 en móvil / px-6 en desktop */}
-        <header className="flex h-14 md:h-16 items-center gap-3 md:gap-4 border-b bg-background px-4 md:px-6 lg:hidden">
+        <header className="flex h-14 md:h-16 items-center gap-3 z-20 md:gap-4 border-b bg-background px-4 md:px-6 lg:hidden">
           <Button
             variant="ghost"
             size="icon"
