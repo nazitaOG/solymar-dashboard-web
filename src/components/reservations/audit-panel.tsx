@@ -9,22 +9,26 @@ interface AuditPanelProps {
 }
 
 export function AuditPanel({ reservation }: AuditPanelProps) {
-  // 🧩 Función segura para formatear fechas
   const safeFormat = (date?: string | Date | null) => {
     if (!date) return "—"
     const parsed = new Date(date)
-    if (isNaN(parsed.getTime())) {
-      console.warn("[AuditPanel] ⚠️ Fecha inválida:", date)
-      return "—"
-    }
+    if (isNaN(parsed.getTime())) return "—"
     return format(parsed, "dd MMM yyyy, HH:mm", { locale: es })
   }
 
   return (
-    <Card className="w-fit">
+    <Card
+      className="
+        w-full max-w-sm mx-auto   /* Mobile: más ancho, centrado */
+        sm:w-fit sm:mx-0         /* Desktop: comportamiento original */
+      "
+    >
       <CardHeader>
-        <CardTitle className="text-base">Auditoría</CardTitle>
+        <CardTitle className="text-base sm:text-base">
+          Auditoría
+        </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-4">
         {/* Creación */}
         <div className="space-y-2">

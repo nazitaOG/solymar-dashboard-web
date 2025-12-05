@@ -77,18 +77,22 @@ export function EditPassengersDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
           <DialogHeader>
-            <DialogTitle>Editar Pasajeros</DialogTitle>
+            <DialogTitle className="text-sm md:text-base">
+              Editar Pasajeros
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Pasajeros actuales */}
             <div className="space-y-2">
-              <Label>Pasajeros vinculados</Label>
+              <Label className="text-[11px] md:text-xs">
+                Pasajeros vinculados
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {selectedPassengers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[11px] md:text-xs text-muted-foreground">
                     No hay pasajeros vinculados
                   </p>
                 ) : (
@@ -96,7 +100,7 @@ export function EditPassengersDialog({
                     <Badge
                       key={passenger.id}
                       variant="secondary"
-                      className="flex items-center gap-2 py-1.5 px-2"
+                      className="flex items-center gap-2 py-1 px-2 text-[11px] md:text-xs"
                     >
                       <span>{passenger.name}</span>
                       <button
@@ -119,15 +123,23 @@ export function EditPassengersDialog({
 
             {/* Buscar pasajero existente */}
             <div className="space-y-2">
-              <Label>Agregar pasajero existente</Label>
+              <Label className="text-[11px] md:text-xs">
+                Agregar pasajero existente
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    <UserPlus className="mr-2 h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  >
+                    <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Buscar pasajero
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
+                <PopoverContent
+                  className="w-[280px] md:w-[400px] p-0 text-xs md:text-sm"
+                  align="start"
+                >
                   <Command>
                     <CommandInput placeholder="Buscar por nombre..." />
                     <CommandList>
@@ -139,10 +151,13 @@ export function EditPassengersDialog({
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addExistingPassenger(passenger)}
+                              className="text-xs md:text-sm"
                             >
                               <div className="flex flex-col">
-                                <span className="font-medium">{passenger.name}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="font-medium">
+                                  {passenger.name}
+                                </span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">
                                   {passenger.nationality}
                                 </span>
                               </div>
@@ -159,25 +174,30 @@ export function EditPassengersDialog({
             <Button
               variant="outline"
               onClick={handleCreatePassenger}
-              className="w-full mt-2"
+              className="w-full mt-2 h-8 md:h-9 text-xs md:text-sm"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
               Crear nuevo pasajero
             </Button>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               variant="outline"
               onClick={() => {
-                // 🔹 Al cerrar manualmente, restauramos al estado original
                 setSelectedPassengers(currentPassengers);
                 onOpenChange(false);
               }}
+              className="text-xs md:text-sm"
             >
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Guardar cambios</Button>
+            <Button
+              onClick={handleSave}
+              className="text-xs md:text-sm"
+            >
+              Guardar cambios
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

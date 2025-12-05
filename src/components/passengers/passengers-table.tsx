@@ -39,108 +39,129 @@ export function PassengersTable({
     if (passenger.dni && passenger.passport) {
       return (
         <div className="space-y-1">
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
             DNI: {passenger.dni.dniNum}
           </Badge>
-          <Badge variant="outline" className="text-xs">
-            Pasaporte: {passenger.passport.passportNum}
-          </Badge>
+          <div className="pt-1">
+             <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+              Pasaporte: {passenger.passport.passportNum}
+            </Badge>
+          </div>
         </div>
       )
     }
     if (passenger.dni) {
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
           DNI: {passenger.dni.dniNum}
         </Badge>
       )
     }
     if (passenger.passport) {
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
           Pasaporte: {passenger.passport.passportNum}
         </Badge>
       )
     }
-    return <span className="text-sm text-muted-foreground">Sin documento</span>
+    return <span className="text-[10px] md:text-sm text-muted-foreground whitespace-nowrap">Sin documento</span>
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Fecha de nacimiento</TableHead>
-              <TableHead>Nacionalidad</TableHead>
-              <TableHead>Documento</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentPassengers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <p className="text-muted-foreground">No se encontraron pasajeros</p>
-                </TableCell>
+      {/* 1. Wrapper Grid para contener el layout */}
+      <div className="grid grid-cols-1 w-full">
+        {/* 2. Wrapper con scroll horizontal forzado en móvil */}
+        <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
+          
+          {/* 3. Ancho mínimo responsivo: 
+              - 600px en móvil (compacto)
+              - 1000px en escritorio (espacioso) 
+          */}
+          <Table className="min-w-[600px] md:min-w-[1000px] w-full">
+            <TableHeader>
+              {/* 4. Fondo sólido para evitar transparencias al hacer scroll */}
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nombre</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Fecha de nacimiento</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nacionalidad</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Documento</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Acciones</TableHead>
               </TableRow>
-            ) : (
-              currentPassengers.map((passenger) => (
-                <TableRow
-                  key={passenger.id}
-                  className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => onView(passenger)}
-                >
-                  <TableCell className="font-medium">{passenger.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(passenger.birthDate), "dd MMM yyyy", { locale: es })}
-                  </TableCell>
-                  <TableCell>{passenger.nationality}</TableCell>
-                  <TableCell>{getDocumentInfo(passenger)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onView(passenger)
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">Ver</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onEdit(passenger)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deletePassenger(passenger.id, passenger.name)
-                        }}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Eliminar</span>
-                      </Button>
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {currentPassengers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    <p className="text-muted-foreground text-xs md:text-sm">No se encontraron pasajeros</p>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                currentPassengers.map((passenger) => (
+                  <TableRow
+                    key={passenger.id}
+                    className="hover:bg-accent/50 transition-colors"
+                    // Eliminado onClick de la fila completa
+                  >
+                    <TableCell className="font-medium whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                      {passenger.name}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                      {format(new Date(passenger.birthDate), "dd MMM yyyy", { locale: es })}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                      {passenger.nationality}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-2 md:px-4">
+                      {getDocumentInfo(passenger)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap px-2 md:px-4">
+                      <div className="flex justify-end gap-1 md:gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 md:h-9 md:w-9"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onView(passenger)
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          <span className="sr-only">Ver</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 md:h-9 md:w-9"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEdit(passenger)
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 md:h-9 md:w-9"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deletePassenger(passenger.id, passenger.name)
+                          }}
+                          disabled={isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          <span className="sr-only">Eliminar</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Error visual si falla eliminación */}
@@ -152,28 +173,30 @@ export function PassengersTable({
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs md:text-sm text-muted-foreground text-center sm:text-left">
             Mostrando {startIndex + 1} a {Math.min(endIndex, passengers.length)} de {passengers.length} pasajeros
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              className="h-8 text-xs md:text-sm"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+              <span className="hidden sm:inline">Anterior</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
+              className="h-8 text-xs md:text-sm"
             >
-              Siguiente
-              <ChevronRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Siguiente</span>
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
         </div>

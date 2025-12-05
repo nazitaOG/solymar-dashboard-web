@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
 import { AuditPanel } from "@/components/reservations/audit-panel";
 import { EntityTable, type Column } from "@/components/entities/table/entity-table";
@@ -40,13 +40,11 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Currency, CurrencyTotal } from "@/lib/interfaces/currency/currency.interface";
 
-
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const passedReservation = location.state as Reservation | undefined;
-
 
   const initialReservation: ReservationDetail = {
     id: "",
@@ -63,11 +61,12 @@ export default function ReservationDetailPage() {
     transfers: [],
     excursions: [],
     medicalAssists: [],
-    carRentals: [], // 🆕 Inicializar array vacío
+    carRentals: [],
     paxReservations: [],
     createdAt: "",
     updatedAt: "",
   };
+
   const [reservation, setReservation] = useState<ReservationDetail>(initialReservation);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +78,6 @@ export default function ReservationDetailPage() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [excursionDialogOpen, setExcursionDialogOpen] = useState(false);
   const [medicalAssistDialogOpen, setMedicalAssistDialogOpen] = useState(false);
-  // 🆕 Estado para Car Rental Dialog
   const [carRentalDialogOpen, setCarRentalDialogOpen] = useState(false);
 
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
@@ -88,9 +86,7 @@ export default function ReservationDetailPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
   const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
   const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
-  // 🆕 Estado selección Car Rental
   const [selectedCarRental, setSelectedCarRental] = useState<CarRental | undefined>();
-
 
   const fmt = (iso: string | null | undefined): string => {
     if (!iso) return "—";
@@ -99,243 +95,255 @@ export default function ReservationDetailPage() {
     return format(d, "dd MMM yyyy HH:mm", { locale: es });
   };
 
-  // 🔥 Helper: Refrescar solo la data "meta" de la reserva (fechas, usuario que modificó)
-  // Esto asegura que el AuditPanel muestre la info real del servidor
   const updateReservationMetadata = useCallback(async () => {
     if (!id) return;
     try {
-      // Pedimos la reserva actualizada al backend
       const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}`);
 
       setReservation((prev) => ({
         ...prev,
         updatedAt: freshData.updatedAt,
         updatedBy: freshData.updatedBy,
-        // Si el backend recalcula estado o totales, podrías actualizar más cosas aquí
       }));
     } catch (err) {
       console.error("⚠️ No se pudo actualizar la metadata de la reserva:", err);
     }
   }, [id]);
 
+  // DELETE handlers
+  const handleDeleteHotelServer = useCallback(
+    async (hotelId: string) => {
+      try {
+        await fetchAPI<void>(`/hotels/${hotelId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          hotels: prev.hotels.filter((h) => h.id !== hotelId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar hotel (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
-  const handleDeleteHotelServer = useCallback(async (hotelId: string) => {
-    try {
-      await fetchAPI<void>(`/hotels/${hotelId}`, { method: "DELETE" });
+  const handleDeleteHotelLocal = useCallback(
+    (hotelId: string) => {
       setReservation((prev) => ({
         ...prev,
         hotels: prev.hotels.filter((h) => h.id !== hotelId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar hotel (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
-  const handleDeleteHotelLocal = useCallback((hotelId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      hotels: prev.hotels.filter((h) => h.id !== hotelId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeletePlaneServer = useCallback(
+    async (planeId: string) => {
+      try {
+        await fetchAPI<void>(`/planes/${planeId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          planes: prev.planes.filter((p) => p.id !== planeId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar vuelo (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
-  const handleDeletePlaneServer = useCallback(async (planeId: string) => {
-    try {
-      await fetchAPI<void>(`/planes/${planeId}`, { method: "DELETE" });
+  const handleDeletePlaneLocal = useCallback(
+    (planeId: string) => {
       setReservation((prev) => ({
         ...prev,
         planes: prev.planes.filter((p) => p.id !== planeId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar vuelo (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 2) Borrado disparado por el diálogo (el diálogo ya hizo DELETE → solo estado)
-  const handleDeletePlaneLocal = useCallback((planeId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      planes: prev.planes.filter((p) => p.id !== planeId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeleteCruiseServer = useCallback(
+    async (cruiseId: string) => {
+      try {
+        await fetchAPI<void>(`/cruises/${cruiseId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          cruises: prev.cruises.filter((c) => c.id !== cruiseId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar crucero (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 1) Borrado desde la tabla (DELETE real al backend + estado)
-  const handleDeleteCruiseServer = useCallback(async (cruiseId: string) => {
-    try {
-      await fetchAPI<void>(`/cruises/${cruiseId}`, { method: "DELETE" });
+  const handleDeleteCruiseLocal = useCallback(
+    (cruiseId: string) => {
       setReservation((prev) => ({
         ...prev,
         cruises: prev.cruises.filter((c) => c.id !== cruiseId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar crucero (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ 2) Borrado disparado por el diálogo (ya hizo DELETE → solo actualiza estado)
-  const handleDeleteCruiseLocal = useCallback((cruiseId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      cruises: prev.cruises.filter((c) => c.id !== cruiseId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeleteTransferServer = useCallback(
+    async (transferId: string) => {
+      try {
+        await fetchAPI<void>(`/transfers/${transferId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          transfers: prev.transfers.filter((t) => t.id !== transferId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar traslado (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
-  const handleDeleteTransferServer = useCallback(async (transferId: string) => {
-    try {
-      await fetchAPI<void>(`/transfers/${transferId}`, { method: "DELETE" });
+  const handleDeleteTransferLocal = useCallback(
+    (transferId: string) => {
       setReservation((prev) => ({
         ...prev,
         transfers: prev.transfers.filter((t) => t.id !== transferId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar traslado (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🗑️ DELETE desde el diálogo (ya lo borró, actualiza estado)
-  const handleDeleteTransferLocal = useCallback((transferId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      transfers: prev.transfers.filter((t) => t.id !== transferId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeleteExcursionServer = useCallback(
+    async (excursionId: string) => {
+      try {
+        await fetchAPI<void>(`/excursions/${excursionId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          excursions: prev.excursions.filter((e) => e.id !== excursionId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar excursión (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🗑️ DELETE desde la tabla (real al backend + actualiza estado)
-  const handleDeleteExcursionServer = useCallback(async (excursionId: string) => {
-    try {
-      await fetchAPI<void>(`/excursions/${excursionId}`, { method: "DELETE" });
+  const handleDeleteExcursionLocal = useCallback(
+    (excursionId: string) => {
       setReservation((prev) => ({
         ...prev,
         excursions: prev.excursions.filter((e) => e.id !== excursionId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar excursión (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🗑️ DELETE desde el diálogo (ya lo borró → solo actualiza estado)
-  const handleDeleteExcursionLocal = useCallback((excursionId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      excursions: prev.excursions.filter((e) => e.id !== excursionId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeleteMedicalAssistServer = useCallback(
+    async (assistId: string) => {
+      try {
+        await fetchAPI<void>(`/medical-assists/${assistId}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar asistencia médica (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ DELETE desde la tabla (real al backend + estado)
-  const handleDeleteMedicalAssistServer = useCallback(async (assistId: string) => {
-    try {
-      await fetchAPI<void>(`/medical-assists/${assistId}`, { method: "DELETE" });
+  const handleDeleteMedicalAssistLocal = useCallback(
+    (assistId: string) => {
       setReservation((prev) => ({
         ...prev,
         medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar asistencia médica (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // ✅ DELETE desde el diálogo (ya se eliminó en backend → solo actualizar estado local)
-  const handleDeleteMedicalAssistLocal = useCallback((assistId: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
+  const handleDeleteCarRentalServer = useCallback(
+    async (id: string) => {
+      try {
+        await fetchAPI<void>(`/car-rentals/${id}`, { method: "DELETE" });
+        setReservation((prev) => ({
+          ...prev,
+          carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
+        }));
+        updateReservationMetadata();
+      } catch (err) {
+        console.error("❌ Error al eliminar alquiler (server):", err);
+        if (err instanceof Error) alert(err.message);
+      }
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🆕 ✅ DELETE Car Rental (Server)
-  const handleDeleteCarRentalServer = useCallback(async (id: string) => {
-    try {
-      await fetchAPI<void>(`/car-rentals/${id}`, { method: "DELETE" });
+  const handleDeleteCarRentalLocal = useCallback(
+    (id: string) => {
       setReservation((prev) => ({
         ...prev,
         carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
       }));
-      updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-    } catch (err) {
-      console.error("❌ Error al eliminar alquiler (server):", err);
-      if (err instanceof Error) alert(err.message);
-    }
-  }, [updateReservationMetadata]);
+      updateReservationMetadata();
+    },
+    [updateReservationMetadata],
+  );
 
-  // 🆕 ✅ DELETE Car Rental (Local)
-  const handleDeleteCarRentalLocal = useCallback((id: string) => {
-    setReservation((prev) => ({
-      ...prev,
-      carRentals: prev.carRentals?.filter((c) => c.id !== id) ?? [],
-    }));
-    updateReservationMetadata(); // 🔄 Actualizar fecha/usuario
-  }, [updateReservationMetadata]);
-
-
-  // 🧭 Fetch detalle de reserva
+  // Fetch detalle de reserva
   useEffect(() => {
-    if (!id) return
+    if (!id) return;
 
     const fetchEntities = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
 
-        let baseReservation: ReservationDetail
+        let baseReservation: ReservationDetail;
 
         if (passedReservation) {
-          // 🔹 Ya vino del listado → usarlo directamente
           baseReservation = {
             ...passedReservation,
-            // garantizar que los campos faltantes existan
             hotels: [],
             planes: [],
             cruises: [],
             transfers: [],
             excursions: [],
             medicalAssists: [],
-            carRentals: [], // 🆕
-          } as ReservationDetail
+            carRentals: [],
+          } as ReservationDetail;
         } else {
-          // 🔹 Si entrás por URL → fetch completo
           baseReservation = await fetchAPI<ReservationDetail>(
-            `/reservations/${id}?include=paxReservations,currencyTotals`
-          )
+            `/reservations/${id}?include=paxReservations,currencyTotals`,
+          );
         }
 
-        // 🔸 Fetch de entidades relacionadas (siempre)
-        const [
-          hotels,
-          planes,
-          cruises,
-          transfers,
-          excursions,
-          medicalAssists,
-          carRentals, // 🆕 Fetch Car Rentals
-        ] = await Promise.all([
-          fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
-          fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
-          fetchAPI<CruiseType[]>(`/cruises/reservation/${id}`),
-          fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
-          fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
-          fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
-          fetchAPI<CarRental[]>(`/car-rentals/reservation/${id}`), // 🆕
-        ])
+        const [hotels, planes, cruises, transfers, excursions, medicalAssists, carRentals] =
+          await Promise.all([
+            fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
+            fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
+            fetchAPI<CruiseType[]>(`/cruises/reservation/${id}`),
+            fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
+            fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
+            fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
+            fetchAPI<CarRental[]>(`/car-rentals/reservation/${id}`),
+          ]);
 
         const normalized = normalizeReservation({
           ...baseReservation,
@@ -345,63 +353,53 @@ export default function ReservationDetailPage() {
           transfers,
           excursions,
           medicalAssists,
-          // Nota: Si normalizeReservation aún no soporta carRentals,
-          // lo agregamos manualmente abajo o actualizamos el helper.
-          // Aquí asumo que lo agregamos al objeto final.
-        })
+        });
 
-        // 🆕 Inyectamos carRentals si normalizeReservation no lo hace
-        setReservation({ ...normalized, carRentals })
-
+        setReservation({ ...normalized, carRentals });
       } catch (err) {
-        console.error("Error al cargar reserva:", err)
-        setError("No se pudo cargar la reserva")
+        console.error("Error al cargar reserva:", err);
+        setError("No se pudo cargar la reserva");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchEntities()
-  }, [id, passedReservation])
+    fetchEntities();
+  }, [id, passedReservation]);
 
-  // 🔁 Recalcular currencyTotals cuando cambian las entidades
+  // Recalcular currencyTotals cuando cambian las entidades
   useEffect(() => {
-    if (!reservation) return
+    if (!reservation) return;
 
-    const totalsMap = new Map<string, { totalPrice: number; amountPaid: number }>()
+    const totalsMap = new Map<string, { totalPrice: number; amountPaid: number }>();
 
-    const addTotals = (
-      items: {
-        currency?: string
-        totalPrice?: number | string | null
-        amountPaid?: number | string | null
-      }[]
-    ) => {
-      // Protección contra items undefined o null
+    const addTotals = (items: {
+      currency?: string;
+      totalPrice?: number | string | null;
+      amountPaid?: number | string | null;
+    }[]) => {
       if (!items) return;
 
       for (const item of items) {
-        const currency = item.currency ?? "USD"
-        const totalPrice = Number(item.totalPrice ?? 0)
-        const amountPaid = Number(item.amountPaid ?? 0)
-        const existing = totalsMap.get(currency) ?? { totalPrice: 0, amountPaid: 0 }
+        const currency = item.currency ?? "USD";
+        const totalPrice = Number(item.totalPrice ?? 0);
+        const amountPaid = Number(item.amountPaid ?? 0);
+        const existing = totalsMap.get(currency) ?? { totalPrice: 0, amountPaid: 0 };
         totalsMap.set(currency, {
           totalPrice: existing.totalPrice + totalPrice,
           amountPaid: existing.amountPaid + amountPaid,
-        })
+        });
       }
-    }
+    };
 
-    // 🔹 Sumar totales de cada entidad asociada
-    addTotals(reservation.hotels)
-    addTotals(reservation.planes)
-    addTotals(reservation.cruises)
-    addTotals(reservation.transfers)
-    addTotals(reservation.excursions)
-    addTotals(reservation.medicalAssists)
-    addTotals(reservation.carRentals) // 🆕 Sumar totales de Autos
+    addTotals(reservation.hotels);
+    addTotals(reservation.planes);
+    addTotals(reservation.cruises);
+    addTotals(reservation.transfers);
+    addTotals(reservation.excursions);
+    addTotals(reservation.medicalAssists);
+    addTotals(reservation.carRentals);
 
-    // 🔸 Crear nuevo array de currencyTotals
     const recalculatedTotals: ReservationCurrencyTotal[] = Array.from(totalsMap.entries()).map(
       ([currencyCode, totals]) => ({
         id: `local-${currencyCode}`,
@@ -410,25 +408,23 @@ export default function ReservationDetailPage() {
           currencyCode === "USD"
             ? Currency.USD
             : currencyCode === "ARS"
-              ? Currency.ARS
-              : (currencyCode as Currency), // fallback seguro
+            ? Currency.ARS
+            : (currencyCode as Currency),
         totalPrice: totals.totalPrice,
         amountPaid: totals.amountPaid,
         createdAt: reservation.createdAt,
         updatedAt: new Date().toISOString(),
-      })
+      }),
     );
 
-
-    // ✅ Actualizar estado con cast seguro a CurrencyTotal[]
     setReservation((prev) =>
       prev
         ? {
-          ...prev,
-          currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
-        }
-        : prev
-    )
+            ...prev,
+            currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
+          }
+        : prev,
+    );
   }, [
     reservation?.id,
     reservation?.createdAt,
@@ -439,17 +435,20 @@ export default function ReservationDetailPage() {
     reservation?.excursions,
     reservation?.medicalAssists,
     reservation?.carRentals,
-  ])
+  ]);
 
-
-  // 🧩 Loading o error
   if (loading) return <FullPageLoader />;
+
   if (error || !reservation) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-          <p className="text-muted-foreground">{error ?? "Reserva no encontrada"}</p>
-          <Button onClick={() => navigate("/reservas")}>Volver a reservas</Button>
+          <p className="text-xs md:text-sm text-muted-foreground">
+            {error ?? "Reserva no encontrada"}
+          </p>
+          <Button onClick={() => navigate("/reservas")} className="text-xs md:text-sm">
+            Volver a reservas
+          </Button>
         </div>
       </DashboardLayout>
     );
@@ -458,39 +457,33 @@ export default function ReservationDetailPage() {
   // ---------------- Handlers ----------------
   const handleStateChange = (state: ReservationState) => {
     setReservation({ ...reservation, state });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
   const handleNameChange = (newName: string) => {
-    setReservation(prev => ({ ...prev, name: newName }));
+    setReservation((prev) => ({ ...prev, name: newName }));
   };
 
   const handlePassengersChange = async (passengers: PaxType[]) => {
     try {
-      // 🔹 1. Crear body con los IDs
       const paxIds = passengers.map((p) => p.id);
 
-      // 🔹 2. PATCH al backend
       const updated = await fetchAPI<ReservationDetail>(`/reservations/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ paxIds }),
       });
 
-      // 🔹 3. Actualizar estado local sin refetch
       setReservation((prev) => ({
         ...prev,
         paxReservations: updated.paxReservations ?? passengers.map((p) => ({ pax: p })),
-        // Aquí SÍ tenemos la data fresca porque updated ya viene del PATCH
         updatedAt: updated.updatedAt,
         updatedBy: updated.updatedBy,
       }));
-
     } catch (error) {
       console.error("❌ Error al vincular pasajeros a la reserva:", error);
       alert("No se pudieron guardar los pasajeros en la reserva.");
     }
   };
-
 
   // Hotels
   const handleCreateHotel = () => {
@@ -511,7 +504,7 @@ export default function ReservationDetailPage() {
         : [...prev.hotels, savedHotel];
       return { ...prev, hotels: updatedHotels };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
   // Planes
@@ -525,7 +518,6 @@ export default function ReservationDetailPage() {
     setPlaneDialogOpen(true);
   };
 
-  // 💾 Guardar (creación o edición)
   const handleSavePlane = (savedPlane: PlaneType) => {
     setReservation((prev) => {
       const exists = prev.planes.some((p) => p.id === savedPlane.id);
@@ -535,11 +527,9 @@ export default function ReservationDetailPage() {
       return { ...prev, planes: updatedPlanes };
     });
 
-    // FIX CRÍTICO: Actualizar selectedPlane con los datos frescos
     setSelectedPlane(savedPlane);
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
-
 
   // Cruises
   const handleCreateCruise = () => {
@@ -560,9 +550,8 @@ export default function ReservationDetailPage() {
         : [...prev.cruises, savedCruise];
       return { ...prev, cruises: updatedCruises };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
-
 
   // Transfers
   const handleCreateTransfer = () => {
@@ -570,13 +559,11 @@ export default function ReservationDetailPage() {
     setTransferDialogOpen(true);
   };
 
-  // ✏️ Editar (abre diálogo con datos existentes)
   const handleEditTransfer = (transfer: Record<string, unknown>) => {
     setSelectedTransfer(transfer as unknown as TransferType);
     setTransferDialogOpen(true);
   };
 
-  // 💾 Guardar traslado (creación o edición)
   const handleSaveTransfer = (savedTransfer: TransferType) => {
     setReservation((prev) => {
       const exists = prev.transfers.some((t) => t.id === savedTransfer.id);
@@ -585,11 +572,10 @@ export default function ReservationDetailPage() {
         : [...prev.transfers, savedTransfer];
       return { ...prev, transfers: updatedTransfers };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
   // Excursions
-  // ✅ Excursions (completo, igual arquitectura que Transfer)
   const handleCreateExcursion = () => {
     setSelectedExcursion(undefined);
     setExcursionDialogOpen(true);
@@ -600,34 +586,28 @@ export default function ReservationDetailPage() {
     setExcursionDialogOpen(true);
   };
 
-  // 💾 Guardar (creación o edición)
   const handleSaveExcursion = (savedExcursion: ExcursionType) => {
     setReservation((prev) => {
       const exists = prev.excursions.some((e) => e.id === savedExcursion.id);
       const updatedExcursions = exists
-        ? prev.excursions.map((e) =>
-          e.id === savedExcursion.id ? savedExcursion : e
-        )
+        ? prev.excursions.map((e) => (e.id === savedExcursion.id ? savedExcursion : e))
         : [...prev.excursions, savedExcursion];
       return { ...prev, excursions: updatedExcursions };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
   // Medical Assists
-  // ✅ Crear
   const handleCreateMedicalAssist = () => {
     setSelectedMedicalAssist(undefined);
     setMedicalAssistDialogOpen(true);
   };
 
-  // ✅ Editar
   const handleEditMedicalAssist = (assist: Record<string, unknown>) => {
     setSelectedMedicalAssist(assist as unknown as MedicalAssistType);
     setMedicalAssistDialogOpen(true);
   };
 
-  // ✅ Guardar (crear o editar)
   const handleSaveMedicalAssist = (savedAssist: MedicalAssistType) => {
     setReservation((prev) => {
       const exists = prev.medicalAssists.some((a) => a.id === savedAssist.id);
@@ -636,10 +616,10 @@ export default function ReservationDetailPage() {
         : [...prev.medicalAssists, savedAssist];
       return { ...prev, medicalAssists: updatedAssists };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
-  // 🆕 Car Rentals Handlers
+  // Car Rentals
   const handleCreateCarRental = () => {
     setSelectedCarRental(undefined);
     setCarRentalDialogOpen(true);
@@ -658,35 +638,24 @@ export default function ReservationDetailPage() {
         : [...(prev.carRentals ?? []), saved];
       return { ...prev, carRentals: updated };
     });
-    updateReservationMetadata(); // 🔄 Actualizar auditoría
+    updateReservationMetadata();
   };
 
-
   // ---------------- Formatters ----------------
-  function formatCurrency(
-    value?: number | null,
-    currency?: string,
-  ): string {
+  function formatCurrency(value?: number | null, currency?: string): string {
     const safeValue = typeof value === "number" ? value : 0;
-    // Aseguramos que la moneda sea válida, default a USD
     const safeCurrency =
-      currency && typeof currency === "string" && currency.length === 3
-        ? currency
-        : "USD";
+      currency && typeof currency === "string" && currency.length === 3 ? currency : "USD";
 
-    // ✅ CASO ESPECIAL: Pesos Argentinos
-    // Forzamos el prefijo "AR$" formateando como decimal
     if (safeCurrency === "ARS") {
       const number = new Intl.NumberFormat("es-AR", {
         style: "decimal",
-        minimumFractionDigits: 2, // Usamos 2 decimales para precisión en tablas
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(safeValue);
       return `AR$ ${number}`;
     }
 
-    // ✅ CASO ESTÁNDAR: USD y otras monedas
-    // Usa el formato de moneda nativo (ej: US$ para USD en locale es-AR)
     try {
       return new Intl.NumberFormat("es-AR", {
         style: "currency",
@@ -694,7 +663,6 @@ export default function ReservationDetailPage() {
         minimumFractionDigits: 2,
       }).format(safeValue);
     } catch {
-      // Fallback por si la moneda es rara
       return `${safeCurrency} ${safeValue.toFixed(2)}`;
     }
   }
@@ -706,31 +674,57 @@ export default function ReservationDetailPage() {
     return format(parsed, "dd MMM yyyy", { locale: es });
   };
 
-  // ---------------- Column defs ----------------
+  // ---------------- Column defs (con text-xs/md:text-sm) ----------------
   const hotelColumns: Column[] = [
-    { key: "hotelName", label: "Hotel" },
-    { key: "city", label: "Ciudad" },
+    {
+      key: "hotelName",
+      label: "Hotel",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
+    {
+      key: "city",
+      label: "Ciudad",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "startDate",
       label: "Check-in / Check-out",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div>{formatDate(String(row.startDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.endDate))}</div>
+          <div className="text-[10px] md:text-xs text-muted-foreground">
+            {formatDate(String(row.endDate))}
+          </div>
         </div>
       ),
     },
-    { key: "roomType", label: "Habitación" },
-    { key: "provider", label: "Proveedor" },
+    {
+      key: "roomType",
+      label: "Habitación",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
+    {
+      key: "provider",
+      label: "Proveedor",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid), String(row.currency))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice), String(row.currency))}
           </div>
         </div>
@@ -746,10 +740,12 @@ export default function ReservationDetailPage() {
         const plane = row as unknown as PlaneType;
         const segs = plane.segments ?? [];
         if (segs.length === 0) {
-          return <span className="text-muted-foreground">— Sin tramos —</span>;
+          return (
+            <span className="text-[10px] md:text-xs text-muted-foreground">— Sin tramos —</span>
+          );
         }
         return (
-          <div className="text-sm space-y-1">
+          <div className="text-xs md:text-sm space-y-1">
             {segs.map((s) => (
               <div key={s.segmentOrder} className="flex gap-1">
                 <span className="font-medium">{s.departure}</span>
@@ -767,15 +763,18 @@ export default function ReservationDetailPage() {
       render: (_value: unknown, row: Record<string, unknown>) => {
         const plane = row as unknown as PlaneType;
         const segs = plane.segments ?? [];
-        if (segs.length === 0) return <span className="text-muted-foreground">—</span>;
+        if (segs.length === 0)
+          return <span className="text-[10px] md:text-xs text-muted-foreground">—</span>;
 
         return (
-          <div className="text-sm space-y-1">
+          <div className="text-xs md:text-sm space-y-1">
             {segs.map((s) => (
               <div key={s.segmentOrder} className="flex gap-2">
                 <span>{fmt(s.departureDate)}</span>
                 <span className="text-muted-foreground">→</span>
-                <span className="text-muted-foreground">{fmt(s.arrivalDate)}</span>
+                <span className="text-[10px] md:text-xs text-muted-foreground">
+                  {fmt(s.arrivalDate)}
+                </span>
               </div>
             ))}
           </div>
@@ -785,20 +784,26 @@ export default function ReservationDetailPage() {
     {
       key: "provider",
       label: "Aerolínea",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
     },
     {
       key: "bookingReference",
       label: "Referencia",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
     },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_v, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
@@ -810,71 +815,105 @@ export default function ReservationDetailPage() {
     {
       key: "provider",
       label: "Naviera",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
     },
     {
       key: "route",
       label: "Ruta",
       render: (_v, row) => {
-        const embark = row.embarkationPort as string | undefined
-        const arrival = row.arrivalPort as string | undefined
-        return embark || arrival ? `${embark ?? "?"} → ${arrival ?? "?"}` : "—"
+        const embark = row.embarkationPort as string | undefined;
+        const arrival = row.arrivalPort as string | undefined;
+        const text = embark || arrival ? `${embark ?? "?"} → ${arrival ?? "?"}` : "—";
+        return <span className="whitespace-nowrap text-xs md:text-sm">{text}</span>;
       },
     },
     {
       key: "startDate",
       label: "Salida / Llegada",
       render: (_v, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div>{formatDate(String(row.startDate))}</div>
-          <div className="text-muted-foreground">{formatDate(String(row.endDate))}</div>
+          <div className="text-[10px] md:text-xs text-muted-foreground">
+            {formatDate(String(row.endDate))}
+          </div>
         </div>
       ),
     },
     {
       key: "bookingReference",
       label: "Referencia",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
     },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_v, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
       ),
     },
-  ]
-
+  ];
 
   const transferColumns: Column[] = [
-    { key: "origin", label: "Origen" },
-    { key: "destination", label: "Destino" },
+    {
+      key: "origin",
+      label: "Origen",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
+    {
+      key: "destination",
+      label: "Destino",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "departureDate",
       label: "Salida / Llegada",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div>{fmt(String(row.departureDate))}</div>
-          <div className="text-muted-foreground">{fmt(String(row.arrivalDate))}</div>
+          <div className="text-[10px] md:text-xs text-muted-foreground">
+            {fmt(String(row.arrivalDate))}
+          </div>
         </div>
       ),
     },
-    { key: "provider", label: "Proveedor" },
-    { key: "transportType", label: "Tipo" },
+    {
+      key: "provider",
+      label: "Proveedor",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
+    {
+      key: "transportType",
+      label: "Tipo",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid), String(row.currency))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice), String(row.currency))}
           </div>
         </div>
@@ -883,25 +922,43 @@ export default function ReservationDetailPage() {
   ];
 
   const excursionColumns: Column[] = [
-    { key: "excursionName", label: "Excursión" },
-    { key: "origin", label: "Lugar / Origen" },
+    {
+      key: "excursionName",
+      label: "Excursión",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
+    {
+      key: "origin",
+      label: "Lugar / Origen",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "excursionDate",
       label: "Fecha",
       render: (_value, row) => (
-        <div className="text-sm">{fmt(String(row.excursionDate))}</div>
+        <div className="text-xs md:text-sm">{fmt(String(row.excursionDate))}</div>
       ),
     },
-    { key: "provider", label: "Proveedor" },
+    {
+      key: "provider",
+      label: "Proveedor",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
@@ -909,28 +966,37 @@ export default function ReservationDetailPage() {
     },
   ];
 
-
   const medicalAssistColumns: Column[] = [
-    { key: "provider", label: "Proveedor" },
+    {
+      key: "provider",
+      label: "Proveedor",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "assistType",
       label: "Tipo de asistencia",
-      render: (_value, row) => <div className="text-sm">{String(row.assistType) || "—"}</div>,
+      render: (_value, row) => (
+        <div className="text-xs md:text-sm">{String(row.assistType) || "—"}</div>
+      ),
     },
     {
       key: "bookingReference",
       label: "Referencia",
-      render: (_value, row) => <div className="text-sm">{String(row.bookingReference) || "—"}</div>,
+      render: (_value, row) => (
+        <div className="text-xs md:text-sm">{String(row.bookingReference) || "—"}</div>
+      ),
     },
     {
       key: "totalPrice",
       label: "Precio",
       render: (_value, row) => (
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <div className="font-medium">
             {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-[10px] md:text-xs text-muted-foreground">
             de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
           </div>
         </div>
@@ -938,22 +1004,28 @@ export default function ReservationDetailPage() {
     },
   ];
 
-  // 🆕 Car Rental Columns
   const carRentalColumns: Column[] = [
-    { key: "provider", label: "Proveedor" },
+    {
+      key: "provider",
+      label: "Proveedor",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+      ),
+    },
     {
       key: "carCategory",
       label: "Vehículo",
       render: (_v, row) => {
-        // ✅ Aserción de tipo segura: row -> unknown -> CarRental
         const item = row as unknown as CarRental;
         return (
-          <div className="text-sm">
+          <div className="text-xs md:text-sm">
             <div className="font-medium">{item.carCategory}</div>
-            {item.carModel && <div className="text-muted-foreground">{item.carModel}</div>}
+            {item.carModel && (
+              <div className="text-[10px] md:text-xs text-muted-foreground">{item.carModel}</div>
+            )}
           </div>
-        )
-      }
+        );
+      },
     },
     {
       key: "pickupDate",
@@ -961,11 +1033,13 @@ export default function ReservationDetailPage() {
       render: (_v, row) => {
         const item = row as unknown as CarRental;
         return (
-          <div className="text-sm">
+          <div className="text-xs md:text-sm">
             <div>{fmt(item.pickupDate)}</div>
-            <div className="text-muted-foreground">{fmt(item.dropoffDate)}</div>
+            <div className="text-[10px] md:text-xs text-muted-foreground">
+              {fmt(item.dropoffDate)}
+            </div>
           </div>
-        )
+        );
       },
     },
     {
@@ -974,11 +1048,13 @@ export default function ReservationDetailPage() {
       render: (_v, row) => {
         const item = row as unknown as CarRental;
         return (
-          <div className="text-sm">
+          <div className="text-xs md:text-sm">
             <div>Ret: {item.pickupLocation}</div>
-            <div className="text-muted-foreground">Dev: {item.dropoffLocation}</div>
+            <div className="text-[10px] md:text-xs text-muted-foreground">
+              Dev: {item.dropoffLocation}
+            </div>
           </div>
-        )
+        );
       },
     },
     {
@@ -987,15 +1063,15 @@ export default function ReservationDetailPage() {
       render: (_v, row) => {
         const item = row as unknown as CarRental;
         return (
-          <div className="text-sm">
+          <div className="text-xs md:text-sm">
             <div className="font-medium">
               {formatCurrency(Number(item.amountPaid ?? 0), String(item.currency ?? "USD"))}
             </div>
-            <div className="text-muted-foreground">
+            <div className="text-[10px] md:text-xs text-muted-foreground">
               de {formatCurrency(Number(item.totalPrice ?? 0), String(item.currency ?? "USD"))}
             </div>
           </div>
-        )
+        );
       },
     },
   ];
@@ -1059,18 +1135,20 @@ export default function ReservationDetailPage() {
     })),
   ];
 
-
   // ---------------- Render ----------------
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/reservas")} className="gap-2">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/reservas")}
+          className="gap-2 text-xs md:text-sm"
+        >
           <ArrowLeft className="h-4 w-4" />
           Volver a reservas
         </Button>
 
         <div className="flex flex-col gap-8">
-
           {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
           <div className="space-y-6 ">
             <ReservationDetailHeader
@@ -1083,132 +1161,217 @@ export default function ReservationDetailPage() {
 
             <Tabs defaultValue="hotels" className="w-full">
               <div className="grid grid-cols-1 w-full">
-                {/* 2. max-w-[calc(100vw-2rem)]: OBLIGA al contenedor a no ser más ancho que la pantalla del móvil.
-             (El -2rem es por el padding de la página, ajústalo si usas p-6 o p-8).
-         3. overflow-x-auto: Habilita el scroll. */}
-                <div className="overflow-x-auto pb-2 w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
+                {/* AQUÍ: sin max-w */}
+                <div className="overflow-x-auto pb-2 w-full">
+                  <TabsList className="flex w-full min-w-max items-stretch gap-1 md:gap-2">
+                    <TabsTrigger
+                      value="hotels"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Hotel className="h-4 w-4 shrink-0" /> Hoteles
+                    </TabsTrigger>
 
-                  <TabsList className="flex h-auto w-max min-w-full justify-start sm:grid sm:w-full sm:grid-cols-7">
-                    <TabsTrigger value="hotels" className="gap-2">
-                      <Hotel className="h-4 w-4" /> Hoteles
+                    <TabsTrigger
+                      value="planes"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Plane className="h-4 w-4 shrink-0" /> Vuelos
                     </TabsTrigger>
-                    <TabsTrigger value="planes" className="gap-2">
-                      <Plane className="h-4 w-4" /> Vuelos
+
+                    <TabsTrigger
+                      value="cruises"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Ship className="h-4 w-4 shrink-0" /> Cruceros
                     </TabsTrigger>
-                    <TabsTrigger value="cruises" className="gap-2">
-                      <Ship className="h-4 w-4" /> Cruceros
+
+                    <TabsTrigger
+                      value="transfers"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Car className="h-4 w-4 shrink-0" /> Traslados
                     </TabsTrigger>
-                    <TabsTrigger value="transfers" className="gap-2">
-                      <Car className="h-4 w-4" /> Traslados
+
+                    <TabsTrigger
+                      value="carRentals"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <CarFront className="h-4 w-4 shrink-0" /> Autos
                     </TabsTrigger>
-                    <TabsTrigger value="carRentals" className="gap-2">
-                      <CarFront className="h-4 w-4" /> Autos
+
+                    <TabsTrigger
+                      value="excursions"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Compass className="h-4 w-4 shrink-0" /> Excursiones
                     </TabsTrigger>
-                    <TabsTrigger value="excursions" className="gap-2">
-                      <Compass className="h-4 w-4" /> Excursiones
-                    </TabsTrigger>
-                    <TabsTrigger value="medical" className="gap-2">
-                      <Heart className="h-4 w-4" /> Asistencias
+
+                    <TabsTrigger
+                      value="medical"
+                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                    >
+                      <Heart className="h-4 w-4 shrink-0" /> Asistencias
                     </TabsTrigger>
                   </TabsList>
-
                 </div>
               </div>
 
-              {/* ... (Aquí van todos tus TabsContent: hotels, planes, cruises, etc. sin cambios) ... */}
-
+              {/* HOTELS */}
               <TabsContent value="hotels" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateHotel}>Crear Hotel</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateHotel}>
+                    Crear Hotel
+                  </Button>
                 </div>
-                <div className="text-xs text-muted-foreground mb-2">
+                <div className="text-[10px] md:text-xs text-muted-foreground mb-2">
                   Total de hotels en estado: {reservation.hotels.length}
                 </div>
-                <EntityTable
-                  data={reservation.hotels as unknown as Record<string, unknown>[]}
-                  columns={hotelColumns}
-                  onEdit={handleEditHotel}
-                  onDelete={handleDeleteHotelServer}
-                  emptyMessage="No hay hoteles agregados aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  {/* AQUÍ: sin max-w */}
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.hotels as unknown as Record<string, unknown>[]}
+                        columns={hotelColumns}
+                        onEdit={handleEditHotel}
+                        onDelete={handleDeleteHotelServer}
+                        emptyMessage="No hay hoteles agregados aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* PLANES */}
               <TabsContent value="planes" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreatePlane}>Crear Vuelo</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreatePlane}>
+                    Crear Vuelo
+                  </Button>
                 </div>
-                <EntityTable
-                  data={reservation.planes as unknown as Record<string, unknown>[]}
-                  columns={planeColumns}
-                  onEdit={handleEditPlane}
-                  onDelete={handleDeletePlaneServer}
-                  emptyMessage="No hay vuelos agregados aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.planes as unknown as Record<string, unknown>[]}
+                        columns={planeColumns}
+                        onEdit={handleEditPlane}
+                        onDelete={handleDeletePlaneServer}
+                        emptyMessage="No hay vuelos agregados aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* CRUISES */}
               <TabsContent value="cruises" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateCruise}>Crear Crucero</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateCruise}>
+                    Crear Crucero
+                  </Button>
                 </div>
-                <EntityTable
-                  data={reservation.cruises as unknown as Record<string, unknown>[]}
-                  columns={cruiseColumns}
-                  onEdit={handleEditCruise}
-                  onDelete={handleDeleteCruiseServer}
-                  emptyMessage="No hay cruceros agregados aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.cruises as unknown as Record<string, unknown>[]}
+                        columns={cruiseColumns}
+                        onEdit={handleEditCruise}
+                        onDelete={handleDeleteCruiseServer}
+                        emptyMessage="No hay cruceros agregados aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* TRANSFERS */}
               <TabsContent value="transfers" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateTransfer}>Crear Traslado</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateTransfer}>
+                    Crear Traslado
+                  </Button>
                 </div>
-                <EntityTable
-                  data={reservation.transfers as unknown as Record<string, unknown>[]}
-                  columns={transferColumns}
-                  onEdit={handleEditTransfer}
-                  onDelete={handleDeleteTransferServer}
-                  emptyMessage="No hay traslados agregados aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.transfers as unknown as Record<string, unknown>[]}
+                        columns={transferColumns}
+                        onEdit={handleEditTransfer}
+                        onDelete={handleDeleteTransferServer}
+                        emptyMessage="No hay traslados agregados aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* CAR RENTALS */}
               <TabsContent value="carRentals" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateCarRental}>Crear Auto</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateCarRental}>
+                    Crear Auto
+                  </Button>
                 </div>
-                <EntityTable
-                  data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
-                  columns={carRentalColumns}
-                  onEdit={handleEditCarRental}
-                  onDelete={handleDeleteCarRentalServer}
-                  emptyMessage="No hay alquileres de autos agregados aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
+                        columns={carRentalColumns}
+                        onEdit={handleEditCarRental}
+                        onDelete={handleDeleteCarRentalServer}
+                        emptyMessage="No hay alquileres de autos agregados aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* EXCURSIONS */}
               <TabsContent value="excursions" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateExcursion}>Crear Excursión</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateExcursion}>
+                    Crear Excursión
+                  </Button>
                 </div>
-                <EntityTable
-                  data={reservation.excursions as unknown as Record<string, unknown>[]}
-                  columns={excursionColumns}
-                  onEdit={handleEditExcursion}
-                  onDelete={handleDeleteExcursionServer}
-                  emptyMessage="No hay excursiones agregadas aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.excursions as unknown as Record<string, unknown>[]}
+                        columns={excursionColumns}
+                        onEdit={handleEditExcursion}
+                        onDelete={handleDeleteExcursionServer}
+                        emptyMessage="No hay excursiones agregadas aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
+              {/* MEDICAL */}
               <TabsContent value="medical" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button onClick={handleCreateMedicalAssist}>Crear Asistencia</Button>
+                  <Button className="text-xs md:text-sm" onClick={handleCreateMedicalAssist}>
+                    Crear Asistencia
+                  </Button>
                 </div>
-                <EntityTable
-                  data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
-                  columns={medicalAssistColumns}
-                  onEdit={handleEditMedicalAssist}
-                  onDelete={handleDeleteMedicalAssistServer}
-                  emptyMessage="No hay asistencias agregadas aún"
-                />
+                <div className="grid grid-cols-1 w-full">
+                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                    <div className="min-w-[600px] md:min-w-[1000px]">
+                      <EntityTable
+                        data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
+                        columns={medicalAssistColumns}
+                        onEdit={handleEditMedicalAssist}
+                        onDelete={handleDeleteMedicalAssistServer}
+                        emptyMessage="No hay asistencias agregadas aún"
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
@@ -1218,7 +1381,6 @@ export default function ReservationDetailPage() {
             <h3 className="mb-4 text-lg font-semibold">Historial de Cambios</h3>
             <AuditPanel reservation={reservation} />
           </div>
-
         </div>
       </div>
 
@@ -1235,7 +1397,7 @@ export default function ReservationDetailPage() {
       )}
       {planeDialogOpen && (
         <PlaneDialog
-          key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : 'new-plane'}
+          key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : "new-plane"}
           open={planeDialogOpen}
           onOpenChange={setPlaneDialogOpen}
           plane={selectedPlane}

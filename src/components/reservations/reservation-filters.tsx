@@ -48,9 +48,7 @@ export function ReservationFiltersComponent({
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [currency, setCurrency] = useState<Currency | undefined>();
   
-  // 🆕 Estado para el rango de fechas
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-
   const [openPassengers, setOpenPassengers] = useState(false);
   const [openStates, setOpenStates] = useState(false);
 
@@ -74,7 +72,7 @@ export function ReservationFiltersComponent({
     setSelectedStates([]);
     setSortBy("newest");
     setCurrency(undefined);
-    setDateRange(undefined); // Limpiar fechas
+    setDateRange(undefined);
     onFilterChange({ sortBy: "newest" });
   };
 
@@ -95,45 +93,54 @@ export function ReservationFiltersComponent({
   };
 
   return (
-    <div className="space-y-4 rounded-lg w-fit border border-border bg-card p-3 md:p-4">
-      {/* 🔹 Header */}
+    // 🔹 Contenedor Principal: Se eliminó 'md:w-fit' para forzar 'w-full' siempre.
+    <div className="space-y-4 w-full rounded-lg border border-border bg-card p-3 md:p-4">
+      
+      {/* Header */}
       <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
         <h3 className="font-semibold text-sm md:text-base">Filtros</h3>
       </div>
 
-      {/* 🔹 Contenedor de filtros principales */}
-      <div className="flex flex-wrap justify-start gap-6">
+      {/* Grid: Adaptado a 4 columnas para escritorio */}
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         
-        {/* 1. Date Range Filter (NUEVO) */}
-        <div className="flex flex-col gap-2 w-[260px]">
-          <Label className="text-sm">Rango de fechas</Label>
-          <DateTimePicker
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            withRange={true}
-            label="Filtrar por fecha"
-            includeTime={false} // Desactivar hora para rangos
-          />
+        {/* 1. Date Range Filter */}
+        <div className="space-y-1.5 md:space-y-2">
+          <Label className="text-xs md:text-sm">Rango de fechas</Label>
+          {/* Wrapper para forzar estilos al botón interno del DatePicker */}
+          <div className="[&>button]:h-8 [&>button]:text-xs md:[&>button]:h-10 md:[&>button]:text-sm [&>button]:w-full [&>button]:bg-transparent [&>button]:font-normal">
+            <DateTimePicker
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              withRange={true}
+              label="Seleccionar fechas"
+              includeTime={false}
+            />
+          </div>
         </div>
 
-        {/* 2. Passenger Filter */}
-        <div className="flex flex-col gap-2 w-[260px]">
-          <Label className="text-sm">Buscar por pasajero</Label>
+        {/* 2. Passenger Filter (Multi-select) */}
+        <div className="space-y-1.5 md:space-y-2">
+          <Label className="text-xs md:text-sm">Buscar por pasajero</Label>
           <Popover open={openPassengers} onOpenChange={setOpenPassengers}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start bg-transparent text-sm"
+                role="combobox"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal"
               >
-                {selectedPassengers.length > 0
-                  ? `${selectedPassengers.length} seleccionados`
-                  : "Seleccionar pasajeros"}
+                <span className="truncate">
+                  {selectedPassengers.length > 0
+                    ? `${selectedPassengers.length} seleccionados`
+                    : "Seleccionar pasajeros"}
+                </span>
+                <Filter className="ml-2 h-3 w-3 md:h-4 md:w-4 opacity-50 shrink-0" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[260px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Buscar pasajero..." />
+                <CommandInput placeholder="Buscar pasajero..." className="h-9" />
                 <CommandList>
                   <CommandEmpty>No se encontraron pasajeros</CommandEmpty>
                   <CommandGroup>
@@ -141,10 +148,11 @@ export function ReservationFiltersComponent({
                       <CommandItem
                         key={passenger.id}
                         onSelect={() => togglePassenger(passenger.id)}
+                        className="text-xs md:text-sm"
                       >
                         <Check
                           className={cn(
-                            "mr-2 h-4 w-4",
+                            "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
                             selectedPassengers.includes(passenger.id)
                               ? "opacity-100"
                               : "opacity-0"
@@ -159,12 +167,13 @@ export function ReservationFiltersComponent({
             </PopoverContent>
           </Popover>
 
+          {/* Badges para Pasajeros */}
           {selectedPassengers.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 mt-1.5">
               {selectedPassengers.map((id) => {
                 const passenger = passengers.find((p) => p.id === id);
                 return (
-                  <Badge key={id} variant="secondary" className="gap-1 text-xs">
+                  <Badge key={id} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
                     {passenger?.name}
                     <button
                       type="button"
@@ -172,7 +181,7 @@ export function ReservationFiltersComponent({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedPassengers((prev) => prev.filter((pid) => pid !== id));
+                        togglePassenger(id);
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -185,34 +194,38 @@ export function ReservationFiltersComponent({
         </div>
 
         {/* 3. Sort By */}
-        <div className="flex flex-col gap-2 w-[220px]">
-          <Label className="text-sm">Ordenar por fecha</Label>
+        <div className="space-y-1.5 md:space-y-2">
+          <Label className="text-xs md:text-sm">Ordenar por fecha</Label>
           <Select
             value={sortBy}
             onValueChange={(value) => setSortBy(value as "newest" | "oldest")}
           >
-            <SelectTrigger className="bg-transparent text-sm w-full">
+            <SelectTrigger className="bg-transparent w-full h-8 md:h-10 text-xs md:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Más nuevas primero</SelectItem>
-              <SelectItem value="oldest">Más antiguas primero</SelectItem>
+              <SelectItem value="newest" className="text-xs md:text-sm">Más nuevas primero</SelectItem>
+              <SelectItem value="oldest" className="text-xs md:text-sm">Más antiguas primero</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* 4. State Filter */}
-        <div className="flex flex-col gap-2 w-[220px]">
-          <Label className="text-sm">Estado</Label>
+        <div className="space-y-1.5 md:space-y-2">
+          <Label className="text-xs md:text-sm">Estado</Label>
           <Popover open={openStates} onOpenChange={setOpenStates}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start bg-transparent text-sm"
+                role="combobox"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal"
               >
-                {selectedStates.length > 0
-                  ? `${selectedStates.length} seleccionados`
-                  : "Todos los estados"}
+                <span className="truncate">
+                  {selectedStates.length > 0
+                    ? `${selectedStates.length} seleccionados`
+                    : "Todos los estados"}
+                </span>
+                <Filter className="ml-2 h-3 w-3 md:h-4 md:w-4 opacity-50 shrink-0" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0" align="start">
@@ -223,10 +236,11 @@ export function ReservationFiltersComponent({
                       <CommandItem
                         key={option.value}
                         onSelect={() => toggleState(option.value as ReservationState)}
+                        className="text-xs md:text-sm"
                       >
                         <Check
                           className={cn(
-                            "mr-2 h-4 w-4",
+                            "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
                             selectedStates.includes(option.value as ReservationState)
                               ? "opacity-100"
                               : "opacity-0"
@@ -241,12 +255,13 @@ export function ReservationFiltersComponent({
             </PopoverContent>
           </Popover>
 
-          {selectedStates.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+           {/* Badges para Estado */}
+           {selectedStates.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
               {selectedStates.map((st) => {
                 const option = stateOptions.find((o) => o.value === st);
                 return (
-                  <Badge key={st} variant="secondary" className="gap-1 text-xs">
+                  <Badge key={st} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
                     {option?.label}
                     <button
                       type="button"
@@ -254,7 +269,7 @@ export function ReservationFiltersComponent({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedStates((prev) => prev.filter((s) => s !== st));
+                        toggleState(st);
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -267,21 +282,24 @@ export function ReservationFiltersComponent({
         </div>
       </div>
 
-      {/* 🔹 Botones abajo a la izquierda */}
-      <div className="flex gap-2 justify-start pt-4">
-        <Button onClick={handleApplyFilters} size="sm">
+      {/* 🔹 Botones de Acción */}
+      <div className="flex gap-2">
+        <Button 
+          onClick={handleApplyFilters} 
+          size="sm" 
+          className="h-8 md:h-9 text-xs md:text-sm"
+        >
           Aplicar filtros
         </Button>
         <Button
           onClick={handleClearFilters}
           variant="outline"
           size="sm"
-          className="bg-transparent"
+          className="h-8 md:h-9 text-xs md:text-sm"
         >
           Limpiar
         </Button>
       </div>
-
     </div>
   );
 }

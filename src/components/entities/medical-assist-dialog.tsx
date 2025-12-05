@@ -139,9 +139,8 @@ export function MedicalAssistDialog({
 
     const payload = {
       bookingReference: formData.bookingReference || null,
-      // ⬇️ CAMBIO IMPORTANTE: Quitamos "|| null" para permitir enviar string vacío ("")
-      // Esto asegura que pase la validación @IsString() del backend
-      assistType: formData.assistType, 
+      // ⬇️ Quitamos "|| null" para assistType (ya lo tenías así)
+      assistType: formData.assistType,
       provider: formData.provider,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
@@ -190,7 +189,9 @@ export function MedicalAssistDialog({
     } catch (err) {
       console.error("❌ Error al eliminar asistencia médica:", err);
       if (err instanceof Error) {
-        setErrors({ _general: err.message || "Error al eliminar asistencia médica." });
+        setErrors({
+          _general: err.message || "Error al eliminar asistencia médica.",
+        });
       }
     } finally {
       deleteLock.current = false;
@@ -201,16 +202,16 @@ export function MedicalAssistDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-sm md:text-base">
             {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
           </DialogTitle>
         </DialogHeader>
 
         {errors._general && (
           <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
               ⚠️ {errors._general}
             </p>
           </div>
@@ -231,8 +232,13 @@ export function MedicalAssistDialog({
               placeholder: "Emergencia médica internacional",
             },
           ].map((f) => (
-            <div key={f.id}>
-              <Label htmlFor={f.id}>{f.label}</Label>
+            <div key={f.id} className="space-y-1">
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={formData[f.id as keyof FormData] as string | number}
@@ -240,9 +246,12 @@ export function MedicalAssistDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id as keyof FormData] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id as keyof FormData]}
                 </p>
               )}
@@ -251,24 +260,34 @@ export function MedicalAssistDialog({
 
           {/* Moneda solo en creación */}
           {!assist && (
-            <div>
-              <Label htmlFor="currency">Moneda *</Label>
+            <div className="space-y-1">
+              <Label
+                htmlFor="currency"
+                className="text-[11px] md:text-xs"
+              >
+                Moneda *
+              </Label>
               <Select
                 value={formData.currency}
                 onValueChange={(v: Currency) =>
                   setFormData({ ...formData, currency: v })
                 }
               >
-                <SelectTrigger id="currency" className="bg-transparent">
+                <SelectTrigger
+                  id="currency"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="text-xs md:text-sm">
                   <SelectItem value="USD">USD</SelectItem>
                   <SelectItem value="ARS">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
-                <p className="text-sm text-red-500">{errors.currency}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.currency}
+                </p>
               )}
             </div>
           )}
@@ -278,8 +297,13 @@ export function MedicalAssistDialog({
             { id: "totalPrice", label: "Precio total *", placeholder: "500" },
             { id: "amountPaid", label: "Monto pagado *", placeholder: "300" },
           ].map((f) => (
-            <div key={f.id}>
-              <Label htmlFor={f.id}>{f.label}</Label>
+            <div key={f.id} className="space-y-1">
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 type="number"
@@ -288,9 +312,12 @@ export function MedicalAssistDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id as keyof FormData] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id as keyof FormData] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id as keyof FormData]}
                 </p>
               )}
@@ -298,23 +325,32 @@ export function MedicalAssistDialog({
           ))}
         </div>
 
-        <DialogFooter className="flex justify-between mt-4">
-          {assist && (
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-              {loading ? "Eliminando..." : "Eliminar"}
-            </Button>
-          )}
-          <div className="flex gap-2">
+        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex justify-start">
+            {assist && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+                className="text-xs md:text-sm"
+              >
+                {loading ? "Eliminando..." : "Eliminar"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="text-xs md:text-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (assist && !hasChanges)}
+              className="text-xs md:text-sm"
             >
               {loading
                 ? "Guardando..."

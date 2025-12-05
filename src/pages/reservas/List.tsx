@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition, Suspense } from "react";
 import { useNavigate, Outlet } from "react-router";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
 import { ReservationFilters } from "@/components/reservations/reservation-filters";
 import { ReservationsTable } from "@/components/reservations/reservations-table";
 import { ReservationDialog } from "@/components/reservations/reservation-dialog";
@@ -23,13 +23,16 @@ import { usePassengersStore } from "@/stores/usePassengerStore";
 
 export default function ReservasPage() {
   const navigate = useNavigate();
+  
   const { passengers, setPassengers, addPassenger, fetched, setFetched } = usePassengersStore();
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  
   const [isPending, startTransition] = useTransition();
 
   // 🧭 Fetch inicial
@@ -43,14 +46,10 @@ export default function ReservasPage() {
         setReservations(reservationsData);
         setFilteredReservations(reservationsData);
 
-        // 🚀 Solo fetch pasajeros si no estaban cargados
         if (!fetched) {
           const passengersData = await fetchAPI<Pax[]>("/pax");
           setPassengers(passengersData);
           setFetched(true);
-          console.log("✅ Pasajeros cargados globalmente (Zustand)");
-        } else {
-          console.log("⚡ Pasajeros recuperados del store Zustand");
         }
       } catch (error) {
         console.error("❌ Error al obtener datos:", error);
@@ -129,7 +128,6 @@ export default function ReservasPage() {
       await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
       setReservations((prev) => prev.filter((r) => r.id !== id));
       setFilteredReservations((prev) => prev.filter((r) => r.id !== id));
-      console.log(`🗑️ Reserva ${id} eliminada correctamente`);
     } catch (error) {
       console.error("❌ Error al eliminar reserva:", error);
     }
@@ -144,7 +142,7 @@ export default function ReservasPage() {
     setDialogOpen(true);
   };
 
-  // 💾 Guardar cambios (PATCH o POST según modo)
+  // 💾 Guardar cambios
   const handleConfirmDialog = async (data: {
     id?: string;
     state: ReservationState;
@@ -169,7 +167,6 @@ export default function ReservasPage() {
 
         setReservations((prev) => prev.map((r) => (r.id === data.id ? updated : r)));
         setFilteredReservations((prev) => prev.map((r) => (r.id === data.id ? updated : r)));
-        console.log(`✅ Reserva ${data.id} actualizada correctamente`);
       }
 
       setDialogOpen(false);
@@ -179,32 +176,39 @@ export default function ReservasPage() {
     }
   };
 
-  // 🧩 Render
   return (
     <DashboardLayout>
       <Suspense fallback={<FullPageLoader />}>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Reservas</h1>
-              <p className="text-muted-foreground">Administra todas las reservas de viajes</p>
+        {/* CORRECCIÓN: Eliminado w-[100vw] y pr-6. Ahora es idéntico a PasajerosPage */}
+        <div className="space-y-6 w-full">
+          
+          {/* Header Responsivo */}
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
+              <p className="text-xs text-muted-foreground md:text-sm">
+                Administra todas las reservas de viajes
+              </p>
             </div>
+
             <Button
               onClick={() => {
                 setDialogMode("create");
                 setDialogOpen(true);
               }}
-              className="gap-2"
+              // Clases idénticas a PasajerosPage
+              className="h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
               disabled={isPending}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
               {isPending ? "Cargando..." : "Crear Reserva"}
             </Button>
           </div>
 
-          {/* Filtros y tabla */}
+          {/* Filtros */}
           <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
 
+          {/* Tabla */}
           <ReservationsTable
             reservations={filteredReservations}
             onDelete={handleDeleteReservation}
@@ -212,7 +216,7 @@ export default function ReservasPage() {
           />
         </div>
 
-        {/* 🧱 Diálogo único (creación y edición) */}
+        {/* Diálogos y Outlet */}
         <ReservationDialog
           open={dialogOpen}
           mode={dialogMode}
@@ -220,7 +224,7 @@ export default function ReservasPage() {
           availablePassengers={passengers}
           reservation={selectedReservation}
           onConfirm={handleConfirmDialog}
-          onPassengerCreated={(newPax) => addPassenger(newPax)} // ✅ store global
+          onPassengerCreated={(newPax) => addPassenger(newPax)}
         />
 
         <Outlet />

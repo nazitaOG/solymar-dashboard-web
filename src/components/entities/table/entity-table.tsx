@@ -27,7 +27,6 @@ export function EntityTable({
   onDelete,
   emptyMessage = "No hay datos",
 }: EntityTableProps) {
-  // ... (Funciones formatDate y defaultRender iguales) ...
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—"
     const date = new Date(dateString)
@@ -46,22 +45,18 @@ export function EntityTable({
 
   const filteredData = Array.isArray(data)
     ? data.filter((item) => {
-        if (!item || typeof item !== 'object') return false
-        const hasValidId = item.id && String(item.id).trim() !== ""
-        return hasValidId
-      })
+      if (!item || typeof item !== "object") return false
+      const hasValidId = item.id && String(item.id).trim() !== ""
+      return hasValidId
+    })
     : []
 
   const noData = filteredData.length === 0
 
   return (
-    // TRUCO 1: 'grid grid-cols-1' fuerza al contenedor a no crecer más allá de su padre en layouts Flex.
-    // TRUCO 2: 'max-w-[90vw]' o similar asegura que en móviles el contenedor tenga un límite físico 
-    // relativo a la pantalla, obligando al contenido interno a hacer scroll.
-    <div className="w-full grid grid-cols-1">
-      <div className="rounded-lg border border-border bg-card w-full overflow-x-auto max-w-[calc(100vw-2rem)] sm:max-w-full">
-        
-        {/* min-w-[800px] fuerza a la tabla a ser ancha. */}
+    <div className="w-full">
+      {/* SIN max-w acá */}
+      <div className="rounded-lg border md:border-border bg-card w-full overflow-x-auto">
         <Table className="min-w-[800px] w-full">
           <TableHeader>
             <TableRow>
@@ -70,7 +65,9 @@ export function EntityTable({
                   {col.label}
                 </TableHead>
               ))}
-              <TableHead className="text-right whitespace-nowrap px-4">Acciones</TableHead>
+              <TableHead className="text-right whitespace-nowrap px-4">
+                Acciones
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

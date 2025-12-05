@@ -24,7 +24,7 @@ import { fetchAPI } from "@/lib/api/fetchApi";
 import {
   createCarRentalSchema,
   updateCarRentalSchema,
-} from '@/lib/schemas/car_rental/car_rental.schema';
+} from "@/lib/schemas/car_rental/car_rental.schema";
 
 import { CarRental } from "@/lib/interfaces/car_rental/car_rental.interface";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
@@ -65,7 +65,7 @@ export function CarRentalDialog({
     bookingReference: "",
     pickupLocation: "",
     dropoffLocation: "",
-    pickupDate: undefined, // Inicializar como undefined
+    pickupDate: undefined,
     dropoffDate: undefined,
     carCategory: "",
     carModel: "",
@@ -86,7 +86,6 @@ export function CarRentalDialog({
         bookingReference: carRental.bookingReference ?? "",
         pickupLocation: carRental.pickupLocation ?? "",
         dropoffLocation: carRental.dropoffLocation ?? "",
-        // ✅ Convertir ISO string a Date
         pickupDate: carRental.pickupDate ? new Date(carRental.pickupDate) : undefined,
         dropoffDate: carRental.dropoffDate ? new Date(carRental.dropoffDate) : undefined,
         carCategory: carRental.carCategory ?? "",
@@ -110,16 +109,15 @@ export function CarRentalDialog({
         currency: Currency.USD,
       });
     }
-    setErrors({}); // Limpiar errores al abrir/cerrar
+    setErrors({});
   }, [carRental, open]);
 
   // 🧭 Detectar cambios (comparando timestamps)
   const hasChanges = useMemo(() => {
     if (!carRental) return true;
 
-    // Helper para comparar fechas con seguridad
     const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
 
     return !(
       formData.provider === carRental.provider &&
@@ -141,7 +139,6 @@ export function CarRentalDialog({
     const isEdit = Boolean(carRental);
     const schema = isEdit ? updateCarRentalSchema : createCarRentalSchema;
 
-    // 1. Validar fechas manualmente antes de Zod
     if (!formData.pickupDate || !formData.dropoffDate) {
       setErrors({
         pickupDate: !formData.pickupDate ? "Requerido" : undefined,
@@ -157,7 +154,6 @@ export function CarRentalDialog({
       return;
     }
 
-    // 2. Preparar payload validable (convertir Dates a ISO strings para Zod)
     const payloadToValidate = {
       ...formData,
       pickupDate: formData.pickupDate.toISOString(),
@@ -186,7 +182,6 @@ export function CarRentalDialog({
       return;
     }
 
-    // 3. Payload final para la API
     const finalPayload = {
       provider: formData.provider,
       bookingReference: formData.bookingReference || null,
@@ -251,15 +246,17 @@ export function CarRentalDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
         <DialogHeader>
-          <DialogTitle>{carRental ? "Editar Alquiler de Auto" : "Nuevo Alquiler de Auto"}</DialogTitle>
+          <DialogTitle className="text-sm md:text-base">
+            {carRental ? "Editar Alquiler de Auto" : "Nuevo Alquiler de Auto"}
+          </DialogTitle>
         </DialogHeader>
 
         {/* ⚠️ Error general */}
         {errors._general && (
           <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
               ⚠️ {errors._general}
             </p>
           </div>
@@ -273,7 +270,9 @@ export function CarRentalDialog({
             { id: "dropoffLocation", label: "Lugar de Devolución *", placeholder: "Aeropuerto MCO" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label htmlFor={f.id} className="text-[11px] md:text-xs">
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={(formData[f.id as keyof FormData] as string) || ""}
@@ -281,45 +280,54 @@ export function CarRentalDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">{errors[f.id]}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors[f.id]}
+                </p>
               )}
             </div>
           ))}
 
-          {/* ✅ Fila 2: Fechas con DateTimePicker */}
+          {/* Fila 2: Fechas con DateTimePicker */}
           <div className="space-y-1">
-            <Label>Fecha/Hora Retiro *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha/Hora Retiro *</Label>
             <DateTimePicker
               date={formData.pickupDate}
               setDate={(date) => setFormData({ ...formData, pickupDate: date })}
               includeTime={true}
             />
             {errors.pickupDate && (
-              <p className="text-sm text-red-500">{errors.pickupDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.pickupDate}
+              </p>
             )}
           </div>
 
           <div className="space-y-1">
-            <Label>Fecha/Hora Devolución *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha/Hora Devolución *</Label>
             <DateTimePicker
               date={formData.dropoffDate}
               setDate={(date) => setFormData({ ...formData, dropoffDate: date })}
               includeTime={true}
             />
             {errors.dropoffDate && (
-              <p className="text-sm text-red-500">{errors.dropoffDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.dropoffDate}
+              </p>
             )}
           </div>
 
           {/* Fila 3: Proveedor y Referencia */}
           {[
-             { id: "provider", label: "Proveedor *", placeholder: "Hertz, Avis..." },
-             { id: "bookingReference", label: "Referencia", placeholder: "RES-12345" },
+            { id: "provider", label: "Proveedor *", placeholder: "Hertz, Avis..." },
+            { id: "bookingReference", label: "Referencia", placeholder: "RES-12345" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label htmlFor={f.id} className="text-[11px] md:text-xs">
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={(formData[f.id as keyof FormData] as string) || ""}
@@ -327,20 +335,25 @@ export function CarRentalDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">{errors[f.id]}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors[f.id]}
+                </p>
               )}
             </div>
           ))}
 
           {/* Fila 4: Datos del Vehículo */}
           {[
-             { id: "carCategory", label: "Categoría *", placeholder: "Compacto, SUV..." },
-             { id: "carModel", label: "Modelo (Opcional)", placeholder: "Toyota Corolla o similar" },
+            { id: "carCategory", label: "Categoría *", placeholder: "Compacto, SUV..." },
+            { id: "carModel", label: "Modelo (Opcional)", placeholder: "Toyota Corolla o similar" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label htmlFor={f.id} className="text-[11px] md:text-xs">
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={(formData[f.id as keyof FormData] as string) || ""}
@@ -348,9 +361,12 @@ export function CarRentalDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">{errors[f.id]}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors[f.id]}
+                </p>
               )}
             </div>
           ))}
@@ -358,21 +374,31 @@ export function CarRentalDialog({
           {/* Fila 5: Moneda (solo create) y Precios */}
           {!carRental && (
             <div className="space-y-1">
-              <Label htmlFor="currency">Moneda *</Label>
+              <Label htmlFor="currency" className="text-[11px] md:text-xs">
+                Moneda *
+              </Label>
               <Select
                 value={formData.currency}
                 onValueChange={(v: Currency) =>
                   setFormData({ ...formData, currency: v })
                 }
               >
-                <SelectTrigger id="currency" className="bg-transparent">
+                <SelectTrigger
+                  id="currency"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="text-xs md:text-sm">
                   <SelectItem value="USD">USD</SelectItem>
                   <SelectItem value="ARS">ARS</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.currency && (
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.currency}
+                </p>
+              )}
             </div>
           )}
 
@@ -381,7 +407,9 @@ export function CarRentalDialog({
             { id: "amountPaid", label: "Monto pagado *", placeholder: "0.00" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label htmlFor={f.id} className="text-[11px] md:text-xs">
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 type="number"
@@ -390,9 +418,10 @@ export function CarRentalDialog({
                   setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id]}
                 </p>
               )}
@@ -401,27 +430,32 @@ export function CarRentalDialog({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="flex justify-between mt-4">
-          {carRental && (
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? "Eliminando..." : "Eliminar"}
-            </Button>
-          )}
-          <div className="flex gap-2">
+        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex justify-start">
+            {carRental && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+                className="text-xs md:text-sm"
+              >
+                {loading ? "Eliminando..." : "Eliminar"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="text-xs md:text-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (carRental && !hasChanges)}
+              className="text-xs md:text-sm"
             >
               {loading
                 ? "Guardando..."

@@ -61,7 +61,7 @@ export function HotelDialog({
   onDelete,
 }: HotelDialogProps) {
   const [formData, setFormData] = useState<FormData>({
-    startDate: undefined, // Inicializar como undefined
+    startDate: undefined,
     endDate: undefined,
     city: "",
     hotelName: "",
@@ -81,7 +81,6 @@ export function HotelDialog({
   useEffect(() => {
     if (hotel) {
       setFormData({
-        // ✅ Convertir ISO string a Date
         startDate: hotel.startDate ? new Date(hotel.startDate) : undefined,
         endDate: hotel.endDate ? new Date(hotel.endDate) : undefined,
         city: hotel.city,
@@ -114,9 +113,8 @@ export function HotelDialog({
   const hasChanges = useMemo(() => {
     if (!hotel) return true;
 
-    // Helper para comparar fechas con seguridad
     const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
 
     return !(
       getTime(formData.startDate) === getIsoTime(hotel.startDate) &&
@@ -145,7 +143,6 @@ export function HotelDialog({
       return;
     }
 
-    // 🚫 Si es edición y no hay cambios
     if (isEdit && !hasChanges) {
       setErrors({
         _general: "Debes modificar al menos un campo para guardar los cambios.",
@@ -153,7 +150,6 @@ export function HotelDialog({
       return;
     }
 
-    // 2. Preparar payload validable
     const payloadToValidate = {
       ...formData,
       startDate: formData.startDate.toISOString(),
@@ -182,7 +178,6 @@ export function HotelDialog({
       return;
     }
 
-    // 3. Payload final
     const payload = {
       startDate: formData.startDate.toISOString(),
       endDate: formData.endDate.toISOString(),
@@ -246,14 +241,16 @@ export function HotelDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
         <DialogHeader>
-          <DialogTitle>{hotel ? "Editar Hotel" : "Crear Hotel"}</DialogTitle>
+          <DialogTitle className="text-sm md:text-base">
+            {hotel ? "Editar Hotel" : "Crear Hotel"}
+          </DialogTitle>
         </DialogHeader>
 
         {errors._general && (
           <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
               ⚠️ {errors._general}
             </p>
           </div>
@@ -262,14 +259,35 @@ export function HotelDialog({
         <div className="grid gap-3 md:grid-cols-2">
           {/* Campos principales */}
           {[
-            { id: "hotelName", label: "Nombre del hotel *", placeholder: "Fontainebleau Miami Beach" },
+            {
+              id: "hotelName",
+              label: "Nombre del hotel *",
+              placeholder: "Fontainebleau Miami Beach",
+            },
             { id: "city", label: "Ciudad *", placeholder: "Miami" },
-            { id: "roomType", label: "Tipo de habitación *", placeholder: "Ocean View Suite" },
-            { id: "provider", label: "Proveedor *", placeholder: "Booking.com" },
-            { id: "bookingReference", label: "Referencia de reserva *", placeholder: "FB-2025-001" },
+            {
+              id: "roomType",
+              label: "Tipo de habitación *",
+              placeholder: "Ocean View Suite",
+            },
+            {
+              id: "provider",
+              label: "Proveedor *",
+              placeholder: "Booking.com",
+            },
+            {
+              id: "bookingReference",
+              label: "Referencia de reserva *",
+              placeholder: "FB-2025-001",
+            },
           ].map((f) => (
-            <div key={f.id}>
-              <Label htmlFor={f.id}>{f.label}</Label>
+            <div key={f.id} className="space-y-1">
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={(formData[f.id as keyof typeof formData] as string) || ""}
@@ -277,9 +295,12 @@ export function HotelDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id]}
                 </p>
               )}
@@ -288,60 +309,87 @@ export function HotelDialog({
 
           {/* ✅ Fechas con DateTimePicker (includeTime={false}) */}
           <div className="space-y-1">
-            <Label>Fecha de entrada *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha de entrada *</Label>
             <DateTimePicker
               date={formData.startDate}
               setDate={(date) => setFormData({ ...formData, startDate: date })}
-              includeTime={false} // 👈 Sin hora
+              includeTime={false}
             />
             {errors.startDate && (
-              <p className="text-sm text-red-500">{errors.startDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.startDate}
+              </p>
             )}
           </div>
 
           <div className="space-y-1">
-            <Label>Fecha de salida *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
             <DateTimePicker
               date={formData.endDate}
               setDate={(date) => setFormData({ ...formData, endDate: date })}
-              includeTime={false} // 👈 Sin hora
+              includeTime={false}
             />
             {errors.endDate && (
-              <p className="text-sm text-red-500">{errors.endDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.endDate}
+              </p>
             )}
           </div>
 
           {/* Moneda solo en creación */}
           {!hotel && (
-            <div>
-              <Label htmlFor="currency">Moneda *</Label>
+            <div className="space-y-1">
+              <Label
+                htmlFor="currency"
+                className="text-[11px] md:text-xs"
+              >
+                Moneda *
+              </Label>
               <Select
                 value={formData.currency}
                 onValueChange={(v: Currency) =>
                   setFormData({ ...formData, currency: v })
                 }
               >
-                <SelectTrigger id="currency" className="bg-transparent">
+                <SelectTrigger
+                  id="currency"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="text-xs md:text-sm">
                   <SelectItem value="USD">USD</SelectItem>
                   <SelectItem value="ARS">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
-                <p className="text-sm text-red-500">{errors.currency}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.currency}
+                </p>
               )}
             </div>
           )}
 
           {/* Precios */}
           {[
-            { id: "totalPrice", label: "Precio total *", placeholder: "1500" },
-            { id: "amountPaid", label: "Monto pagado *", placeholder: "1000" },
+            {
+              id: "totalPrice",
+              label: "Precio total *",
+              placeholder: "1500",
+            },
+            {
+              id: "amountPaid",
+              label: "Monto pagado *",
+              placeholder: "1000",
+            },
           ].map((f) => (
-            <div key={f.id}>
-              <Label htmlFor={f.id}>{f.label}</Label>
+            <div key={f.id} className="space-y-1">
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 type="number"
@@ -350,9 +398,12 @@ export function HotelDialog({
                   setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id]}
                 </p>
               )}
@@ -360,23 +411,32 @@ export function HotelDialog({
           ))}
         </div>
 
-        <DialogFooter className="flex justify-between mt-4">
-          {hotel && (
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-              {loading ? "Eliminando..." : "Eliminar"}
-            </Button>
-          )}
-          <div className="flex gap-2">
+        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex justify-start">
+            {hotel && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+                className="text-xs md:text-sm"
+              >
+                {loading ? "Eliminando..." : "Eliminar"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="text-xs md:text-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (hotel && !hasChanges)}
+              className="text-xs md:text-sm"
             >
               {loading
                 ? "Guardando..."

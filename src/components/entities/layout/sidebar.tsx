@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";
-import { useTheme } from "../theme-context";
+import { useTheme } from "../../theme-context";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 type NavItem = {

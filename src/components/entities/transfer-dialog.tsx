@@ -114,10 +114,10 @@ export function TransferDialog({
   // 🧭 Detectar cambios (comparando timestamps)
   const hasChanges = useMemo(() => {
     if (!transfer) return true;
-    
+
     // Helper para comparar fechas con seguridad
     const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => iso ? new Date(iso).getTime() : 0;
+    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
 
     return !(
       formData.origin === transfer.origin &&
@@ -215,7 +215,6 @@ export function TransferDialog({
       // Cerramos primero, luego actualizamos
       onOpenChange(false);
       setTimeout(() => onSave(savedTransfer), 150);
-      
     } catch {
       setErrors({
         _general: "Ocurrió un error al guardar el traslado. Inténtalo nuevamente.",
@@ -249,22 +248,24 @@ export function TransferDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
         <DialogHeader>
-          <DialogTitle>{transfer ? "Editar Traslado" : "Crear Traslado"}</DialogTitle>
+          <DialogTitle className="text-sm md:text-base">
+            {transfer ? "Editar Traslado" : "Crear Traslado"}
+          </DialogTitle>
         </DialogHeader>
 
         {/* ⚠️ Error general */}
         {errors._general && (
           <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
               ⚠️ {errors._general}
             </p>
           </div>
         )}
 
         {/* Formulario */}
-        <div className="grid gap-3 md:grid-cols-2 ">
+        <div className="grid gap-3 md:grid-cols-2">
           {/* Inputs de Texto normales */}
           {[
             { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
@@ -273,7 +274,12 @@ export function TransferDialog({
             { id: "bookingReference", label: "Referencia", placeholder: "TRF-00123" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 value={(formData[f.id as keyof typeof formData] as string) || ""}
@@ -281,52 +287,68 @@ export function TransferDialog({
                   setFormData({ ...formData, [f.id]: e.target.value })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">{errors[f.id]}</p>
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors[f.id]}
+                </p>
               )}
             </div>
           ))}
 
-          {/* ✅ DATE TIME PICKERS (REEMPLAZO) */}
+          {/* ✅ DATE TIME PICKERS */}
           <div className="space-y-1">
-            <Label>Fecha de salida *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
             <DateTimePicker
               date={formData.departureDate}
               setDate={(date) => setFormData({ ...formData, departureDate: date })}
               includeTime={true}
             />
             {errors.departureDate && (
-              <p className="text-sm text-red-500">{errors.departureDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.departureDate}
+              </p>
             )}
           </div>
 
           <div className="space-y-1">
-            <Label>Fecha de llegada *</Label>
+            <Label className="text-[11px] md:text-xs">Fecha de llegada *</Label>
             <DateTimePicker
               date={formData.arrivalDate}
               setDate={(date) => setFormData({ ...formData, arrivalDate: date })}
               includeTime={true}
             />
             {errors.arrivalDate && (
-              <p className="text-sm text-red-500">{errors.arrivalDate}</p>
+              <p className="text-red-500 text-[10px] md:text-xs">
+                {errors.arrivalDate}
+              </p>
             )}
           </div>
 
-
           {/* Tipo de transporte */}
           <div className="space-y-1">
-            <Label htmlFor="transportType">Tipo de transporte *</Label>
+            <Label
+              htmlFor="transportType"
+              className="text-[11px] md:text-xs"
+            >
+              Tipo de transporte *
+            </Label>
             <Select
               value={formData.transportType}
               onValueChange={(v: TransportType) =>
                 setFormData({ ...formData, transportType: v })
               }
             >
-              <SelectTrigger id="transportType" className="bg-transparent">
+              <SelectTrigger
+                id="transportType"
+                className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+              >
                 <SelectValue placeholder="Seleccionar" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="text-xs md:text-sm">
                 <SelectItem value={TransportType.TRANSFER}>Transfer</SelectItem>
                 <SelectItem value={TransportType.BUS}>Bus</SelectItem>
                 <SelectItem value={TransportType.TRAIN}>Tren</SelectItem>
@@ -339,21 +361,34 @@ export function TransferDialog({
           {/* Moneda (solo al crear) */}
           {!transfer && (
             <div className="space-y-1">
-              <Label htmlFor="currency">Moneda *</Label>
+              <Label
+                htmlFor="currency"
+                className="text-[11px] md:text-xs"
+              >
+                Moneda *
+              </Label>
               <Select
                 value={formData.currency}
                 onValueChange={(v: Currency) =>
                   setFormData({ ...formData, currency: v })
                 }
               >
-                <SelectTrigger id="currency" className="bg-transparent">
+                <SelectTrigger
+                  id="currency"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="text-xs md:text-sm">
                   <SelectItem value="USD">USD</SelectItem>
                   <SelectItem value="ARS">ARS</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.currency && (
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.currency}
+                </p>
+              )}
             </div>
           )}
 
@@ -362,7 +397,12 @@ export function TransferDialog({
             { id: "amountPaid", label: "Monto pagado *", placeholder: "500" },
           ].map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label htmlFor={f.id}>{f.label}</Label>
+              <Label
+                htmlFor={f.id}
+                className="text-[11px] md:text-xs"
+              >
+                {f.label}
+              </Label>
               <Input
                 id={f.id}
                 type="number"
@@ -371,9 +411,12 @@ export function TransferDialog({
                   setFormData({ ...formData, [f.id]: Number(e.target.value) })
                 }
                 placeholder={f.placeholder}
+                className={`h-8 md:h-9 text-xs md:text-sm ${
+                  errors[f.id] ? "border-red-500" : ""
+                }`}
               />
               {errors[f.id] && (
-                <p className="text-sm text-red-500">
+                <p className="text-red-500 text-[10px] md:text-xs">
                   {errors[f.id]}
                 </p>
               )}
@@ -382,27 +425,32 @@ export function TransferDialog({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="flex justify-between mt-4">
-          {transfer && (
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? "Eliminando..." : "Eliminar"}
-            </Button>
-          )}
-          <div className="flex gap-2">
+        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex justify-start">
+            {transfer && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+                className="text-xs md:text-sm"
+              >
+                {loading ? "Eliminando..." : "Eliminar"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="text-xs md:text-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading}
+              className="text-xs md:text-sm"
             >
               {loading
                 ? "Guardando..."

@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
-import { DateRange } from "react-day-picker"; // Importante para el tipado
+import { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,13 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Definimos las props extendidas para soportar rango
 interface DateTimePickerProps {
-  // Modo simple
   date?: Date | undefined;
   setDate?: (date: Date | undefined) => void;
-  
-  // Modo rango
+
   dateRange?: DateRange | undefined;
   setDateRange?: (range: DateRange | undefined) => void;
   withRange?: boolean;
@@ -27,7 +24,7 @@ interface DateTimePickerProps {
 }
 
 // -----------------------------------------------------------------------------
-// Componente Auxiliar: Input de Tiempo Controlado
+// Input de tiempo
 // -----------------------------------------------------------------------------
 interface TimePickerInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   picker: "hours" | "minutes";
@@ -38,23 +35,37 @@ interface TimePickerInputProps extends React.InputHTMLAttributes<HTMLInputElemen
 }
 
 const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>(
-  ({ className, picker, date, onDateChange, onRightFocus, onLeftFocus, onFocus, onBlur, ...props }, ref) => {
+  (
+    {
+      className,
+      picker,
+      date,
+      onDateChange,
+      onRightFocus,
+      onLeftFocus,
+      onFocus,
+      onBlur,
+      ...props
+    },
+    ref,
+  ) => {
     const [hasFocus, setHasFocus] = React.useState(false);
 
     const getDateValue = React.useCallback(() => {
-        if (!date) return "00";
-        const val = picker === "hours" 
-            ? (date.getHours() % 12 || 12) 
-            : date.getMinutes();
-        return val.toString().padStart(2, "0");
+      if (!date) return "00";
+      const val =
+        picker === "hours"
+          ? date.getHours() % 12 || 12
+          : date.getMinutes();
+      return val.toString().padStart(2, "0");
     }, [date, picker]);
 
     const [localValue, setLocalValue] = React.useState(getDateValue());
 
     React.useEffect(() => {
-        if (!hasFocus) {
-            setLocalValue(getDateValue());
-        }
+      if (!hasFocus) {
+        setLocalValue(getDateValue());
+      }
     }, [date, getDateValue, hasFocus]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,20 +102,23 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-        setHasFocus(true);
-        if (onFocus) onFocus(e);
+      setHasFocus(true);
+      onFocus?.(e);
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-        setHasFocus(false);
-        setLocalValue(getDateValue());
-        if (onBlur) onBlur(e);
+      setHasFocus(false);
+      setLocalValue(getDateValue());
+      onBlur?.(e);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "ArrowRight") onRightFocus?.();
       if (e.key === "ArrowLeft") onLeftFocus?.();
-      if (["Tab", "Backspace", "Delete", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+      if (
+        ["Tab", "Backspace", "Delete", "ArrowUp", "ArrowDown"].includes(e.key)
+      )
+        return;
       if (!/[0-9]/.test(e.key)) e.preventDefault();
     };
 
@@ -113,22 +127,25 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
         ref={ref}
         type="text"
         inputMode="numeric"
-        className={cn("w-[48px] text-center font-mono text-base p-0 h-8 focus:ring-0 focus-visible:ring-1", className)}
+        className={cn(
+          "w-[44px] md:w-[52px] text-center font-mono text-xs md:text-sm p-0 h-8 md:h-9 focus:ring-0 focus-visible:ring-1",
+          className,
+        )}
         value={localValue}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        disabled={!date} 
+        disabled={!date}
         {...props}
       />
     );
-  }
+  },
 );
 TimePickerInput.displayName = "TimePickerInput";
 
 // -----------------------------------------------------------------------------
-// Componente Auxiliar: Botones Up/Down
+// Botones Up/Down
 // -----------------------------------------------------------------------------
 const TimePeriod = ({
   onUp,
@@ -142,12 +159,24 @@ const TimePeriod = ({
   children: React.ReactNode;
 }) => (
   <div className="flex flex-col items-center gap-1">
-    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onUp} disabled={disabled}>
-      <ChevronUp className="h-4 w-4" />
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6 md:h-7 md:w-7"
+      onClick={onUp}
+      disabled={disabled}
+    >
+      <ChevronUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
     </Button>
     {children}
-    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDown} disabled={disabled}>
-      <ChevronDown className="h-4 w-4" />
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6 md:h-7 md:w-7"
+      onClick={onDown}
+      disabled={disabled}
+    >
+      <ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
     </Button>
   </div>
 );
@@ -155,19 +184,18 @@ const TimePeriod = ({
 // -----------------------------------------------------------------------------
 // Componente Principal
 // -----------------------------------------------------------------------------
-export function DateTimePicker({ 
-  date, 
-  setDate, 
+export function DateTimePicker({
+  date,
+  setDate,
   dateRange,
   setDateRange,
   withRange = false,
-  label, 
-  includeTime = true 
+  label,
+  includeTime = true,
 }: DateTimePickerProps) {
   const hourRef = React.useRef<HTMLInputElement>(null);
   const minuteRef = React.useRef<HTMLInputElement>(null);
 
-  // Manejo de selección (Solo para Single Mode con preservación de hora)
   const handleSelectSingle = (day: Date | undefined) => {
     if (!setDate) return;
     if (!day) {
@@ -203,45 +231,51 @@ export function DateTimePicker({
     setDate(newDate);
   };
 
-  // Renderizado del texto del botón
   const renderButtonText = () => {
     if (withRange) {
       if (dateRange?.from) {
         if (dateRange.to) {
-          return `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(dateRange.to, "dd/MM/yyyy", { locale: es })}`;
+          return `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(
+            dateRange.to,
+            "dd/MM/yyyy",
+            { locale: es },
+          )}`;
         }
         return format(dateRange.from, "dd/MM/yyyy", { locale: es });
       }
       return label || "Seleccionar rango";
     }
 
-    // Modo Single
     if (date) {
-      return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es });
+      return format(
+        date,
+        includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy",
+        { locale: es },
+      );
     }
     return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
   };
 
-  // Si usamos rango, desactivamos el tiempo para simplificar la UI por ahora
   const showTimePicker = includeTime && !withRange;
 
   return (
     <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
+          variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal",
-            ((!withRange && !date) || (withRange && !dateRange?.from)) && "text-muted-foreground"
+            "w-full justify-start text-left font-normal h-8 md:h-9 text-xs md:text-sm",
+            ((!withRange && !date) || (withRange && !dateRange?.from)) &&
+              "text-muted-foreground",
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          <span>{renderButtonText()}</span>
+          <CalendarIcon className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
+          <span className="truncate">{renderButtonText()}</span>
         </Button>
       </PopoverTrigger>
-      
-      <PopoverContent 
-        className="w-auto p-0 max-h-[420px] overflow-y-auto z-[9999]" 
+
+      <PopoverContent
+        className="w-[280px] md:w-auto p-0 max-h-[420px] overflow-y-auto z-[9999] text-xs md:text-sm"
         align="start"
         side="bottom"
         collisionPadding={16}
@@ -268,10 +302,16 @@ export function DateTimePicker({
 
         {showTimePicker && (
           <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hora</Label>
+            <Label className="text-[11px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Hora
+            </Label>
             <div className="flex items-center gap-3">
               <div>
-                <TimePeriod onUp={() => adjustTime("hours", 1)} onDown={() => adjustTime("hours", -1)} disabled={!date}>
+                <TimePeriod
+                  onUp={() => adjustTime("hours", 1)}
+                  onDown={() => adjustTime("hours", -1)}
+                  disabled={!date}
+                >
                   <TimePickerInput
                     picker="hours"
                     date={date}
@@ -282,9 +322,15 @@ export function DateTimePicker({
                   />
                 </TimePeriod>
               </div>
-              <span className="text-xl font-bold text-muted-foreground pb-2">:</span>
+              <span className="text-lg md:text-xl font-bold text-muted-foreground pb-2">
+                :
+              </span>
               <div>
-                <TimePeriod onUp={() => adjustTime("minutes", 1)} onDown={() => adjustTime("minutes", -1)} disabled={!date}>
+                <TimePeriod
+                  onUp={() => adjustTime("minutes", 1)}
+                  onDown={() => adjustTime("minutes", -1)}
+                  disabled={!date}
+                >
                   <TimePickerInput
                     picker="minutes"
                     date={date}
@@ -295,10 +341,19 @@ export function DateTimePicker({
                   />
                 </TimePeriod>
               </div>
-              <div className="w-4"></div>
+              <div className="w-3 md:w-4" />
               <div>
-                <TimePeriod onUp={() => adjustTime("ampm", 1)} onDown={() => adjustTime("ampm", -1)} disabled={!date}>
-                  <div className={cn("flex items-center justify-center h-8 w-[48px] rounded-md border border-input bg-background font-mono text-sm font-medium", !date && "opacity-50")}>
+                <TimePeriod
+                  onUp={() => adjustTime("ampm", 1)}
+                  onDown={() => adjustTime("ampm", -1)}
+                  disabled={!date}
+                >
+                  <div
+                    className={cn(
+                      "flex items-center justify-center h-7 md:h-8 w-[44px] md:w-[52px] rounded-md border border-input bg-background font-mono text-xs md:text-sm font-medium",
+                      !date && "opacity-50",
+                    )}
+                  >
                     {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}
                   </div>
                 </TimePeriod>

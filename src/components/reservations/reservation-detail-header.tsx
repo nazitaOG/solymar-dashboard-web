@@ -202,7 +202,7 @@ export function ReservationDetailHeader({
 
   return (
     <>
-      <div className="pl-4 md:pl-0 w-[90vw] sm:w-full">
+      <div className="pl-4 pr-3 md:pl-0 w-full">
         {/* --- Header principal --- */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
           <div className="flex flex-row flex-wrap items-start gap-4 w-full sm:w-auto">
@@ -248,7 +248,7 @@ export function ReservationDetailHeader({
         </div>
 
         {/* --- Sección de Totales y Link --- */}
-        <div className="flex flex-col w-full pr-4 sm:w-full items-center sm:items-start gap-2">
+        <div className="flex flex-col w-full pr-1 sm:w-full items-center sm:items-start gap-2">
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 w-full sm:w-full">
 
             {/* Cards de Moneda */}

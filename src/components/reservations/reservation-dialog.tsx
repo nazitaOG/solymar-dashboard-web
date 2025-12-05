@@ -117,9 +117,9 @@ export function ReservationDialog({
     <>
       {/* 🌍 Diálogo principal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-sm md:text-base">
               {isEdit ? "Editar Reserva" : "Crear Nueva Reserva"}
             </DialogTitle>
           </DialogHeader>
@@ -127,12 +127,15 @@ export function ReservationDialog({
           <div className="space-y-6">
             {/* Estado */}
             <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select value={state} onValueChange={(v) => setState(v as ReservationState)}>
-                <SelectTrigger className="bg-transparent">
+              <Label className="text-[11px] md:text-xs">Estado</Label>
+              <Select
+                value={state}
+                onValueChange={(v) => setState(v as ReservationState)}
+              >
+                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="text-xs md:text-sm">
                   <SelectItem value="PENDING">Pendiente</SelectItem>
                   <SelectItem value="CONFIRMED">Confirmada</SelectItem>
                   <SelectItem value="CANCELLED">Cancelada</SelectItem>
@@ -142,17 +145,17 @@ export function ReservationDialog({
 
             {/* Pasajeros vinculados */}
             <div className="space-y-2">
-              <Label>Pasajeros vinculados</Label>
+              <Label className="text-[11px] md:text-xs">Pasajeros vinculados</Label>
               <div className="flex flex-wrap gap-2 min-h-[40px] rounded-lg border border-border bg-muted/50 p-3">
                 {selectedPassengers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[11px] md:text-xs text-muted-foreground">
                     No hay pasajeros vinculados
                   </p>
                 ) : (
                   selectedPassengers.map((passenger) => (
                     <div
                       key={passenger.id}
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-secondary text-secondary-foreground text-sm border border-border"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-secondary text-secondary-foreground text-[11px] md:text-xs border border-border"
                     >
                       <span>{passenger.name}</span>
                       <button
@@ -175,15 +178,21 @@ export function ReservationDialog({
 
             {/* Buscar pasajero existente */}
             <div className="space-y-2">
-              <Label>Agregar pasajero existente</Label>
+              <Label className="text-[11px] md:text-xs">Agregar pasajero existente</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    <UserPlus className="mr-2 h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  >
+                    <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Buscar pasajero
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
+                <PopoverContent
+                  className="w-[280px] md:w-[400px] p-0 text-xs md:text-sm"
+                  align="start"
+                >
                   <Command>
                     <CommandInput placeholder="Buscar por nombre..." />
                     <CommandList>
@@ -195,10 +204,13 @@ export function ReservationDialog({
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addPassenger(passenger)}
+                              className="text-xs md:text-sm"
                             >
                               <div className="flex flex-col">
-                                <span className="font-medium">{passenger.name}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="font-medium">
+                                  {passenger.name}
+                                </span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">
                                   {passenger.nationality}
                                 </span>
                               </div>
@@ -215,16 +227,16 @@ export function ReservationDialog({
             <Button
               variant="outline"
               onClick={() => setPassengerDialogOpen(true)}
-              className="w-full"
+              className="w-full h-8 md:h-9 text-xs md:text-sm"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
               Crear nuevo pasajero
             </Button>
 
             {/* Info */}
             {!isEdit && (
-              <div className="rounded-lg border border-border bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">
+              <div className="rounded-lg border border-border bg-muted/50 p-3 md:p-4">
+                <p className="text-[11px] md:text-xs text-muted-foreground">
                   Después de crear la reserva, podrás agregar hoteles, vuelos, cruceros
                   y otros servicios desde la página de detalle.
                 </p>
@@ -232,13 +244,18 @@ export function ReservationDialog({
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-xs md:text-sm"
+            >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirm}
               disabled={!isEdit && selectedPassengers.length === 0}
+              className="text-xs md:text-sm"
             >
               {isEdit ? "Guardar Cambios" : "Crear Reserva"}
             </Button>
@@ -258,7 +275,6 @@ export function ReservationDialog({
           setPassengerDialogOpen(false)
         }}
       />
-
     </>
   )
 }

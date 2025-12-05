@@ -136,7 +136,6 @@ export function PassengerDialog({
   // 💾 Guardar (crear / editar)
   const handleSave = () => {
     // Prepara los datos para Zod
-    // Nota: Convertimos Date a ISO string para asegurar compatibilidad si el schema espera strings
     const zodData = {
       name: formData.name,
       birthDate: formData.birthDate?.toISOString(),
@@ -221,9 +220,9 @@ export function PassengerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-sm md:text-base">
             {isCreateMode
               ? "Crear Pasajero"
               : isViewMode
@@ -235,26 +234,34 @@ export function PassengerDialog({
         <div className="space-y-4">
           {/* Información básica */}
           <div className="space-y-3">
-            <h4 className="font-medium">Información básica</h4>
+            <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
             <div className="grid gap-3 md:grid-cols-2">
               
               {/* Nombre */}
               <div className="space-y-1">
-                <Label htmlFor="name">Nombre completo *</Label>
+                <Label htmlFor="name" className="text-[11px] md:text-xs">
+                  Nombre completo *
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={isViewMode}
                   placeholder="Juan Pérez"
-                  className={errors.name ? "border-red-500" : ""}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.name ? "border-red-500" : ""}`}
                 />
-                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               {/* ✅ Fecha de nacimiento con Custom Picker */}
               <div className="space-y-1">
-                <Label htmlFor="birthDate">Fecha de nacimiento *</Label>
+                <Label htmlFor="birthDate" className="text-[11px] md:text-xs">
+                  Fecha de nacimiento *
+                </Label>
                 <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
                   <DateTimePicker
                     date={formData.birthDate}
@@ -264,13 +271,17 @@ export function PassengerDialog({
                   />
                 </div>
                 {errors.birthDate && (
-                  <p className="text-red-500 text-sm">{errors.birthDate}</p>
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.birthDate}
+                  </p>
                 )}
               </div>
 
               {/* Nacionalidad */}
               <div className="space-y-1">
-                <Label htmlFor="nationality">Nacionalidad *</Label>
+                <Label htmlFor="nationality" className="text-[11px] md:text-xs">
+                  Nacionalidad *
+                </Label>
                 <Select
                   value={formData.nationality}
                   onValueChange={(value) =>
@@ -280,11 +291,11 @@ export function PassengerDialog({
                 >
                   <SelectTrigger
                     id="nationality"
-                    className={`bg-transparent ${errors.nationality ? "border-red-500" : ""}`}
+                    className={`bg-transparent h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}
                   >
                     <SelectValue placeholder="Argentina" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="text-xs md:text-sm">
                     <SelectItem value="Argentina">Argentina</SelectItem>
                     <SelectItem value="Uruguay">Uruguay</SelectItem>
                     <SelectItem value="Chile">Chile</SelectItem>
@@ -296,7 +307,9 @@ export function PassengerDialog({
                   </SelectContent>
                 </Select>
                 {errors.nationality && (
-                  <p className="text-red-500 text-sm">{errors.nationality}</p>
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.nationality}
+                  </p>
                 )}
               </div>
 
@@ -307,26 +320,35 @@ export function PassengerDialog({
 
           {/* DNI */}
           <div className="space-y-3">
-            <h4 className="font-medium">DNI</h4>
+            <h4 className="font-medium text-xs md:text-sm">DNI</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="dniNum">Número de DNI *</Label>
+                <Label htmlFor="dniNum" className="text-[11px] md:text-xs">
+                  Número de DNI *
+                </Label>
                 <Input
                   id="dniNum"
                   value={formData.dniNum}
                   onChange={(e) => setFormData({ ...formData, dniNum: e.target.value })}
                   disabled={isViewMode}
                   placeholder="12345678"
-                  className={errors.dniNum ? "border-red-500" : ""}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.dniNum ? "border-red-500" : ""}`}
                 />
                 {errors.dniNum && (
-                  <p className="text-red-500 text-sm">{errors.dniNum}</p>
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.dniNum}
+                  </p>
                 )}
               </div>
 
               {/* ✅ Vencimiento DNI */}
               <div className="space-y-1">
-                <Label htmlFor="dniExpiration">Fecha de vencimiento (Opcional)</Label>
+                <Label
+                  htmlFor="dniExpiration"
+                  className="text-[11px] md:text-xs"
+                >
+                  Fecha de vencimiento (Opcional)
+                </Label>
                 <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
                   <DateTimePicker
                     date={formData.dniExpirationDate}
@@ -336,7 +358,9 @@ export function PassengerDialog({
                   />
                 </div>
                 {errors.dniExpirationDate && (
-                  <p className="text-red-500 text-sm">{errors.dniExpirationDate}</p>
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.dniExpirationDate}
+                  </p>
                 )}
               </div>
             </div>
@@ -346,10 +370,15 @@ export function PassengerDialog({
 
           {/* Pasaporte */}
           <div className="space-y-3">
-            <h4 className="font-medium">Pasaporte</h4>
+            <h4 className="font-medium text-xs md:text-sm">Pasaporte</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="passportNum">Número de pasaporte *</Label>
+                <Label
+                  htmlFor="passportNum"
+                  className="text-[11px] md:text-xs"
+                >
+                  Número de pasaporte *
+                </Label>
                 <Input
                   id="passportNum"
                   value={formData.passportNum}
@@ -358,16 +387,23 @@ export function PassengerDialog({
                   }
                   disabled={isViewMode}
                   placeholder="AAA123456"
-                  className={errors.passportNum ? "border-red-500" : ""}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.passportNum ? "border-red-500" : ""}`}
                 />
                 {errors.passportNum && (
-                  <p className="text-red-500 text-sm">{errors.passportNum}</p>
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.passportNum}
+                  </p>
                 )}
               </div>
 
               {/* ✅ Vencimiento Pasaporte */}
               <div className="space-y-1">
-                <Label htmlFor="passportExpiration">Fecha de vencimiento (Opcional)</Label>
+                <Label
+                  htmlFor="passportExpiration"
+                  className="text-[11px] md:text-xs"
+                >
+                  Fecha de vencimiento (Opcional)
+                </Label>
                 <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
                   <DateTimePicker
                     date={formData.passportExpirationDate}
@@ -377,7 +413,7 @@ export function PassengerDialog({
                   />
                 </div>
                 {errors.passportExpirationDate && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-[10px] md:text-xs">
                     {errors.passportExpirationDate}
                   </p>
                 )}
@@ -387,7 +423,7 @@ export function PassengerDialog({
 
           {/* Errores */}
           {(errors.general || deleteError) && (
-            <p className="text-red-500 text-sm text-center mt-2">
+            <p className="text-red-500 text-[10px] md:text-xs text-center mt-2">
               {errors.general || deleteError}
             </p>
           )}
@@ -397,13 +433,15 @@ export function PassengerDialog({
             <>
               <Separator />
               <div className="space-y-3">
-                <h4 className="font-medium">Reservas vinculadas</h4>
+                <h4 className="font-medium text-xs md:text-sm">
+                  Reservas vinculadas
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {linkedReservations.map((reservation) => (
                     <Link key={reservation.id} to={`/reservas/${reservation.id}`}>
                       <Badge
                         variant="outline"
-                        className="cursor-pointer hover:bg-accent"
+                        className="cursor-pointer hover:bg-accent text-[10px] md:text-xs px-2 py-0.5"
                       >
                         {reservation.id}
                       </Badge>
@@ -415,8 +453,8 @@ export function PassengerDialog({
           )}
         </div>
 
-        <DialogFooter className="flex justify-between">
-          <div>
+        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex justify-start">
             {!isCreateMode && !isViewMode && (
               <Button
                 variant="destructive"
@@ -424,17 +462,26 @@ export function PassengerDialog({
                   passenger?.id && deletePassenger(passenger.id, passenger.name)
                 }
                 disabled={isDeleting}
+                className="text-xs md:text-sm"
               >
                 {isDeleting ? "Eliminando..." : "Eliminar"}
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-xs md:text-sm"
+            >
               {isViewMode ? "Cerrar" : "Cancelar"}
             </Button>
             {!isViewMode && (
-              <Button onClick={handleSave} disabled={isPending}>
+              <Button
+                onClick={handleSave}
+                disabled={isPending}
+                className="text-xs md:text-sm"
+              >
                 {isPending
                   ? "Guardando..."
                   : isCreateMode
