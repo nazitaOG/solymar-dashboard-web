@@ -197,7 +197,7 @@ export default function ReservasPage() {
                 setDialogOpen(true);
               }}
               // Clases idénticas a PasajerosPage
-              className="h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
               disabled={isPending}
             >
               <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />

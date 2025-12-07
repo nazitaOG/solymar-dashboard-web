@@ -1163,52 +1163,52 @@ export default function ReservationDetailPage() {
               <div className="grid grid-cols-1 w-full">
                 {/* AQUÍ: sin max-w */}
                 <div className="overflow-x-auto pb-2 w-full">
-                  <TabsList className="flex w-full min-w-max items-stretch gap-1 md:gap-2">
+                  <TabsList className="flex  w-full min-w-max items-stretch gap-1 md:gap-2">
                     <TabsTrigger
                       value="hotels"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Hotel className="h-4 w-4 shrink-0" /> Hoteles
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="planes"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Plane className="h-4 w-4 shrink-0" /> Vuelos
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="cruises"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Ship className="h-4 w-4 shrink-0" /> Cruceros
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="transfers"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Car className="h-4 w-4 shrink-0" /> Traslados
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="carRentals"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <CarFront className="h-4 w-4 shrink-0" /> Autos
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="excursions"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Compass className="h-4 w-4 shrink-0" /> Excursiones
                     </TabsTrigger>
 
                     <TabsTrigger
                       value="medical"
-                      className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
                     >
                       <Heart className="h-4 w-4 shrink-0" /> Asistencias
                     </TabsTrigger>
@@ -1219,7 +1219,7 @@ export default function ReservationDetailPage() {
               {/* HOTELS */}
               <TabsContent value="hotels" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateHotel}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateHotel}>
                     Crear Hotel
                   </Button>
                 </div>
@@ -1245,7 +1245,7 @@ export default function ReservationDetailPage() {
               {/* PLANES */}
               <TabsContent value="planes" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreatePlane}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreatePlane}>
                     Crear Vuelo
                   </Button>
                 </div>
@@ -1267,7 +1267,7 @@ export default function ReservationDetailPage() {
               {/* CRUISES */}
               <TabsContent value="cruises" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateCruise}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCruise}>
                     Crear Crucero
                   </Button>
                 </div>
@@ -1289,7 +1289,7 @@ export default function ReservationDetailPage() {
               {/* TRANSFERS */}
               <TabsContent value="transfers" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateTransfer}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateTransfer}>
                     Crear Traslado
                   </Button>
                 </div>
@@ -1311,7 +1311,7 @@ export default function ReservationDetailPage() {
               {/* CAR RENTALS */}
               <TabsContent value="carRentals" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateCarRental}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCarRental}>
                     Crear Auto
                   </Button>
                 </div>
@@ -1333,7 +1333,7 @@ export default function ReservationDetailPage() {
               {/* EXCURSIONS */}
               <TabsContent value="excursions" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateExcursion}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateExcursion}>
                     Crear Excursión
                   </Button>
                 </div>
@@ -1355,7 +1355,7 @@ export default function ReservationDetailPage() {
               {/* MEDICAL */}
               <TabsContent value="medical" className="space-y-4">
                 <div className="flex mt-2 justify-start">
-                  <Button className="text-xs md:text-sm" onClick={handleCreateMedicalAssist}>
+                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateMedicalAssist}>
                     Crear Asistencia
                   </Button>
                 </div>

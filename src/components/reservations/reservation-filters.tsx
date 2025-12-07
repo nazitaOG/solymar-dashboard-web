@@ -93,7 +93,6 @@ export function ReservationFiltersComponent({
   };
 
   return (
-    // 🔹 Contenedor Principal: Se eliminó 'md:w-fit' para forzar 'w-full' siempre.
     <div className="space-y-4 w-full rounded-lg border border-border bg-card p-3 md:p-4">
       
       {/* Header */}
@@ -102,14 +101,13 @@ export function ReservationFiltersComponent({
         <h3 className="font-semibold text-sm md:text-base">Filtros</h3>
       </div>
 
-      {/* Grid: Adaptado a 4 columnas para escritorio */}
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         
         {/* 1. Date Range Filter */}
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Rango de fechas</Label>
-          {/* Wrapper para forzar estilos al botón interno del DatePicker */}
-          <div className="[&>button]:h-8 [&>button]:text-xs md:[&>button]:h-10 md:[&>button]:text-sm [&>button]:w-full [&>button]:bg-transparent [&>button]:font-normal">
+          {/* Se agregó [&>button]:cursor-pointer para asegurar la mano en el input de fecha */}
+          <div className="[&>button]:h-8 [&>button]:text-xs md:[&>button]:h-10 md:[&>button]:text-sm [&>button]:w-full [&>button]:bg-transparent [&>button]:font-normal [&>button]:cursor-pointer">
             <DateTimePicker
               dateRange={dateRange}
               setDateRange={setDateRange}
@@ -128,7 +126,7 @@ export function ReservationFiltersComponent({
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal cursor-pointer"
               >
                 <span className="truncate">
                   {selectedPassengers.length > 0
@@ -148,7 +146,7 @@ export function ReservationFiltersComponent({
                       <CommandItem
                         key={passenger.id}
                         onSelect={() => togglePassenger(passenger.id)}
-                        className="text-xs md:text-sm"
+                        className="text-xs md:text-sm cursor-pointer" // cursor-pointer aquí
                       >
                         <Check
                           className={cn(
@@ -177,7 +175,7 @@ export function ReservationFiltersComponent({
                     {passenger?.name}
                     <button
                       type="button"
-                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer" // cursor-pointer aquí
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -200,12 +198,13 @@ export function ReservationFiltersComponent({
             value={sortBy}
             onValueChange={(value) => setSortBy(value as "newest" | "oldest")}
           >
-            <SelectTrigger className="bg-transparent w-full h-8 md:h-10 text-xs md:text-sm">
+            <SelectTrigger className="bg-transparent w-full h-8 md:h-10 text-xs md:text-sm cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest" className="text-xs md:text-sm">Más nuevas primero</SelectItem>
-              <SelectItem value="oldest" className="text-xs md:text-sm">Más antiguas primero</SelectItem>
+              {/* cursor-pointer en las opciones */}
+              <SelectItem value="newest" className="text-xs md:text-sm cursor-pointer">Más nuevas primero</SelectItem>
+              <SelectItem value="oldest" className="text-xs md:text-sm cursor-pointer">Más antiguas primero</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -218,7 +217,7 @@ export function ReservationFiltersComponent({
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal cursor-pointer"
               >
                 <span className="truncate">
                   {selectedStates.length > 0
@@ -236,7 +235,7 @@ export function ReservationFiltersComponent({
                       <CommandItem
                         key={option.value}
                         onSelect={() => toggleState(option.value as ReservationState)}
-                        className="text-xs md:text-sm"
+                        className="text-xs md:text-sm cursor-pointer" // cursor-pointer aquí
                       >
                         <Check
                           className={cn(
@@ -265,7 +264,7 @@ export function ReservationFiltersComponent({
                     {option?.label}
                     <button
                       type="button"
-                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer" // cursor-pointer aquí
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -287,7 +286,7 @@ export function ReservationFiltersComponent({
         <Button 
           onClick={handleApplyFilters} 
           size="sm" 
-          className="h-8 md:h-9 text-xs md:text-sm"
+          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
         >
           Aplicar filtros
         </Button>
@@ -295,7 +294,7 @@ export function ReservationFiltersComponent({
           onClick={handleClearFilters}
           variant="outline"
           size="sm"
-          className="h-8 md:h-9 text-xs md:text-sm"
+          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
         >
           Limpiar
         </Button>

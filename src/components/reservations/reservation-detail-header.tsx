@@ -215,7 +215,7 @@ export function ReservationDetailHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity shrink-0"
+                className="cursor-pointer h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity shrink-0"
                 onClick={() => setEditNameOpen(true)}
               >
                 <Pencil className="h-4 w-4" />
@@ -233,15 +233,15 @@ export function ReservationDetailHeader({
                 }
               }}
             >
-              <SelectTrigger className="w-fit bg-transparent">
+              <SelectTrigger className="w-fit cursor-pointer bg-transparent">
                 <Badge className={getStateBadge(reservation.state).className}>
                   {getStateBadge(reservation.state).label}
                 </Badge>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENDING">Pendiente</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmada</SelectItem>
-                <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                <SelectItem value="PENDING" className="cursor-pointer">Pendiente</SelectItem>
+                <SelectItem value="CONFIRMED" className="cursor-pointer">Confirmada</SelectItem>
+                <SelectItem value="CANCELLED" className="cursor-pointer">Cancelada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -317,7 +317,7 @@ export function ReservationDetailHeader({
             variant="outline"
             onClick={() => setEditPassengersOpen(true)}
             // En escritorio (sm), el botón toma su tamaño natural (w-auto) y no se encoge (shrink-0)
-            className="w-full sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
+            className="cursor-pointer w-full sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
           >
             Editar pasajeros
           </Button>
@@ -347,8 +347,9 @@ export function ReservationDetailHeader({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingState(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer" onClick={() => setPendingState(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
+              className="cursor-pointer"
               disabled={!pendingState || isUpdating}
               onClick={handleConfirmStateChange}
             >
@@ -479,10 +480,10 @@ export function ReservationDetailHeader({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditNameOpen(false)}>
+            <Button variant="outline" className="cursor-pointer" onClick={() => setEditNameOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveName} disabled={isSavingName}>
+            <Button className="cursor-pointer" onClick={handleSaveName} disabled={isSavingName}>
               {isSavingName ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>

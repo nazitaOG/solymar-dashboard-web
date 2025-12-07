@@ -101,7 +101,7 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
     }).format(amount);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 cursor-pointer ">
       {/* 1. Wrapper Grid para contener el layout */}
       <div className="grid grid-cols-1 w-full">
         {/* 2. Wrapper con scroll horizontal forzado en móvil */}
@@ -213,7 +213,7 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9"
+                          className="cursor-pointer h-7 w-7 md:h-9 md:w-9"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -227,7 +227,7 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9"
+                          className="cursor-pointer h-7 w-7 md:h-9 md:w-9"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -243,7 +243,7 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 md:h-9 md:w-9"
+                              className="cursor-pointer h-7 w-7 md:h-9 md:w-9"
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();

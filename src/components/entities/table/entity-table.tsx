@@ -93,6 +93,7 @@ export function EntityTable({
                   <TableCell className="text-right whitespace-nowrap px-4">
                     <div className="flex justify-end gap-2">
                       <Button
+                        className="cursor-pointer"
                         variant="ghost"
                         size="icon"
                         onClick={() => onEdit(item)}
@@ -101,6 +102,7 @@ export function EntityTable({
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
+                        className="cursor-pointer"
                         variant="ghost"
                         size="icon"
                         onClick={() => onDelete(String(item.id))}

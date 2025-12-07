@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { X, UserPlus, Plus } from "lucide-react";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
-import { usePassengersStore } from "@/stores/usePassengerStore"; // ✅ Zustand store
+import { usePassengersStore } from "@/stores/usePassengerStore";
 
 interface EditPassengersDialogProps {
   open: boolean;
@@ -30,44 +30,36 @@ export function EditPassengersDialog({
   const [selectedPassengers, setSelectedPassengers] = useState<Pax[]>(currentPassengers);
   const [isPassengerDialogOpen, setIsPassengerDialogOpen] = useState(false);
 
-  // ✅ Zustand global store
   const { passengers: availablePassengers, addPassenger } = usePassengersStore();
 
-  // 🧠 🔄 Cuando el diálogo se abre, restablecemos el estado local
   useEffect(() => {
     if (open) {
       setSelectedPassengers(currentPassengers);
     }
   }, [open, currentPassengers]);
 
-  // 🧩 Eliminar pasajero (con la X)
   const removePassenger = (id: string) => {
     setSelectedPassengers((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // ➕ Agregar pasajero existente
   const addExistingPassenger = (passenger: Pax) => {
     setSelectedPassengers((prev) =>
       prev.find((p) => p.id === passenger.id) ? prev : [...prev, passenger]
     );
   };
 
-  // 💾 Guardar selección
   const handleSave = () => {
     onSave(selectedPassengers);
     onOpenChange(false);
   };
 
-  // 🧠 Crear nuevo pasajero
   const handleCreatePassenger = () => setIsPassengerDialogOpen(true);
 
-  // 🧩 Callback al crear pasajero desde PassengerDialog real
   const handlePassengerCreated = (newPax: Pax) => {
-    addPassenger(newPax); // 🔹 1) Actualiza el store global
-    setSelectedPassengers((prev) => [...prev, newPax]); // 🔹 2) Agrega localmente
-    setIsPassengerDialogOpen(false); // 🔹 3) Cierra el sub-diálogo
+    addPassenger(newPax);
+    setSelectedPassengers((prev) => [...prev, newPax]);
+    setIsPassengerDialogOpen(false);
 
-    // 🔹 4) Auto-guardar y cerrar el diálogo principal
     setTimeout(() => {
       onSave([...selectedPassengers, newPax]);
       onOpenChange(false);
@@ -77,7 +69,8 @@ export function EditPassengersDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+        {/* 👇 AQUÍ ESTÁ EL CAMBIO: [&>button]:cursor-pointer */}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               Editar Pasajeros
@@ -113,7 +106,7 @@ export function EditPassengersDialog({
                         className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
                         aria-label={`Eliminar pasajero ${passenger.name}`}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3 w-3 cursor-pointer" />
                       </button>
                     </Badge>
                   ))
@@ -130,7 +123,7 @@ export function EditPassengersDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                    className="w-full cursor-pointer justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm"
                   >
                     <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Buscar pasajero
@@ -151,7 +144,7 @@ export function EditPassengersDialog({
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addExistingPassenger(passenger)}
-                              className="text-xs md:text-sm"
+                              className="text-xs md:text-sm cursor-pointer" // Agregué cursor aquí también por si acaso
                             >
                               <div className="flex flex-col">
                                 <span className="font-medium">
@@ -174,7 +167,7 @@ export function EditPassengersDialog({
             <Button
               variant="outline"
               onClick={handleCreatePassenger}
-              className="w-full mt-2 h-8 md:h-9 text-xs md:text-sm"
+              className="w-full cursor-pointer mt-2 h-8 md:h-9 text-xs md:text-sm"
             >
               <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
               Crear nuevo pasajero
@@ -188,13 +181,13 @@ export function EditPassengersDialog({
                 setSelectedPassengers(currentPassengers);
                 onOpenChange(false);
               }}
-              className="text-xs md:text-sm"
+              className="text-xs cursor-pointer md:text-sm"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
-              className="text-xs md:text-sm"
+              className="text-xs cursor-pointer md:text-sm"
             >
               Guardar cambios
             </Button>
@@ -202,7 +195,6 @@ export function EditPassengersDialog({
         </DialogContent>
       </Dialog>
 
-      {/* ✈️ PassengerDialog real */}
       <PassengerDialog
         key="passenger-dialog"
         open={isPassengerDialogOpen}

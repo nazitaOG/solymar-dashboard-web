@@ -88,7 +88,7 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen w-full flex justify-center bg-[#17151f]/96 px-4 py-8 md:py-12">
-      <div className="w-full max-w-5xl bg-[#17151f] text-white rounded-none md:rounded-md overflow-hidden shadow-xl border border-white/5 flex flex-col md:grid md:grid-cols-2">
+      <div className="w-full md:pb-6 max-w-5xl bg-[#17151f] text-white rounded-none md:rounded-md overflow-hidden shadow-xl border border-white/5 flex flex-col md:grid md:grid-cols-2">
         {/* Slideshow */}
         <div className="relative w-full h-48 sm:h-64 md:h-full md:m-3 md:rounded-md overflow-hidden">
           <div className="absolute top-3 left-3 flex items-center gap-2 text-white/90 z-10">
@@ -199,21 +199,22 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  className="rounded-sm border-none bg-white/5 cursor-pointer"
+                  className="rounded-sm border-none bg-white/5 cursor-pointer" // El cursor-pointer debe estar aquí
                   checked={rememberMe}
                   onCheckedChange={(v) => setRememberMe(!!v)}
                 />
+                {/* El texto ya no activará el checkbox porque el padre es un div */}
                 <span>Recordarme en este dispositivo</span>
-              </label>
+              </div>
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
               <Button
                 type="submit"
                 disabled={isPending}
-                className={`w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${isPending ? "opacity-70 cursor-wait" : ""
+                className={`cursor-pointer w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${isPending ? "opacity-70 cursor-wait" : ""
                   }`}
               >
                 {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
