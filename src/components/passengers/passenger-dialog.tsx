@@ -19,7 +19,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import { DateTimePicker } from "@/components/ui/custom/date-time-picker" // ✅ Importar Custom Picker
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker"
 
 import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
@@ -45,12 +45,12 @@ interface PassengerDialogProps {
 // 🛠️ Definimos el tipo del estado local
 interface FormDataState {
   name: string
-  birthDate: Date | undefined // ✅ Cambio a Date object
+  birthDate: Date | undefined
   nationality: string
   dniNum: string
-  dniExpirationDate: Date | undefined // ✅ Cambio a Date object
+  dniExpirationDate: Date | undefined
   passportNum: string
-  passportExpirationDate: Date | undefined // ✅ Cambio a Date object
+  passportExpirationDate: Date | undefined
 }
 
 export function PassengerDialog({
@@ -98,7 +98,6 @@ export function PassengerDialog({
 
   // 🧭 Precarga de datos al abrir o cambiar pasajero
   useEffect(() => {
-    // Helper para convertir string ISO o Date a objeto Date
     const toDate = (value?: string | Date | null): Date | undefined => {
       if (!value) return undefined
       const d = typeof value === "string" ? new Date(value) : value
@@ -135,7 +134,6 @@ export function PassengerDialog({
 
   // 💾 Guardar (crear / editar)
   const handleSave = () => {
-    // Prepara los datos para Zod
     const zodData = {
       name: formData.name,
       birthDate: formData.birthDate?.toISOString(),
@@ -220,7 +218,8 @@ export function PassengerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer para la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {isCreateMode
@@ -262,11 +261,12 @@ export function PassengerDialog({
                 <Label htmlFor="birthDate" className="text-[11px] md:text-xs">
                   Fecha de nacimiento *
                 </Label>
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                   <DateTimePicker
                     date={formData.birthDate}
                     setDate={(date) => setFormData({ ...formData, birthDate: date })}
-                    includeTime={false} // Solo fecha
+                    includeTime={false}
                     label="Seleccionar fecha"
                   />
                 </div>
@@ -289,21 +289,23 @@ export function PassengerDialog({
                   }
                   disabled={isViewMode}
                 >
+                  {/* 👇 cursor-pointer en trigger */}
                   <SelectTrigger
                     id="nationality"
-                    className={`bg-transparent h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}
+                    className={`bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer ${errors.nationality ? "border-red-500" : ""}`}
                   >
                     <SelectValue placeholder="Argentina" />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
-                    <SelectItem value="Argentina">Argentina</SelectItem>
-                    <SelectItem value="Uruguay">Uruguay</SelectItem>
-                    <SelectItem value="Chile">Chile</SelectItem>
-                    <SelectItem value="Brasil">Brasil</SelectItem>
-                    <SelectItem value="Paraguay">Paraguay</SelectItem>
-                    <SelectItem value="Perú">Perú</SelectItem>
-                    <SelectItem value="Bolivia">Bolivia</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
+                    {/* 👇 cursor-pointer en items */}
+                    <SelectItem value="Argentina" className="cursor-pointer">Argentina</SelectItem>
+                    <SelectItem value="Uruguay" className="cursor-pointer">Uruguay</SelectItem>
+                    <SelectItem value="Chile" className="cursor-pointer">Chile</SelectItem>
+                    <SelectItem value="Brasil" className="cursor-pointer">Brasil</SelectItem>
+                    <SelectItem value="Paraguay" className="cursor-pointer">Paraguay</SelectItem>
+                    <SelectItem value="Perú" className="cursor-pointer">Perú</SelectItem>
+                    <SelectItem value="Bolivia" className="cursor-pointer">Bolivia</SelectItem>
+                    <SelectItem value="Otro" className="cursor-pointer">Otro</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.nationality && (
@@ -349,7 +351,8 @@ export function PassengerDialog({
                 >
                   Fecha de vencimiento (Opcional)
                 </Label>
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                   <DateTimePicker
                     date={formData.dniExpirationDate}
                     setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
@@ -404,7 +407,8 @@ export function PassengerDialog({
                 >
                   Fecha de vencimiento (Opcional)
                 </Label>
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : ""}>
+                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
+                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                   <DateTimePicker
                     date={formData.passportExpirationDate}
                     setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
@@ -441,6 +445,7 @@ export function PassengerDialog({
                     <Link key={reservation.id} to={`/reservas/${reservation.id}`}>
                       <Badge
                         variant="outline"
+                        // 👇 cursor-pointer
                         className="cursor-pointer hover:bg-accent text-[10px] md:text-xs px-2 py-0.5"
                       >
                         {reservation.id}
@@ -462,7 +467,8 @@ export function PassengerDialog({
                   passenger?.id && deletePassenger(passenger.id, passenger.name)
                 }
                 disabled={isDeleting}
-                className="text-xs md:text-sm"
+                // 👇 cursor-pointer
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {isDeleting ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -472,7 +478,8 @@ export function PassengerDialog({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="text-xs md:text-sm cursor-pointer"
             >
               {isViewMode ? "Cerrar" : "Cancelar"}
             </Button>
@@ -480,7 +487,8 @@ export function PassengerDialog({
               <Button
                 onClick={handleSave}
                 disabled={isPending}
-                className="text-xs md:text-sm"
+                // 👇 cursor-pointer
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {isPending
                   ? "Guardando..."

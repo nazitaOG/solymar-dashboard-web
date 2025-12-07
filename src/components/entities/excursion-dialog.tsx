@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ 1. Importar el componente
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -39,7 +38,6 @@ interface ExcursionDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// ✅ 2. Ajustar FormData para usar Date | undefined
 type FormData = Omit<
   z.input<typeof createExcursionSchema>,
   "reservationId" | "excursionDate"
@@ -64,7 +62,7 @@ export function ExcursionDialog({
     origin: "",
     provider: "",
     bookingReference: "",
-    excursionDate: undefined, // Inicializar como undefined
+    excursionDate: undefined,
     totalPrice: 0,
     amountPaid: 0,
     currency: Currency.USD,
@@ -230,7 +228,8 @@ export function ExcursionDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {excursion ? "Editar Excursión" : "Crear Excursión"}
@@ -297,7 +296,8 @@ export function ExcursionDialog({
           ))}
 
           {/* Fecha y hora */}
-          <div className="space-y-1">
+          {/* 👇 Se agrega [&>button]:cursor-pointer para el botón del calendario */}
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label
               htmlFor="excursionDate"
               className="text-[11px] md:text-xs"
@@ -333,15 +333,17 @@ export function ExcursionDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value={Currency.USD}>USD</SelectItem>
-                  <SelectItem value={Currency.ARS}>ARS</SelectItem>
+                  {/* 👇 cursor-pointer en items */}
+                  <SelectItem value={Currency.USD} className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value={Currency.ARS} className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -400,7 +402,7 @@ export function ExcursionDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -411,14 +413,14 @@ export function ExcursionDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (excursion && !hasChanges)}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

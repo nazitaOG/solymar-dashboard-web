@@ -127,7 +127,7 @@ export default function PasajerosPage() {
                 setDialogOpen(true);
               }}
               // Botón: h-8/text-xs en móvil | h-10/text-sm en desktop
-              className="h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
               disabled={isPending}
             >
               {/* Icono ajustado */}

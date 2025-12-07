@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ 1. Importar el componente
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -39,7 +38,6 @@ interface CarRentalDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// ✅ 2. Ajustar FormData para manejar Date objects
 type FormData = Omit<
   z.input<typeof createCarRentalSchema>,
   "reservationId" | "pickupDate" | "dropoffDate"
@@ -78,7 +76,6 @@ export function CarRentalDialog({
   const [loading, setLoading] = useState(false);
   const deleteLock = useRef(false);
 
-  // 🔄 Prellenar datos
   useEffect(() => {
     if (carRental) {
       setFormData({
@@ -112,7 +109,6 @@ export function CarRentalDialog({
     setErrors({});
   }, [carRental, open]);
 
-  // 🧭 Detectar cambios (comparando timestamps)
   const hasChanges = useMemo(() => {
     if (!carRental) return true;
 
@@ -134,7 +130,6 @@ export function CarRentalDialog({
     );
   }, [formData, carRental]);
 
-  // 💾 Guardar alquiler
   const handleSave = async () => {
     const isEdit = Boolean(carRental);
     const schema = isEdit ? updateCarRentalSchema : createCarRentalSchema;
@@ -222,7 +217,6 @@ export function CarRentalDialog({
     }
   };
 
-  // 🗑️ Eliminar alquiler
   const handleDelete = async () => {
     if (!carRental || deleteLock.current) return;
     deleteLock.current = true;
@@ -243,10 +237,10 @@ export function CarRentalDialog({
     }
   };
 
-  // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {carRental ? "Editar Alquiler de Auto" : "Nuevo Alquiler de Auto"}
@@ -291,7 +285,8 @@ export function CarRentalDialog({
           ))}
 
           {/* Fila 2: Fechas con DateTimePicker */}
-          <div className="space-y-1">
+          {/* 👇 Se agrega [&>button]:cursor-pointer para el botón del calendario */}
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha/Hora Retiro *</Label>
             <DateTimePicker
               date={formData.pickupDate}
@@ -305,7 +300,7 @@ export function CarRentalDialog({
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha/Hora Devolución *</Label>
             <DateTimePicker
               date={formData.dropoffDate}
@@ -383,15 +378,17 @@ export function CarRentalDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en el trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                  {/* 👇 cursor-pointer en los items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -437,7 +434,7 @@ export function CarRentalDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -448,14 +445,14 @@ export function CarRentalDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (carRental && !hasChanges)}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

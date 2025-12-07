@@ -139,7 +139,6 @@ export function MedicalAssistDialog({
 
     const payload = {
       bookingReference: formData.bookingReference || null,
-      // ⬇️ Quitamos "|| null" para assistType (ya lo tenías así)
       assistType: formData.assistType,
       provider: formData.provider,
       totalPrice: Number(formData.totalPrice),
@@ -202,7 +201,8 @@ export function MedicalAssistDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
@@ -273,15 +273,17 @@ export function MedicalAssistDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                  {/* 👇 cursor-pointer en items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -332,7 +334,7 @@ export function MedicalAssistDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -343,14 +345,14 @@ export function MedicalAssistDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (assist && !hasChanges)}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

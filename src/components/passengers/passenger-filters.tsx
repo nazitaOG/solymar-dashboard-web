@@ -59,7 +59,7 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Nombre del pasajero..."
-              // h-8 en móvil (compacto), h-10 en desktop (estándar)
+              // El input mantiene su cursor de texto por defecto
               className="pl-8 md:pl-9 h-8 md:h-10 text-xs md:text-sm"
             />
           </div>
@@ -69,19 +69,21 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Nacionalidad</Label>
           <Select value={nationality} onValueChange={setNationality}>
-            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm">
+            {/* 👇 cursor-pointer en trigger */}
+            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm cursor-pointer">
               <SelectValue placeholder="Todas las nacionalidades" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs md:text-sm">Todas las nacionalidades</SelectItem>
-              <SelectItem value="Argentina" className="text-xs md:text-sm">Argentina</SelectItem>
-              <SelectItem value="Uruguay" className="text-xs md:text-sm">Uruguay</SelectItem>
-              <SelectItem value="Chile" className="text-xs md:text-sm">Chile</SelectItem>
-              <SelectItem value="Brasil" className="text-xs md:text-sm">Brasil</SelectItem>
-              <SelectItem value="Paraguay" className="text-xs md:text-sm">Paraguay</SelectItem>
-              <SelectItem value="Perú" className="text-xs md:text-sm">Perú</SelectItem>
-              <SelectItem value="Bolivia" className="text-xs md:text-sm">Bolivia</SelectItem>
-              <SelectItem value="Otro" className="text-xs md:text-sm">Otro</SelectItem>
+              {/* 👇 cursor-pointer en items */}
+              <SelectItem value="all" className="text-xs md:text-sm cursor-pointer">Todas las nacionalidades</SelectItem>
+              <SelectItem value="Argentina" className="text-xs md:text-sm cursor-pointer">Argentina</SelectItem>
+              <SelectItem value="Uruguay" className="text-xs md:text-sm cursor-pointer">Uruguay</SelectItem>
+              <SelectItem value="Chile" className="text-xs md:text-sm cursor-pointer">Chile</SelectItem>
+              <SelectItem value="Brasil" className="text-xs md:text-sm cursor-pointer">Brasil</SelectItem>
+              <SelectItem value="Paraguay" className="text-xs md:text-sm cursor-pointer">Paraguay</SelectItem>
+              <SelectItem value="Perú" className="text-xs md:text-sm cursor-pointer">Perú</SelectItem>
+              <SelectItem value="Bolivia" className="text-xs md:text-sm cursor-pointer">Bolivia</SelectItem>
+              <SelectItem value="Otro" className="text-xs md:text-sm cursor-pointer">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -90,13 +92,15 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Documento</Label>
           <Select value={documentFilter} onValueChange={setDocumentFilter}>
-            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm">
+            {/* 👇 cursor-pointer en trigger */}
+            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm cursor-pointer">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs md:text-sm">Todos</SelectItem>
-              <SelectItem value="with-dni" className="text-xs md:text-sm">Con DNI</SelectItem>
-              <SelectItem value="with-passport" className="text-xs md:text-sm">Con Pasaporte</SelectItem>
+              {/* 👇 cursor-pointer en items */}
+              <SelectItem value="all" className="text-xs md:text-sm cursor-pointer">Todos</SelectItem>
+              <SelectItem value="with-dni" className="text-xs md:text-sm cursor-pointer">Con DNI</SelectItem>
+              <SelectItem value="with-passport" className="text-xs md:text-sm cursor-pointer">Con Pasaporte</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -106,7 +110,8 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
         <Button 
           onClick={handleApplyFilters} 
           size="sm" 
-          className="h-8 md:h-9 text-xs md:text-sm"
+          // 👇 cursor-pointer
+          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
         >
           Aplicar filtros
         </Button>
@@ -114,7 +119,8 @@ export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
           onClick={handleClearFilters} 
           variant="outline" 
           size="sm" 
-          className="h-8 md:h-9 text-xs md:text-sm"
+          // 👇 cursor-pointer
+          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
         >
           Limpiar
         </Button>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/entities/layout/sidebar";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react"; // Importamos X
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,33 +12,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar: Se encarga de mostrarse u ocultarse según isOpen y el tamaño de pantalla */}
+      {/* Sidebar recibe el estado */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex flex-1 flex-col lg:ml-64 transition-all duration-300">
         
         {/* --- Topbar / Header --- */}
-        {/* Ajuste de altura: h-14 en móvil (56px) / h-16 en desktop (64px) */}
-        {/* Ajuste de padding: px-4 en móvil / px-6 en desktop */}
-        <header className="flex h-14 md:h-16 items-center gap-3 z-20 md:gap-4 border-b bg-background px-4 md:px-6 lg:hidden">
+        <header className="sticky top-0 z-50 flex h-14 md:h-16 items-center gap-3 md:gap-4 border-b bg-background px-4 md:px-6 lg:hidden">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarOpen(true)}
-            // Botón más compacto en móvil (h-8 w-8)
-            className="lg:hidden h-8 w-8 md:h-9 md:w-9" 
+            // CAMBIO: Ahora hace toggle (!sidebarOpen)
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            // CAMBIO: z-50 para que quede por encima del Sidebar abierto
+            className="cursor-pointer lg:hidden h-8 w-8 md:h-9 md:w-9 relative z-50" 
+            aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
           >
-            {/* Ícono ajustado: 20px en móvil, 24px en desktop */}
-            <Menu className="h-5 w-5 md:h-6 md:w-6" />
-            <span className="sr-only">Abrir menú</span>
+            {/* CONDICIONAL: Si está abierto muestra X, si no Menu */}
+            {sidebarOpen ? (
+              <X className="h-5 w-5 md:h-6 md:w-6 transition-all" />
+            ) : (
+              <Menu className="h-5 w-5 md:h-6 md:w-6 transition-all" />
+            )}
           </Button>
           
-          {/* Título ajustado: text-sm en móvil / text-lg en desktop */}
           <div className="font-semibold text-sm md:text-lg">Solymar Travel</div>
         </header>
 
         {/* Contenido Principal */}
-        {/* Ajuste de padding: p-3 en móvil (apretado) / p-6 en desktop (aireado) */}
         <main className="flex-1 overflow-y-auto p-3 md:p-6">
           {children}
         </main>

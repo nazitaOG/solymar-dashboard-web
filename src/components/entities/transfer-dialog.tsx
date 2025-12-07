@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ Importamos el componente DateTimePicker
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -39,7 +38,6 @@ interface TransferDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// ⚠️ Ajustamos el tipo para que las fechas sean Date | undefined en el estado local
 type FormData = Omit<
   z.input<typeof createTransferSchema>,
   "reservationId" | "departureDate" | "arrivalDate"
@@ -83,7 +81,6 @@ export function TransferDialog({
       setFormData({
         origin: transfer.origin ?? "",
         destination: transfer.destination ?? "",
-        // ✅ Convertimos string ISO a Date
         departureDate: transfer.departureDate ? new Date(transfer.departureDate) : undefined,
         arrivalDate: transfer.arrivalDate ? new Date(transfer.arrivalDate) : undefined,
         provider: transfer.provider ?? "",
@@ -94,7 +91,6 @@ export function TransferDialog({
         currency: transfer.currency ?? Currency.USD,
       });
     } else {
-      // Reset form
       setFormData({
         origin: "",
         destination: "",
@@ -115,7 +111,6 @@ export function TransferDialog({
   const hasChanges = useMemo(() => {
     if (!transfer) return true;
 
-    // Helper para comparar fechas con seguridad
     const getTime = (d?: Date) => d?.getTime() ?? 0;
     const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
 
@@ -138,7 +133,6 @@ export function TransferDialog({
     const isEdit = Boolean(transfer);
     const schema = isEdit ? updateTransferSchema : createTransferSchema;
 
-    // 1. Validar fechas manualmente antes de Zod
     if (!formData.departureDate || !formData.arrivalDate) {
       setErrors({
         departureDate: !formData.departureDate ? "Requerido" : undefined,
@@ -154,7 +148,6 @@ export function TransferDialog({
       return;
     }
 
-    // 2. Preparar payload validable (convertir Dates a ISO strings)
     const payloadToValidate = {
       ...formData,
       departureDate: formData.departureDate.toISOString(),
@@ -183,7 +176,6 @@ export function TransferDialog({
       return;
     }
 
-    // 3. Payload final para la API
     const finalPayload = {
       origin: formData.origin,
       destination: formData.destination || null,
@@ -212,7 +204,6 @@ export function TransferDialog({
         body: JSON.stringify(finalPayload),
       });
 
-      // Cerramos primero, luego actualizamos
       onOpenChange(false);
       setTimeout(() => onSave(savedTransfer), 150);
     } catch {
@@ -248,7 +239,8 @@ export function TransferDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {transfer ? "Editar Traslado" : "Crear Traslado"}
@@ -300,7 +292,8 @@ export function TransferDialog({
           ))}
 
           {/* ✅ DATE TIME PICKERS */}
-          <div className="space-y-1">
+          {/* 👇 [&>button]:cursor-pointer para el botón del calendario */}
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
             <DateTimePicker
               date={formData.departureDate}
@@ -314,7 +307,7 @@ export function TransferDialog({
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de llegada *</Label>
             <DateTimePicker
               date={formData.arrivalDate}
@@ -342,18 +335,20 @@ export function TransferDialog({
                 setFormData({ ...formData, transportType: v })
               }
             >
+              {/* 👇 cursor-pointer en trigger */}
               <SelectTrigger
                 id="transportType"
-                className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
               >
                 <SelectValue placeholder="Seleccionar" />
               </SelectTrigger>
               <SelectContent className="text-xs md:text-sm">
-                <SelectItem value={TransportType.TRANSFER}>Transfer</SelectItem>
-                <SelectItem value={TransportType.BUS}>Bus</SelectItem>
-                <SelectItem value={TransportType.TRAIN}>Tren</SelectItem>
-                <SelectItem value={TransportType.FERRY}>Ferry</SelectItem>
-                <SelectItem value={TransportType.OTHER}>Otro</SelectItem>
+                {/* 👇 cursor-pointer en items */}
+                <SelectItem value={TransportType.TRANSFER} className="cursor-pointer">Transfer</SelectItem>
+                <SelectItem value={TransportType.BUS} className="cursor-pointer">Bus</SelectItem>
+                <SelectItem value={TransportType.TRAIN} className="cursor-pointer">Tren</SelectItem>
+                <SelectItem value={TransportType.FERRY} className="cursor-pointer">Ferry</SelectItem>
+                <SelectItem value={TransportType.OTHER} className="cursor-pointer">Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -373,15 +368,17 @@ export function TransferDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                   {/* 👇 cursor-pointer en items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -432,7 +429,8 @@ export function TransferDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                // 👇 cursor-pointer
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -443,14 +441,16 @@ export function TransferDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

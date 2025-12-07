@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ 1. Importar el componente
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -39,7 +38,6 @@ interface CruiseDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// ✅ 2. Ajustar FormData para usar Date | undefined
 type FormData = Omit<
   z.input<typeof createCruiseSchema>,
   "reservationId" | "startDate" | "endDate"
@@ -233,7 +231,8 @@ export function CruiseDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {cruise ? "Editar Crucero" : "Crear Crucero"}
@@ -284,7 +283,8 @@ export function CruiseDialog({
           ))}
 
           {/* Fechas */}
-          <div className="space-y-1">
+          {/* 👇 Se agrega [&>button]:cursor-pointer para los calendarios */}
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
             <DateTimePicker
               date={formData.startDate}
@@ -298,7 +298,7 @@ export function CruiseDialog({
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de llegada</Label>
             <DateTimePicker
               date={formData.endDate}
@@ -327,15 +327,17 @@ export function CruiseDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                   {/* 👇 cursor-pointer en items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -386,7 +388,7 @@ export function CruiseDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -397,14 +399,14 @@ export function CruiseDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (cruise && !hasChanges)}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

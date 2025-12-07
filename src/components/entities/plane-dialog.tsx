@@ -255,7 +255,8 @@ export function PlaneDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {plane ? "Editar Vuelo" : "Crear Vuelo"}
@@ -329,12 +330,14 @@ export function PlaneDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
-                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm">
+                {/* 👇 cursor-pointer en trigger */}
+                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                  {/* 👇 cursor-pointer en items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -381,7 +384,8 @@ export function PlaneDialog({
                     ],
                   })
                 }
-                className="h-7 md:h-8 px-2 text-[11px] md:text-xs"
+                // 👇 cursor-pointer en botón de agregar tramo
+                className="h-7 md:h-8 px-2 text-[11px] md:text-xs cursor-pointer"
               >
                 + Agregar tramo
               </Button>
@@ -405,7 +409,8 @@ export function PlaneDialog({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-red-500 h-7 md:h-8 px-2 text-[11px] md:text-xs hover:text-red-600"
+                  // 👇 cursor-pointer en botón de eliminar tramo
+                  className="text-red-500 h-7 md:h-8 px-2 text-[11px] md:text-xs hover:text-red-600 cursor-pointer"
                   onClick={() => removeSegment(index)}
                 >
                   Eliminar
@@ -452,7 +457,8 @@ export function PlaneDialog({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
+                {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
+                <div className="space-y-1 [&>button]:cursor-pointer">
                   <Label className="text-[11px] md:text-xs">Salida</Label>
                   <DateTimePicker
                     key={`departure-${index}`}
@@ -466,7 +472,8 @@ export function PlaneDialog({
                     </p>
                   )}
                 </div>
-                <div className="space-y-1">
+                {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
+                <div className="space-y-1 [&>button]:cursor-pointer">
                   <Label className="text-[11px] md:text-xs">Llegada</Label>
                   <DateTimePicker
                     key={`arrival-${index}`}
@@ -529,7 +536,8 @@ export function PlaneDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                // 👇 cursor-pointer en botón Eliminar
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -541,14 +549,16 @@ export function PlaneDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer en botón Cancelar
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer en botón Guardar
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

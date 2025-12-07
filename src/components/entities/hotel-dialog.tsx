@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ 1. Importar el componente
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
 import {
@@ -39,7 +38,6 @@ interface HotelDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// ✅ 2. Ajustar FormData para manejar Date | undefined
 type FormData = Omit<
   z.input<typeof createHotelSchema>,
   "reservationId" | "startDate" | "endDate"
@@ -241,7 +239,8 @@ export function HotelDialog({
   // 🧱 Render
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle className="text-sm md:text-base">
             {hotel ? "Editar Hotel" : "Crear Hotel"}
@@ -308,7 +307,8 @@ export function HotelDialog({
           ))}
 
           {/* ✅ Fechas con DateTimePicker (includeTime={false}) */}
-          <div className="space-y-1">
+          {/* 👇 Se agrega [&>button]:cursor-pointer para los calendarios */}
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de entrada *</Label>
             <DateTimePicker
               date={formData.startDate}
@@ -322,7 +322,7 @@ export function HotelDialog({
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 [&>button]:cursor-pointer">
             <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
             <DateTimePicker
               date={formData.endDate}
@@ -351,15 +351,17 @@ export function HotelDialog({
                   setFormData({ ...formData, currency: v })
                 }
               >
+                {/* 👇 cursor-pointer en el trigger */}
                 <SelectTrigger
                   id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="ARS">ARS</SelectItem>
+                  {/* 👇 cursor-pointer en los items */}
+                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                 </SelectContent>
               </Select>
               {errors.currency && (
@@ -418,7 +420,7 @@ export function HotelDialog({
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
-                className="text-xs md:text-sm"
+                className="text-xs md:text-sm cursor-pointer"
               >
                 {loading ? "Eliminando..." : "Eliminar"}
               </Button>
@@ -429,14 +431,14 @@ export function HotelDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={loading || (hotel && !hasChanges)}
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm cursor-pointer"
             >
               {loading
                 ? "Guardando..."

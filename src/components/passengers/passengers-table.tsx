@@ -74,13 +74,10 @@ export function PassengersTable({
         {/* 2. Wrapper con scroll horizontal forzado en móvil */}
         <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
           
-          {/* 3. Ancho mínimo responsivo: 
-              - 600px en móvil (compacto)
-              - 1000px en escritorio (espacioso) 
-          */}
+          {/* 3. Ancho mínimo responsivo */}
           <Table className="min-w-[600px] md:min-w-[1000px] w-full">
             <TableHeader>
-              {/* 4. Fondo sólido para evitar transparencias al hacer scroll */}
+              {/* 4. Fondo sólido */}
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nombre</TableHead>
                 <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Fecha de nacimiento</TableHead>
@@ -101,7 +98,6 @@ export function PassengersTable({
                   <TableRow
                     key={passenger.id}
                     className="hover:bg-accent/50 transition-colors"
-                    // Eliminado onClick de la fila completa
                   >
                     <TableCell className="font-medium whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
                       {passenger.name}
@@ -120,7 +116,8 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9"
+                          // 👇 cursor-pointer
+                          className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
                             onView(passenger)
@@ -132,7 +129,8 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9"
+                          // 👇 cursor-pointer
+                          className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
                             onEdit(passenger)
@@ -144,7 +142,8 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9"
+                          // 👇 cursor-pointer
+                          className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
                             deletePassenger(passenger.id, passenger.name)
@@ -183,7 +182,8 @@ export function PassengersTable({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="h-8 text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="h-8 text-xs md:text-sm cursor-pointer"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-1" />
               <span className="hidden sm:inline">Anterior</span>
@@ -193,7 +193,8 @@ export function PassengersTable({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="h-8 text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="h-8 text-xs md:text-sm cursor-pointer"
             >
               <span className="hidden sm:inline">Siguiente</span>
               <ChevronRight className="h-3.5 w-3.5 ml-1" />
