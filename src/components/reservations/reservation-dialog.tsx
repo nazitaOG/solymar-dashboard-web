@@ -117,7 +117,8 @@ export function ReservationDialog({
     <>
       {/* 🌍 Diálogo principal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm">
+        {/* 👇 [&>button]:cursor-pointer para la X de cerrar */}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {isEdit ? "Editar Reserva" : "Crear Nueva Reserva"}
@@ -132,13 +133,15 @@ export function ReservationDialog({
                 value={state}
                 onValueChange={(v) => setState(v as ReservationState)}
               >
-                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm">
+                {/* 👇 cursor-pointer en trigger */}
+                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value="PENDING">Pendiente</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmada</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                  {/* 👇 cursor-pointer en items */}
+                  <SelectItem value="PENDING" className="cursor-pointer">Pendiente</SelectItem>
+                  <SelectItem value="CONFIRMED" className="cursor-pointer">Confirmada</SelectItem>
+                  <SelectItem value="CANCELLED" className="cursor-pointer">Cancelada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -165,7 +168,8 @@ export function ReservationDialog({
                           e.stopPropagation()
                           removePassenger(passenger.id)
                         }}
-                        className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        // 👇 cursor-pointer en botón X de borrar pax
+                        className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
                         aria-label={`Eliminar pasajero ${passenger.name}`}
                       >
                         <X className="h-3 w-3" />
@@ -183,7 +187,8 @@ export function ReservationDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm"
+                    // 👇 cursor-pointer
+                    className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                   >
                     <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Buscar pasajero
@@ -204,7 +209,8 @@ export function ReservationDialog({
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addPassenger(passenger)}
-                              className="text-xs md:text-sm"
+                              // 👇 cursor-pointer
+                              className="text-xs md:text-sm cursor-pointer"
                             >
                               <div className="flex flex-col">
                                 <span className="font-medium">
@@ -227,7 +233,8 @@ export function ReservationDialog({
             <Button
               variant="outline"
               onClick={() => setPassengerDialogOpen(true)}
-              className="w-full h-8 md:h-9 text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="w-full h-8 md:h-9 text-xs md:text-sm cursor-pointer"
             >
               <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
               Crear nuevo pasajero
@@ -248,14 +255,16 @@ export function ReservationDialog({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirm}
               disabled={!isEdit && selectedPassengers.length === 0}
-              className="text-xs md:text-sm"
+              // 👇 cursor-pointer
+              className="text-xs md:text-sm cursor-pointer"
             >
               {isEdit ? "Guardar Cambios" : "Crear Reserva"}
             </Button>

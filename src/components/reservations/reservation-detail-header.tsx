@@ -359,9 +359,10 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Detalles de Pago */}
-      <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden w-[95vw] sm:w-full">
+    {/* Dialog de Detalles de Pago */}
+    <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
+        {/* 👇 Se agregó [&>button]:cursor-pointer al final */}
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden w-[95vw] sm:w-full [&>button]:cursor-pointer">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
