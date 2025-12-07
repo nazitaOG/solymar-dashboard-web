@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -39,6 +32,11 @@ const stateOptions = [
   { value: "CANCELLED", label: "Cancelada" },
 ];
 
+const sortOptions = [
+  { value: "newest" as const, label: "Más nuevas primero" },
+  { value: "oldest" as const, label: "Más antiguas primero" },
+];
+
 export function ReservationFiltersComponent({
   passengers,
   onFilterChange,
@@ -47,10 +45,11 @@ export function ReservationFiltersComponent({
   const [selectedStates, setSelectedStates] = useState<ReservationState[]>([]);
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [currency, setCurrency] = useState<Currency | undefined>();
-  
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [openPassengers, setOpenPassengers] = useState(false);
   const [openStates, setOpenStates] = useState(false);
+  const [openSort, setOpenSort] = useState(false);
 
   const handleApplyFilters = () => {
     const passengerNames = selectedPassengers
@@ -94,7 +93,6 @@ export function ReservationFiltersComponent({
 
   return (
     <div className="space-y-4 w-full rounded-lg border border-border bg-card p-3 md:p-4">
-      
       {/* Header */}
       <div className="flex items-center gap-2">
         <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
@@ -102,11 +100,9 @@ export function ReservationFiltersComponent({
       </div>
 
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        
         {/* 1. Date Range Filter */}
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Rango de fechas</Label>
-          {/* Se agregó [&>button]:cursor-pointer para asegurar la mano en el input de fecha */}
           <div className="[&>button]:h-8 [&>button]:text-xs md:[&>button]:h-10 md:[&>button]:text-sm [&>button]:w-full [&>button]:bg-transparent [&>button]:font-normal [&>button]:cursor-pointer">
             <DateTimePicker
               dateRange={dateRange}
@@ -146,7 +142,7 @@ export function ReservationFiltersComponent({
                       <CommandItem
                         key={passenger.id}
                         onSelect={() => togglePassenger(passenger.id)}
-                        className="text-xs md:text-sm cursor-pointer" // cursor-pointer aquí
+                        className="text-xs md:text-sm cursor-pointer"
                       >
                         <Check
                           className={cn(
@@ -171,11 +167,15 @@ export function ReservationFiltersComponent({
               {selectedPassengers.map((id) => {
                 const passenger = passengers.find((p) => p.id === id);
                 return (
-                  <Badge key={id} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
+                  <Badge
+                    key={id}
+                    variant="secondary"
+                    className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6"
+                  >
                     {passenger?.name}
                     <button
                       type="button"
-                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer" // cursor-pointer aquí
+                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -191,22 +191,52 @@ export function ReservationFiltersComponent({
           )}
         </div>
 
-        {/* 3. Sort By */}
+        {/* 3. Sort By (sin bloquear scroll) */}
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Ordenar por fecha</Label>
-          <Select
-            value={sortBy}
-            onValueChange={(value) => setSortBy(value as "newest" | "oldest")}
-          >
-            <SelectTrigger className="bg-transparent w-full h-8 md:h-10 text-xs md:text-sm cursor-pointer">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {/* cursor-pointer en las opciones */}
-              <SelectItem value="newest" className="text-xs md:text-sm cursor-pointer">Más nuevas primero</SelectItem>
-              <SelectItem value="oldest" className="text-xs md:text-sm cursor-pointer">Más antiguas primero</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover open={openSort} onOpenChange={setOpenSort} modal={false}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal cursor-pointer"
+              >
+                <span className="truncate">
+                  {sortOptions.find((o) => o.value === sortBy)?.label ??
+                    "Ordenar por fecha"}
+                </span>
+                <Filter className="ml-2 h-3 w-3 md:h-4 md:w-4 opacity-50 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[220px] p-0" align="start">
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    {sortOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          setSortBy(option.value);
+                          setOpenSort(false);
+                        }}
+                        className="text-xs md:text-sm cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
+                            sortBy === option.value
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* 4. State Filter */}
@@ -234,13 +264,17 @@ export function ReservationFiltersComponent({
                     {stateOptions.map((option) => (
                       <CommandItem
                         key={option.value}
-                        onSelect={() => toggleState(option.value as ReservationState)}
-                        className="text-xs md:text-sm cursor-pointer" // cursor-pointer aquí
+                        onSelect={() =>
+                          toggleState(option.value as ReservationState)
+                        }
+                        className="text-xs md:text-sm cursor-pointer"
                       >
                         <Check
                           className={cn(
                             "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
-                            selectedStates.includes(option.value as ReservationState)
+                            selectedStates.includes(
+                              option.value as ReservationState
+                            )
                               ? "opacity-100"
                               : "opacity-0"
                           )}
@@ -254,17 +288,21 @@ export function ReservationFiltersComponent({
             </PopoverContent>
           </Popover>
 
-           {/* Badges para Estado */}
-           {selectedStates.length > 0 && (
+          {/* Badges para Estado */}
+          {selectedStates.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {selectedStates.map((st) => {
                 const option = stateOptions.find((o) => o.value === st);
                 return (
-                  <Badge key={st} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
+                  <Badge
+                    key={st}
+                    variant="secondary"
+                    className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6"
+                  >
                     {option?.label}
                     <button
                       type="button"
-                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer" // cursor-pointer aquí
+                      className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -281,11 +319,11 @@ export function ReservationFiltersComponent({
         </div>
       </div>
 
-      {/* 🔹 Botones de Acción */}
+      {/* Botones de Acción */}
       <div className="flex gap-2">
-        <Button 
-          onClick={handleApplyFilters} 
-          size="sm" 
+        <Button
+          onClick={handleApplyFilters}
+          size="sm"
           className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
         >
           Aplicar filtros
