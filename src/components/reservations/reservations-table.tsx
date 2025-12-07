@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +21,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -57,7 +70,11 @@ const normalizeReservation = (reservation: Reservation): Reservation => {
   };
 };
 
-export function ReservationsTable({ reservations, onEdit, onDelete }: ReservationsTableProps) {
+export function ReservationsTable({
+  reservations,
+  onEdit,
+  onDelete,
+}: ReservationsTableProps) {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -87,7 +104,10 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
 
     const config = variants[state];
     return (
-      <Badge variant="default" className={`${config.className} text-[10px] md:text-xs whitespace-nowrap`}>
+      <Badge
+        variant="default"
+        className={`${config.className} text-[10px] md:text-xs whitespace-nowrap`}
+      >
         {config.label}
       </Badge>
     );
@@ -101,23 +121,34 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
     }).format(amount);
 
   return (
-    <div className="space-y-4 cursor-pointer ">
+    <div className="space-y-4 cursor-pointer">
       {/* 1. Wrapper Grid para contener el layout */}
       <div className="grid grid-cols-1 w-full">
-        {/* 2. Wrapper con scroll horizontal forzado en móvil */}
-        <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
-          
+        {/* 2. Wrapper con scroll horizontal en móvil, SIN 100vw */}
+        <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
           {/* 3. Ancho mínimo responsivo: 600px en móvil, 1000px en escritorio */}
           <Table className="min-w-[600px] md:min-w-[1000px] w-full">
             <TableHeader>
               {/* 4. Fondo sólido */}
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[100px]">Estado</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[150px]">Pasajeros</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[150px]">Totales</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">Creada</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">Actualizada</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">Acciones</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[100px]">
+                  Estado
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[150px]">
+                  Pasajeros
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[150px]">
+                  Totales
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">
+                  Creada
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">
+                  Actualizada
+                </TableHead>
+                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4 min-w-[120px]">
+                  Acciones
+                </TableHead>
               </TableRow>
             </TableHeader>
 
@@ -125,7 +156,9 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
               {currentReservations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    <p className="text-muted-foreground text-xs md:text-sm">No se encontraron reservas</p>
+                    <p className="text-muted-foreground text-xs md:text-sm">
+                      No se encontraron reservas
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -139,7 +172,9 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                       className="px-2 md:px-4"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                      onClick={() =>
+                        navigate(`./${reservation.id}`, { state: reservation })
+                      }
                     >
                       {getStateBadge(reservation.state)}
                     </TableCell>
@@ -149,11 +184,17 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                       className="px-2 md:px-4"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                      onClick={() =>
+                        navigate(`./${reservation.id}`, { state: reservation })
+                      }
                     >
                       <div className="flex flex-wrap gap-1">
                         {(reservation.paxReservations ?? []).map((pr, idx) => (
-                          <Badge key={idx} variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-[10px] md:text-xs whitespace-nowrap"
+                          >
                             {pr.pax?.name ?? "—"}
                           </Badge>
                         ))}
@@ -165,17 +206,26 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                       className="px-2 md:px-4 whitespace-nowrap"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                      onClick={() =>
+                        navigate(`./${reservation.id}`, { state: reservation })
+                      }
                     >
                       <div className="space-y-1">
                         {(reservation.currencyTotals ?? []).map((ct, idx) => (
                           <div key={idx} className="text-xs md:text-sm">
                             <span className="font-medium">
-                              {formatCurrency(ct.amountPaid ?? 0, ct.currency ?? "USD")}
+                              {formatCurrency(
+                                ct.amountPaid ?? 0,
+                                ct.currency ?? "USD"
+                              )}
                             </span>
                             <span className="text-muted-foreground">
                               {" "}
-                              / {formatCurrency(ct.totalPrice ?? 0, ct.currency ?? "USD")}
+                              /{" "}
+                              {formatCurrency(
+                                ct.totalPrice ?? 0,
+                                ct.currency ?? "USD"
+                              )}
                             </span>
                           </div>
                         ))}
@@ -187,10 +237,16 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                       className="text-xs md:text-sm text-muted-foreground whitespace-nowrap px-2 md:px-4"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                      onClick={() =>
+                        navigate(`./${reservation.id}`, { state: reservation })
+                      }
                     >
                       {reservation.createdAt
-                        ? format(new Date(reservation.createdAt), "dd MMM yyyy, HH:mm", { locale: es })
+                        ? format(
+                            new Date(reservation.createdAt),
+                            "dd MMM yyyy, HH:mm",
+                            { locale: es }
+                          )
                         : "—"}
                     </TableCell>
 
@@ -199,10 +255,16 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                       className="text-xs md:text-sm text-muted-foreground whitespace-nowrap px-2 md:px-4"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`./${reservation.id}`, { state: reservation })}
+                      onClick={() =>
+                        navigate(`./${reservation.id}`, { state: reservation })
+                      }
                     >
                       {reservation.updatedAt
-                        ? format(new Date(reservation.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })
+                        ? format(
+                            new Date(reservation.updatedAt),
+                            "dd MMM yyyy, HH:mm",
+                            { locale: es }
+                          )
                         : "—"}
                     </TableCell>
 
@@ -217,7 +279,9 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            navigate(`./${reservation.id}`, { state: reservation });
+                            navigate(`./${reservation.id}`, {
+                              state: reservation,
+                            });
                           }}
                         >
                           <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -255,10 +319,13 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
 
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar reserva?</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                ¿Eliminar reserva?
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Esta acción eliminará permanentemente la reserva y todos sus datos asociados.
-                                No podrás deshacer esta acción.
+                                Esta acción eliminará permanentemente la reserva
+                                y todos sus datos asociados. No podrás deshacer
+                                esta acción.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -288,14 +355,17 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs md:text-sm text-muted-foreground text-center sm:text-left">
-            Mostrando {startIndex + 1} a {Math.min(endIndex, safeReservations.length)} de{" "}
+            Mostrando {startIndex + 1} a{" "}
+            {Math.min(endIndex, safeReservations.length)} de{" "}
             {safeReservations.length} reservas
           </p>
           <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() =>
+                setCurrentPage((p) => Math.max(1, p - 1))
+              }
               disabled={currentPage === 1}
               className="h-8 text-xs md:text-sm"
             >
@@ -305,7 +375,9 @@ export function ReservationsTable({ reservations, onEdit, onDelete }: Reservatio
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
               disabled={currentPage === totalPages}
               className="h-8 text-xs md:text-sm"
             >

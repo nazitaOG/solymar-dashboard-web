@@ -43,7 +43,7 @@ export function PassengersTable({
             DNI: {passenger.dni.dniNum}
           </Badge>
           <div className="pt-1">
-             <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+            <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
               Pasaporte: {passenger.passport.passportNum}
             </Badge>
           </div>
@@ -64,7 +64,11 @@ export function PassengersTable({
         </Badge>
       )
     }
-    return <span className="text-[10px] md:text-sm text-muted-foreground whitespace-nowrap">Sin documento</span>
+    return (
+      <span className="text-[10px] md:text-sm text-muted-foreground whitespace-nowrap">
+        Sin documento
+      </span>
+    )
   }
 
   return (
@@ -72,25 +76,36 @@ export function PassengersTable({
       {/* 1. Wrapper Grid para contener el layout */}
       <div className="grid grid-cols-1 w-full">
         {/* 2. Wrapper con scroll horizontal forzado en móvil */}
-        <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-full">
-          
+        <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
           {/* 3. Ancho mínimo responsivo */}
           <Table className="min-w-[600px] md:min-w-[1000px] w-full">
             <TableHeader>
               {/* 4. Fondo sólido */}
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nombre</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Fecha de nacimiento</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nacionalidad</TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Documento</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Acciones</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                  Nombre
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                  Fecha de nacimiento
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                  Nacionalidad
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                  Documento
+                </TableHead>
+                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
+                  Acciones
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentPassengers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    <p className="text-muted-foreground text-xs md:text-sm">No se encontraron pasajeros</p>
+                    <p className="text-muted-foreground text-xs md:text-sm">
+                      No se encontraron pasajeros
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -116,7 +131,6 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          // 👇 cursor-pointer
                           className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
@@ -129,7 +143,6 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          // 👇 cursor-pointer
                           className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
@@ -142,7 +155,6 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          // 👇 cursor-pointer
                           className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
@@ -174,7 +186,8 @@ export function PassengersTable({
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs md:text-sm text-muted-foreground text-center sm:text-left">
-            Mostrando {startIndex + 1} a {Math.min(endIndex, passengers.length)} de {passengers.length} pasajeros
+            Mostrando {startIndex + 1} a {Math.min(endIndex, passengers.length)} de{" "}
+            {passengers.length} pasajeros
           </p>
           <div className="flex gap-2 justify-center">
             <Button
@@ -182,7 +195,6 @@ export function PassengersTable({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              // 👇 cursor-pointer
               className="h-8 text-xs md:text-sm cursor-pointer"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-1" />
@@ -193,7 +205,6 @@ export function PassengersTable({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              // 👇 cursor-pointer
               className="h-8 text-xs md:text-sm cursor-pointer"
             >
               <span className="hidden sm:inline">Siguiente</span>
