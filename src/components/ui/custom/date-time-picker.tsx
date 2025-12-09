@@ -254,11 +254,13 @@ export function DateTimePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className=" z-50 w-[250px] md:w-auto p-0 text-[10px] md:text-sm max-h-[calc(100vh-80px)] overflow-y-auto"
+        className=" z-50 w-[250px] md:w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto"
         align="start"
         side="bottom"
         sideOffset={4}
         avoidCollisions={false}
+        onWheel={(e) => e.stopPropagation()}      // Frena el evento de rueda para que no suba al Dialog
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {withRange ? (
           <Calendar
