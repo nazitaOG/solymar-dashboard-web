@@ -278,17 +278,19 @@ export function ReservationDetailHeader({
               ))}
             </div>
           </div>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              setPaymentDetailsOpen(true);
-            }}
-            className="text-sm self-start pb-3 pl-1 font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
-          >
-            <AlertCircle className="h-4 w-4" />
-            ¿Qué falta pagar?
-          </a>
+          {paymentItems.length > 0 && (
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setPaymentDetailsOpen(true);
+              }}
+              className="text-sm self-start pb-3 pl-1 font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
+            >
+              <AlertCircle className="h-4 w-4" />
+              ¿Qué falta pagar?
+            </a>
+          )}
         </div>
 
         {/* --- Sección de Pasajeros (CORREGIDA) --- */}
@@ -359,8 +361,8 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-    {/* Dialog de Detalles de Pago */}
-    <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
+      {/* Dialog de Detalles de Pago */}
+      <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
         {/* 👇 Se agregó [&>button]:cursor-pointer al final */}
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden w-[95vw] sm:w-full [&>button]:cursor-pointer">
           <div className="px-6 pt-6 pb-2 shrink-0">
