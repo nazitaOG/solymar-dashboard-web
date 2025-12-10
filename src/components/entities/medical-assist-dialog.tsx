@@ -6,6 +6,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +73,8 @@ export function MedicalAssistDialog({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  // 👇 Nuevo estado para confirmación
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const deleteLock = useRef(false);
 
   // 🧩 Prellenar datos al abrir
@@ -85,6 +98,7 @@ export function MedicalAssistDialog({
         currency: Currency.USD,
       });
     }
+    setErrors({});
   }, [assist, open]);
 
   // 🧭 Comparar si hubo cambios
@@ -99,20 +113,15 @@ export function MedicalAssistDialog({
     );
   }, [formData, assist]);
 
-  // 💾 Guardar (creación o edición)
+  // 💾 Guardar (creación o edición) con validación acumulativa
   const handleSave = async () => {
     const isEdit = Boolean(assist);
     const schema = isEdit ? updateMedicalAssistSchema : createMedicalAssistSchema;
 
-    // 🚫 Si es edición y no hay cambios
-    if (isEdit && !hasChanges) {
-      setErrors({
-        _general: "Debes modificar al menos un campo para guardar los cambios.",
-      });
-      return;
-    }
+    // 👇 1. Acumulador de errores
+    const newErrors: FormErrors = {};
 
-    // 🧩 Validar datos
+    // 👇 2. Validación Zod
     const result = schema.safeParse({
       ...formData,
       ...(isEdit ? {} : { reservationId }),
@@ -121,18 +130,29 @@ export function MedicalAssistDialog({
     });
 
     if (!result.success) {
-      const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
         const key = err.path[0] as keyof FormData;
-        fieldErrors[key] = err.message;
+        if (!newErrors[key]) {
+           newErrors[key] = err.message;
+        }
       }
-      setErrors(fieldErrors);
+    }
+
+    // 👇 3. Validación lógica de precios
+    if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
+      newErrors.amountPaid = "El monto pagado no puede ser mayor que el total.";
+    }
+
+    // 👇 4. Si hay errores, mostrar y detener
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
+    // 👇 5. Validación de cambios (solo edición)
+    if (isEdit && !hasChanges) {
       setErrors({
-        amountPaid: "El monto pagado no puede ser mayor que el total.",
+        _general: "Debes modificar al menos un campo para guardar los cambios.",
       });
       return;
     }
@@ -177,6 +197,8 @@ export function MedicalAssistDialog({
 
   // 🗑️ Eliminar
   const handleDelete = async () => {
+    setShowDeleteConfirm(false); // Cerrar confirmación
+
     if (!assist || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -200,171 +222,214 @@ export function MedicalAssistDialog({
 
   // 🧱 Render
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
-        <DialogHeader>
-          <DialogTitle className="text-sm md:text-base">
-            {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle className="text-sm md:text-base">
+              {assist ? "Editar Asistencia Médica" : "Crear Asistencia Médica"}
+            </DialogTitle>
+          </DialogHeader>
 
-        {errors._general && (
-          <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
-              ⚠️ {errors._general}
-            </p>
-          </div>
-        )}
-
-        <div className="grid gap-3 md:grid-cols-2">
-          {/* Campos principales */}
-          {[
-            { id: "provider", label: "Proveedor *", placeholder: "Assist Card" },
-            {
-              id: "bookingReference",
-              label: "Referencia de reserva *",
-              placeholder: "ASST-00123",
-            },
-            {
-              id: "assistType",
-              label: "Tipo de asistencia",
-              placeholder: "Emergencia médica internacional",
-            },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label
-                htmlFor={f.id}
-                className="text-[11px] md:text-xs"
-              >
-                {f.label}
-              </Label>
-              <Input
-                id={f.id}
-                value={formData[f.id as keyof FormData] as string | number}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-                placeholder={f.placeholder}
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[f.id as keyof FormData] ? "border-red-500" : ""
-                }`}
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors[f.id as keyof FormData]}
-                </p>
-              )}
-            </div>
-          ))}
-
-          {/* Moneda solo en creación */}
-          {!assist && (
-            <div className="space-y-1">
-              <Label
-                htmlFor="currency"
-                className="text-[11px] md:text-xs"
-              >
-                Moneda *
-              </Label>
-              <Select
-                value={formData.currency}
-                onValueChange={(v: Currency) =>
-                  setFormData({ ...formData, currency: v })
-                }
-              >
-                {/* 👇 cursor-pointer en trigger */}
-                <SelectTrigger
-                  id="currency"
-                  className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="text-xs md:text-sm">
-                  {/* 👇 cursor-pointer en items */}
-                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
-                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.currency && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.currency}
-                </p>
-              )}
+          {errors._general && (
+            <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
+              <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
+                ⚠️ {errors._general}
+              </p>
             </div>
           )}
 
-          {/* Precios */}
-          {[
-            { id: "totalPrice", label: "Precio total *", placeholder: "500" },
-            { id: "amountPaid", label: "Monto pagado *", placeholder: "300" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label
-                htmlFor={f.id}
-                className="text-[11px] md:text-xs"
-              >
-                {f.label}
-              </Label>
-              <Input
-                id={f.id}
-                type="number"
-                value={formData[f.id as keyof FormData] as string | number}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-                placeholder={f.placeholder}
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[f.id as keyof FormData] ? "border-red-500" : ""
-                }`}
-              />
-              {errors[f.id as keyof FormData] && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors[f.id as keyof FormData]}
-                </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* Campos principales */}
+            {[
+              { id: "provider", label: "Proveedor *", placeholder: "Assist Card" },
+              {
+                id: "bookingReference",
+                label: "Referencia de reserva *",
+                placeholder: "ASST-00123",
+              },
+              {
+                id: "assistType",
+                label: "Tipo de asistencia",
+                placeholder: "Emergencia médica internacional",
+              },
+            ].map((f) => (
+              <div key={f.id} className="space-y-1">
+                <Label
+                  htmlFor={f.id}
+                  className="text-[11px] md:text-xs"
+                >
+                  {f.label}
+                </Label>
+                <Input
+                  id={f.id}
+                  value={formData[f.id as keyof FormData] as string | number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [f.id]: e.target.value })
+                  }
+                  placeholder={f.placeholder}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[f.id as keyof FormData] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[f.id as keyof FormData] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors[f.id as keyof FormData]}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {/* Moneda solo en creación */}
+            {!assist && (
+              <div className="space-y-1">
+                <Label
+                  htmlFor="currency"
+                  className="text-[11px] md:text-xs"
+                >
+                  Moneda *
+                </Label>
+                <Select
+                  value={formData.currency}
+                  onValueChange={(v: Currency) =>
+                    setFormData({ ...formData, currency: v })
+                  }
+                >
+                  {/* 👇 cursor-pointer en trigger */}
+                  <SelectTrigger
+                    id="currency"
+                    className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs md:text-sm">
+                    {/* 👇 cursor-pointer en items */}
+                    <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                    <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.currency && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.currency}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 👇 PRECIOS MEJORADOS (Bloqueo de negativos) */}
+            {[
+              { id: "totalPrice", label: "Precio total *", placeholder: "500" },
+              { id: "amountPaid", label: "Monto pagado *", placeholder: "300" },
+            ].map((f) => (
+              <div key={f.id} className="space-y-1">
+                <Label
+                  htmlFor={f.id}
+                  className="text-[11px] md:text-xs"
+                >
+                  {f.label}
+                </Label>
+                <Input
+                  id={f.id}
+                  type="number"
+                  min={0} // 1. Restricción nativa
+                  value={formData[f.id as keyof FormData] as string | number}
+                  
+                  // 2. Validación en onChange
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      setFormData({ ...formData, [f.id]: 0 });
+                      return;
+                    }
+                    const numValue = Number(value);
+                    if (numValue >= 0) {
+                      setFormData({ ...formData, [f.id]: numValue });
+                    }
+                  }}
+
+                  // 3. Bloqueo de tecla menos
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "Minus") {
+                      e.preventDefault();
+                    }
+                  }}
+
+                  placeholder={f.placeholder}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[f.id as keyof FormData] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[f.id as keyof FormData] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors[f.id as keyof FormData]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex justify-start">
+              {assist && (
+                <Button
+                  variant="destructive"
+                  // 👇 Abre confirmación
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={loading}
+                  className="text-xs md:text-sm cursor-pointer"
+                >
+                  {loading ? "Eliminando..." : "Eliminar"}
+                </Button>
               )}
             </div>
-          ))}
-        </div>
-
-        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex justify-start">
-            {assist && (
+            <div className="flex gap-2 justify-end">
               <Button
-                variant="destructive"
-                onClick={handleDelete}
+                variant="outline"
+                onClick={() => onOpenChange(false)}
                 disabled={loading}
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading ? "Eliminando..." : "Eliminar"}
+                Cancelar
               </Button>
-            )}
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-              className="text-xs md:text-sm cursor-pointer"
+              <Button
+                onClick={handleSave}
+                disabled={loading || (assist && !hasChanges)}
+                className="text-xs md:text-sm cursor-pointer"
+              >
+                {loading
+                  ? "Guardando..."
+                  : assist
+                  ? hasChanges
+                    ? "Guardar cambios"
+                    : "Sin cambios"
+                  : "Crear"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 👇 MODAL DE CONFIRMACIÓN */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente la asistencia médica.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading || (assist && !hasChanges)}
-              className="text-xs md:text-sm cursor-pointer"
-            >
-              {loading
-                ? "Guardando..."
-                : assist
-                ? hasChanges
-                  ? "Guardar cambios"
-                  : "Sin cambios"
-                : "Crear"}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

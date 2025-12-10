@@ -6,6 +6,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +63,7 @@ type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId" | "segme
   }[];
 };
 
-// Permitimos claves dinámicas para los errores de segmentos (ej: "segments.0.departure")
+// Permitimos claves dinámicas para los errores de segmentos
 interface FormErrors extends Record<string, string | undefined> {
   _general?: string;
 }
@@ -77,6 +88,8 @@ export function PlaneDialog({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  // 👇 Nuevo estado para confirmación
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const deleteLock = useRef(false);
 
   useEffect(() => {
@@ -158,8 +171,10 @@ export function PlaneDialog({
   };
 
   const handleSave = async () => {
+    // 👇 1. Acumulador de errores
     const allErrors: FormErrors = {};
 
+    // 👇 2. Validaciones manuales de segmentos
     formData.segments.forEach((s, index) => {
       if (!s.departureDate) {
         allErrors[`segments.${index}.departureDate`] = "La fecha de salida es obligatoria";
@@ -199,6 +214,7 @@ export function PlaneDialog({
       ...(isEdit ? {} : { reservationId }),
     };
 
+    // 👇 3. Validación Zod
     const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
@@ -210,6 +226,12 @@ export function PlaneDialog({
       }
     }
 
+    // 👇 4. Validación lógica de precios
+    if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
+        allErrors["amountPaid"] = "El monto pagado no puede ser mayor que el total.";
+    }
+
+    // 👇 5. Si hay errores, mostrar y detener
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
       return;
@@ -237,6 +259,8 @@ export function PlaneDialog({
   };
 
   const handleDelete = async () => {
+    setShowDeleteConfirm(false); // Cerrar confirmación
+
     if (!plane || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -254,321 +278,364 @@ export function PlaneDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
-        <DialogHeader>
-          <DialogTitle className="text-sm md:text-base">
-            {plane ? "Editar Vuelo" : "Crear Vuelo"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle className="text-sm md:text-base">
+              {plane ? "Editar Vuelo" : "Crear Vuelo"}
+            </DialogTitle>
+          </DialogHeader>
 
-        {errors._general && (
-          <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
-              ⚠️ {errors._general}
-            </p>
-          </div>
-        )}
-
-        <div className="grid gap-3 md:grid-cols-2">
-          {(["bookingReference", "provider"] as const).map((key) => (
-            <div key={key} className="space-y-1">
-              <Label
-                htmlFor={key}
-                className="text-[11px] md:text-xs"
-              >
-                {key === "bookingReference" ? "Referencia *" : "Proveedor (opcional)"}
-              </Label>
-              <Input
-                id={key}
-                value={formData[key]}
-                onChange={(e) =>
-                  setFormData({ ...formData, [key]: e.target.value })
-                }
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[key] ? "border-red-500" : ""
-                }`}
-              />
-              {errors[key] && (
-                <p className="text-red-500 text-[10px] md:text-xs">{errors[key]}</p>
-              )}
-            </div>
-          ))}
-
-          {(["totalPrice", "amountPaid"] as const).map((key) => (
-            <div key={key} className="space-y-1">
-              <Label
-                htmlFor={key}
-                className="text-[11px] md:text-xs"
-              >
-                {key === "totalPrice" ? "Precio total *" : "Monto pagado *"}
-              </Label>
-              <Input
-                id={key}
-                type="number"
-                value={formData[key as keyof FormData] as string | number}
-                onChange={(e) =>
-                  setFormData({ ...formData, [key]: Number(e.target.value) })
-                }
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[key] ? "border-red-500" : ""
-                }`}
-              />
-              {errors[key] && (
-                <p className="text-red-500 text-[10px] md:text-xs">{errors[key]}</p>
-              )}
-            </div>
-          ))}
-
-          {!plane && (
-            <div className="space-y-1">
-              <Label className="text-[11px] md:text-xs">Moneda *</Label>
-              <Select
-                value={formData.currency}
-                onValueChange={(v: Currency) =>
-                  setFormData({ ...formData, currency: v })
-                }
-              >
-                {/* 👇 cursor-pointer en trigger */}
-                <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent className="text-xs md:text-sm">
-                  {/* 👇 cursor-pointer en items */}
-                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
-                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.currency && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.currency}
-                </p>
-              )}
+          {errors._general && (
+            <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
+              <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
+                ⚠️ {errors._general}
+              </p>
             </div>
           )}
-        </div>
 
-        <div className="mt-3 space-y-1">
-          <Label className="text-[11px] md:text-xs">Notas (opcional)</Label>
-          <Textarea
-            value={formData.notes ?? ""}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
-            className="text-xs md:text-sm"
-          />
-        </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {(["bookingReference", "provider"] as const).map((key) => (
+              <div key={key} className="space-y-1">
+                <Label
+                  htmlFor={key}
+                  className="text-[11px] md:text-xs"
+                >
+                  {key === "bookingReference" ? "Referencia *" : "Proveedor (opcional)"}
+                </Label>
+                <Input
+                  id={key}
+                  value={formData[key]}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [key]: e.target.value })
+                  }
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[key] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[key] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">{errors[key]}</p>
+                )}
+              </div>
+            ))}
 
-        <div className="mt-5 space-y-3">
-          <div>
-            <div className="flex justify-between items-center">
-              <Label className="text-[11px] md:text-xs">Tramos del vuelo *</Label>
+            {/* 👇 INPUTS DE PRECIOS MEJORADOS */}
+            {(["totalPrice", "amountPaid"] as const).map((key) => (
+              <div key={key} className="space-y-1">
+                <Label
+                  htmlFor={key}
+                  className="text-[11px] md:text-xs"
+                >
+                  {key === "totalPrice" ? "Precio total *" : "Monto pagado *"}
+                </Label>
+                <Input
+                  id={key}
+                  type="number"
+                  min={0} // 1. Restricción nativa
+                  value={formData[key as keyof FormData] as string | number}
+                  
+                  // 2. Validación en onChange
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                        setFormData({ ...formData, [key]: 0 });
+                        return;
+                    }
+                    const numValue = Number(value);
+                    if (numValue >= 0) {
+                        setFormData({ ...formData, [key]: numValue });
+                    }
+                  }}
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    segments: [
-                      ...formData.segments,
-                      {
-                        segmentOrder: formData.segments.length + 1,
-                        departure: "",
-                        arrival: "",
-                        departureDate: undefined,
-                        arrivalDate: undefined,
-                        airline: "",
-                        flightNumber: "",
-                      },
-                    ],
-                  })
-                }
-                // 👇 cursor-pointer en botón de agregar tramo
-                className="h-7 md:h-8 px-2 text-[11px] md:text-xs cursor-pointer"
-              >
-                + Agregar tramo
-              </Button>
-            </div>
-            {errors.segments && (
-              <p className="text-red-500 text-[10px] md:text-xs mt-1">
-                {errors.segments}
-              </p>
+                  // 3. Bloqueo de tecla menos
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "Minus") {
+                        e.preventDefault();
+                    }
+                  }}
+
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[key] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[key] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">{errors[key]}</p>
+                )}
+              </div>
+            ))}
+
+            {!plane && (
+              <div className="space-y-1">
+                <Label className="text-[11px] md:text-xs">Moneda *</Label>
+                <Select
+                  value={formData.currency}
+                  onValueChange={(v: Currency) =>
+                    setFormData({ ...formData, currency: v })
+                  }
+                >
+                  {/* 👇 cursor-pointer en trigger */}
+                  <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs md:text-sm">
+                    {/* 👇 cursor-pointer en items */}
+                    <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                    <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.currency && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.currency}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
-          {formData.segments.map((seg, index) => (
-            <div
-              key={index}
-              className="border p-3 md:p-4 rounded-md space-y-3 md:space-y-4 bg-muted/10 text-xs md:text-sm"
-            >
+          <div className="mt-3 space-y-1">
+            <Label className="text-[11px] md:text-xs">Notas (opcional)</Label>
+            <Textarea
+              value={formData.notes ?? ""}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={3}
+              className="text-xs md:text-sm"
+            />
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <div>
               <div className="flex justify-between items-center">
-                <p className="text-[11px] md:text-xs font-semibold">
-                  Tramo #{index + 1}
-                </p>
+                <Label className="text-[11px] md:text-xs">Tramos del vuelo *</Label>
+
                 <Button
-                  variant="ghost"
                   size="sm"
-                  // 👇 cursor-pointer en botón de eliminar tramo
-                  className="text-red-500 h-7 md:h-8 px-2 text-[11px] md:text-xs hover:text-red-600 cursor-pointer"
-                  onClick={() => removeSegment(index)}
+                  variant="outline"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      segments: [
+                        ...formData.segments,
+                        {
+                          segmentOrder: formData.segments.length + 1,
+                          departure: "",
+                          arrival: "",
+                          departureDate: undefined,
+                          arrivalDate: undefined,
+                          airline: "",
+                          flightNumber: "",
+                        },
+                      ],
+                    })
+                  }
+                  // 👇 cursor-pointer en botón de agregar tramo
+                  className="h-7 md:h-8 px-2 text-[11px] md:text-xs cursor-pointer"
                 >
-                  Eliminar
+                  + Agregar tramo
                 </Button>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs">Origen</Label>
-                  <Input
-                    placeholder="EZE"
-                    value={seg.departure}
-                    onChange={(e) =>
-                      updateSegment(index, "departure", e.target.value)
-                    }
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors[`segments.${index}.departure`] ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors[`segments.${index}.departure`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.departure`]}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] md:text-xs">Destino</Label>
-                  <Input
-                    placeholder="MIA"
-                    value={seg.arrival}
-                    onChange={(e) =>
-                      updateSegment(index, "arrival", e.target.value)
-                    }
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors[`segments.${index}.arrival`] ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors[`segments.${index}.arrival`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.arrival`]}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
-                <div className="space-y-1 [&>button]:cursor-pointer">
-                  <Label className="text-[11px] md:text-xs">Salida</Label>
-                  <DateTimePicker
-                    key={`departure-${index}`}
-                    date={seg.departureDate}
-                    setDate={(date) => updateSegment(index, "departureDate", date)}
-                    includeTime={true}
-                  />
-                  {errors[`segments.${index}.departureDate`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.departureDate`]}
-                    </p>
-                  )}
-                </div>
-                {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
-                <div className="space-y-1 [&>button]:cursor-pointer">
-                  <Label className="text-[11px] md:text-xs">Llegada</Label>
-                  <DateTimePicker
-                    key={`arrival-${index}`}
-                    date={seg.arrivalDate}
-                    setDate={(date) => updateSegment(index, "arrivalDate", date)}
-                    includeTime={true}
-                  />
-                  {errors[`segments.${index}.arrivalDate`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.arrivalDate`]}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Input
-                    placeholder="Aerolínea"
-                    value={seg.airline ?? ""}
-                    onChange={(e) =>
-                      updateSegment(index, "airline", e.target.value)
-                    }
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors[`segments.${index}.airline`] ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors[`segments.${index}.airline`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.airline`]}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <Input
-                    placeholder="Nro. Vuelo"
-                    value={seg.flightNumber ?? ""}
-                    onChange={(e) =>
-                      updateSegment(index, "flightNumber", e.target.value)
-                    }
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors[`segments.${index}.flightNumber`] ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors[`segments.${index}.flightNumber`] && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors[`segments.${index}.flightNumber`]}
-                    </p>
-                  )}
-                </div>
-              </div>
+              {errors.segments && (
+                <p className="text-red-500 text-[10px] md:text-xs mt-1">
+                  {errors.segments}
+                </p>
+              )}
             </div>
-          ))}
-        </div>
 
-        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex justify-start">
-            {plane && (
+            {formData.segments.map((seg, index) => (
+              <div
+                key={index}
+                className="border p-3 md:p-4 rounded-md space-y-3 md:space-y-4 bg-muted/10 text-xs md:text-sm"
+              >
+                <div className="flex justify-between items-center">
+                  <p className="text-[11px] md:text-xs font-semibold">
+                    Tramo #{index + 1}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    // 👇 cursor-pointer en botón de eliminar tramo
+                    className="text-red-500 h-7 md:h-8 px-2 text-[11px] md:text-xs hover:text-red-600 cursor-pointer"
+                    onClick={() => removeSegment(index)}
+                  >
+                    Eliminar
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] md:text-xs">Origen</Label>
+                    <Input
+                      placeholder="EZE"
+                      value={seg.departure}
+                      onChange={(e) =>
+                        updateSegment(index, "departure", e.target.value)
+                      }
+                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                        errors[`segments.${index}.departure`] ? "border-red-500" : ""
+                      }`}
+                    />
+                    {errors[`segments.${index}.departure`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.departure`]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] md:text-xs">Destino</Label>
+                    <Input
+                      placeholder="MIA"
+                      value={seg.arrival}
+                      onChange={(e) =>
+                        updateSegment(index, "arrival", e.target.value)
+                      }
+                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                        errors[`segments.${index}.arrival`] ? "border-red-500" : ""
+                      }`}
+                    />
+                    {errors[`segments.${index}.arrival`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.arrival`]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
+                  <div className="space-y-1 [&>button]:cursor-pointer">
+                    <Label className="text-[11px] md:text-xs">Salida</Label>
+                    <DateTimePicker
+                      key={`departure-${index}`}
+                      date={seg.departureDate}
+                      setDate={(date) => updateSegment(index, "departureDate", date)}
+                      includeTime={true}
+                    />
+                    {errors[`segments.${index}.departureDate`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.departureDate`]}
+                      </p>
+                    )}
+                  </div>
+                  {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
+                  <div className="space-y-1 [&>button]:cursor-pointer">
+                    <Label className="text-[11px] md:text-xs">Llegada</Label>
+                    <DateTimePicker
+                      key={`arrival-${index}`}
+                      date={seg.arrivalDate}
+                      setDate={(date) => updateSegment(index, "arrivalDate", date)}
+                      includeTime={true}
+                    />
+                    {errors[`segments.${index}.arrivalDate`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.arrivalDate`]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Input
+                      placeholder="Aerolínea"
+                      value={seg.airline ?? ""}
+                      onChange={(e) =>
+                        updateSegment(index, "airline", e.target.value)
+                      }
+                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                        errors[`segments.${index}.airline`] ? "border-red-500" : ""
+                      }`}
+                    />
+                    {errors[`segments.${index}.airline`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.airline`]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      placeholder="Nro. Vuelo"
+                      value={seg.flightNumber ?? ""}
+                      onChange={(e) =>
+                        updateSegment(index, "flightNumber", e.target.value)
+                      }
+                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                        errors[`segments.${index}.flightNumber`] ? "border-red-500" : ""
+                      }`}
+                    />
+                    {errors[`segments.${index}.flightNumber`] && (
+                      <p className="text-red-500 text-[10px] md:text-xs">
+                        {errors[`segments.${index}.flightNumber`]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex justify-start">
+              {plane && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={loading}
+                  // 👇 cursor-pointer en botón Eliminar
+                  className="text-xs md:text-sm cursor-pointer"
+                >
+                  {loading ? "Eliminando..." : "Eliminar"}
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
               <Button
-                variant="destructive"
-                onClick={handleDelete}
+                variant="outline"
+                onClick={() => onOpenChange(false)}
                 disabled={loading}
-                // 👇 cursor-pointer en botón Eliminar
+                // 👇 cursor-pointer en botón Cancelar
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading ? "Eliminando..." : "Eliminar"}
+                Cancelar
               </Button>
-            )}
-          </div>
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                // 👇 cursor-pointer en botón Guardar
+                className="text-xs md:text-sm cursor-pointer"
+              >
+                {loading
+                  ? "Guardando..."
+                  : plane
+                  ? "Guardar cambios"
+                  : "Crear vuelo"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-              // 👇 cursor-pointer en botón Cancelar
-              className="text-xs md:text-sm cursor-pointer"
+      {/* 👇 MODAL DE CONFIRMACIÓN */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el vuelo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-              // 👇 cursor-pointer en botón Guardar
-              className="text-xs md:text-sm cursor-pointer"
-            >
-              {loading
-                ? "Guardando..."
-                : plane
-                ? "Guardar cambios"
-                : "Crear vuelo"}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -6,6 +6,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +84,8 @@ export function TransferDialog({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  // 👇 Nuevo estado para confirmación
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const deleteLock = useRef(false);
 
   // 🔄 Prellenar datos
@@ -107,7 +120,7 @@ export function TransferDialog({
     setErrors({});
   }, [transfer, open]);
 
-  // 🧭 Detectar cambios (comparando timestamps)
+  // 🧭 Detectar cambios
   const hasChanges = useMemo(() => {
     if (!transfer) return true;
 
@@ -128,30 +141,27 @@ export function TransferDialog({
     );
   }, [formData, transfer]);
 
-  // 💾 Guardar traslado
+  // 💾 Guardar traslado con validación acumulativa
   const handleSave = async () => {
     const isEdit = Boolean(transfer);
     const schema = isEdit ? updateTransferSchema : createTransferSchema;
 
-    if (!formData.departureDate || !formData.arrivalDate) {
-      setErrors({
-        departureDate: !formData.departureDate ? "Requerido" : undefined,
-        arrivalDate: !formData.arrivalDate ? "Requerido" : undefined,
-      });
-      return;
+    // 👇 1. Acumulador de errores
+    const newErrors: FormErrors = {};
+
+    // 👇 2. Validación manual de fechas
+    if (!formData.departureDate) {
+      newErrors.departureDate = "Requerido";
+    }
+    if (!formData.arrivalDate) {
+      newErrors.arrivalDate = "Requerido";
     }
 
-    if (isEdit && !hasChanges) {
-      setErrors({
-        _general: "Debes modificar al menos un campo para guardar los cambios.",
-      });
-      return;
-    }
-
+    // 👇 3. Validación Zod
     const payloadToValidate = {
       ...formData,
-      departureDate: formData.departureDate.toISOString(),
-      arrivalDate: formData.arrivalDate.toISOString(),
+      departureDate: formData.departureDate?.toISOString() ?? "",
+      arrivalDate: formData.arrivalDate?.toISOString() ?? "",
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
       ...(isEdit ? {} : { reservationId }),
@@ -160,18 +170,29 @@ export function TransferDialog({
     const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
-      const fieldErrors: FormErrors = {};
       for (const err of result.error.issues) {
         const key = err.path[0] as string;
-        fieldErrors[key] = err.message;
+        if (!newErrors[key]) {
+          newErrors[key] = err.message;
+        }
       }
-      setErrors(fieldErrors);
+    }
+
+    // 👇 4. Validación lógica de precios
+    if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
+      newErrors.amountPaid = "El monto pagado no puede ser mayor que el total.";
+    }
+
+    // 👇 5. Si hay errores, mostrar y detener
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
+    // 👇 6. Validación de cambios (solo edición)
+    if (isEdit && !hasChanges) {
       setErrors({
-        amountPaid: "El monto pagado no puede ser mayor que el total.",
+        _general: "Debes modificar al menos un campo para guardar los cambios.",
       });
       return;
     }
@@ -179,8 +200,8 @@ export function TransferDialog({
     const finalPayload = {
       origin: formData.origin,
       destination: formData.destination || null,
-      departureDate: formData.departureDate.toISOString(),
-      arrivalDate: formData.arrivalDate.toISOString(),
+      departureDate: formData.departureDate!.toISOString(), // Seguro porque ya validamos
+      arrivalDate: formData.arrivalDate!.toISOString(),
       provider: formData.provider,
       bookingReference: formData.bookingReference || null,
       transportType: formData.transportType,
@@ -217,6 +238,8 @@ export function TransferDialog({
 
   // 🗑️ Eliminar traslado
   const handleDelete = async () => {
+    setShowDeleteConfirm(false); // Cerrar confirmación
+
     if (!transfer || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -238,229 +261,269 @@ export function TransferDialog({
 
   // 🧱 Render
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
-        <DialogHeader>
-          <DialogTitle className="text-sm md:text-base">
-            {transfer ? "Editar Traslado" : "Crear Traslado"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle className="text-sm md:text-base">
+              {transfer ? "Editar Traslado" : "Crear Traslado"}
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* ⚠️ Error general */}
-        {errors._general && (
-          <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-            <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
-              ⚠️ {errors._general}
-            </p>
-          </div>
-        )}
+          {errors._general && (
+            <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
+              <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
+                ⚠️ {errors._general}
+              </p>
+            </div>
+          )}
 
-        {/* Formulario */}
-        <div className="grid gap-3 md:grid-cols-2">
-          {/* Inputs de Texto normales */}
-          {[
-            { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
-            { id: "destination", label: "Destino", placeholder: "Hotel Alvear" },
-            { id: "provider", label: "Proveedor *", placeholder: "Remises del Sol" },
-            { id: "bookingReference", label: "Referencia", placeholder: "TRF-00123" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label
-                htmlFor={f.id}
-                className="text-[11px] md:text-xs"
-              >
-                {f.label}
-              </Label>
-              <Input
-                id={f.id}
-                value={(formData[f.id as keyof typeof formData] as string) || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: e.target.value })
-                }
-                placeholder={f.placeholder}
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[f.id] ? "border-red-500" : ""
-                }`}
+          {/* Formulario */}
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
+              { id: "destination", label: "Destino", placeholder: "Hotel Alvear" },
+              { id: "provider", label: "Proveedor *", placeholder: "Remises del Sol" },
+              { id: "bookingReference", label: "Referencia", placeholder: "TRF-00123" },
+            ].map((f) => (
+              <div key={f.id} className="space-y-1">
+                <Label
+                  htmlFor={f.id}
+                  className="text-[11px] md:text-xs"
+                >
+                  {f.label}
+                </Label>
+                <Input
+                  id={f.id}
+                  value={(formData[f.id as keyof typeof formData] as string) || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [f.id]: e.target.value })
+                  }
+                  placeholder={f.placeholder}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[f.id] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[f.id] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors[f.id]}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {/* ✅ DATE TIME PICKERS */}
+            <div className="space-y-1 [&>button]:cursor-pointer">
+              <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
+              <DateTimePicker
+                date={formData.departureDate}
+                setDate={(date) => setFormData({ ...formData, departureDate: date })}
+                includeTime={true}
               />
-              {errors[f.id] && (
+              {errors.departureDate && (
                 <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors[f.id]}
+                  {errors.departureDate}
                 </p>
               )}
             </div>
-          ))}
 
-          {/* ✅ DATE TIME PICKERS */}
-          {/* 👇 [&>button]:cursor-pointer para el botón del calendario */}
-          <div className="space-y-1 [&>button]:cursor-pointer">
-            <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
-            <DateTimePicker
-              date={formData.departureDate}
-              setDate={(date) => setFormData({ ...formData, departureDate: date })}
-              includeTime={true}
-            />
-            {errors.departureDate && (
-              <p className="text-red-500 text-[10px] md:text-xs">
-                {errors.departureDate}
-              </p>
-            )}
-          </div>
+            <div className="space-y-1 [&>button]:cursor-pointer">
+              <Label className="text-[11px] md:text-xs">Fecha de llegada *</Label>
+              <DateTimePicker
+                date={formData.arrivalDate}
+                setDate={(date) => setFormData({ ...formData, arrivalDate: date })}
+                includeTime={true}
+              />
+              {errors.arrivalDate && (
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.arrivalDate}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-1 [&>button]:cursor-pointer">
-            <Label className="text-[11px] md:text-xs">Fecha de llegada *</Label>
-            <DateTimePicker
-              date={formData.arrivalDate}
-              setDate={(date) => setFormData({ ...formData, arrivalDate: date })}
-              includeTime={true}
-            />
-            {errors.arrivalDate && (
-              <p className="text-red-500 text-[10px] md:text-xs">
-                {errors.arrivalDate}
-              </p>
-            )}
-          </div>
-
-          {/* Tipo de transporte */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="transportType"
-              className="text-[11px] md:text-xs"
-            >
-              Tipo de transporte *
-            </Label>
-            <Select
-              value={formData.transportType}
-              onValueChange={(v: TransportType) =>
-                setFormData({ ...formData, transportType: v })
-              }
-            >
-              {/* 👇 cursor-pointer en trigger */}
-              <SelectTrigger
-                id="transportType"
-                className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
-              >
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent className="text-xs md:text-sm">
-                {/* 👇 cursor-pointer en items */}
-                <SelectItem value={TransportType.TRANSFER} className="cursor-pointer">Transfer</SelectItem>
-                <SelectItem value={TransportType.BUS} className="cursor-pointer">Bus</SelectItem>
-                <SelectItem value={TransportType.TRAIN} className="cursor-pointer">Tren</SelectItem>
-                <SelectItem value={TransportType.FERRY} className="cursor-pointer">Ferry</SelectItem>
-                <SelectItem value={TransportType.OTHER} className="cursor-pointer">Otro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Moneda (solo al crear) */}
-          {!transfer && (
+            {/* Tipo de transporte */}
             <div className="space-y-1">
               <Label
-                htmlFor="currency"
+                htmlFor="transportType"
                 className="text-[11px] md:text-xs"
               >
-                Moneda *
+                Tipo de transporte *
               </Label>
               <Select
-                value={formData.currency}
-                onValueChange={(v: Currency) =>
-                  setFormData({ ...formData, currency: v })
+                value={formData.transportType}
+                onValueChange={(v: TransportType) =>
+                  setFormData({ ...formData, transportType: v })
                 }
               >
                 {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger
-                  id="currency"
+                  id="transportType"
                   className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                 >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                   {/* 👇 cursor-pointer en items */}
-                  <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
-                  <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
+                  {/* 👇 cursor-pointer en items */}
+                  <SelectItem value={TransportType.TRANSFER} className="cursor-pointer">Transfer</SelectItem>
+                  <SelectItem value={TransportType.BUS} className="cursor-pointer">Bus</SelectItem>
+                  <SelectItem value={TransportType.TRAIN} className="cursor-pointer">Tren</SelectItem>
+                  <SelectItem value={TransportType.FERRY} className="cursor-pointer">Ferry</SelectItem>
+                  <SelectItem value={TransportType.OTHER} className="cursor-pointer">Otro</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.currency && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.currency}
-                </p>
+            </div>
+
+            {/* Moneda (solo al crear) */}
+            {!transfer && (
+              <div className="space-y-1">
+                <Label
+                  htmlFor="currency"
+                  className="text-[11px] md:text-xs"
+                >
+                  Moneda *
+                </Label>
+                <Select
+                  value={formData.currency}
+                  onValueChange={(v: Currency) =>
+                    setFormData({ ...formData, currency: v })
+                  }
+                >
+                  {/* 👇 cursor-pointer en trigger */}
+                  <SelectTrigger
+                    id="currency"
+                    className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+                  >
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs md:text-sm">
+                    {/* 👇 cursor-pointer en items */}
+                    <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
+                    <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.currency && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors.currency}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 👇 INPUTS DE PRECIOS MEJORADOS */}
+            {[
+              { id: "totalPrice", label: "Precio total *", placeholder: "2000" },
+              { id: "amountPaid", label: "Monto pagado *", placeholder: "500" },
+            ].map((f) => (
+              <div key={f.id} className="space-y-1">
+                <Label
+                  htmlFor={f.id}
+                  className="text-[11px] md:text-xs"
+                >
+                  {f.label}
+                </Label>
+                <Input
+                  id={f.id}
+                  type="number"
+                  min={0} // 1. Restricción nativa
+                  value={(formData[f.id as keyof FormData] as number) || 0}
+                  
+                  // 2. Validación en onChange
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                        setFormData({ ...formData, [f.id]: 0 });
+                        return;
+                    }
+                    const numValue = Number(value);
+                    if (numValue >= 0) {
+                        setFormData({ ...formData, [f.id]: numValue });
+                    }
+                  }}
+
+                  // 3. Bloqueo de tecla menos
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "Minus") {
+                        e.preventDefault();
+                    }
+                  }}
+
+                  placeholder={f.placeholder}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    errors[f.id] ? "border-red-500" : ""
+                  }`}
+                />
+                {errors[f.id] && (
+                  <p className="text-red-500 text-[10px] md:text-xs">
+                    {errors[f.id]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex justify-start">
+              {transfer && (
+                <Button
+                  variant="destructive"
+                  // 👇 Abre confirmación
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={loading}
+                  className="text-xs md:text-sm cursor-pointer"
+                >
+                  {loading ? "Eliminando..." : "Eliminar"}
+                </Button>
               )}
             </div>
-          )}
-
-          {[
-            { id: "totalPrice", label: "Precio total *", placeholder: "2000" },
-            { id: "amountPaid", label: "Monto pagado *", placeholder: "500" },
-          ].map((f) => (
-            <div key={f.id} className="space-y-1">
-              <Label
-                htmlFor={f.id}
-                className="text-[11px] md:text-xs"
-              >
-                {f.label}
-              </Label>
-              <Input
-                id={f.id}
-                type="number"
-                value={(formData[f.id as keyof FormData] as number) || 0}
-                onChange={(e) =>
-                  setFormData({ ...formData, [f.id]: Number(e.target.value) })
-                }
-                placeholder={f.placeholder}
-                className={`h-8 md:h-9 text-xs md:text-sm ${
-                  errors[f.id] ? "border-red-500" : ""
-                }`}
-              />
-              {errors[f.id] && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors[f.id]}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex justify-start">
-            {transfer && (
+            <div className="flex gap-2 justify-end">
               <Button
-                variant="destructive"
-                onClick={handleDelete}
+                variant="outline"
+                onClick={() => onOpenChange(false)}
                 disabled={loading}
-                // 👇 cursor-pointer
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading ? "Eliminando..." : "Eliminar"}
+                Cancelar
               </Button>
-            )}
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-              // 👇 cursor-pointer
-              className="text-xs md:text-sm cursor-pointer"
+              <Button
+                onClick={handleSave}
+                disabled={loading || (transfer && !hasChanges)}
+                className="text-xs md:text-sm cursor-pointer"
+              >
+                {loading
+                  ? "Guardando..."
+                  : transfer
+                  ? hasChanges
+                    ? "Guardar cambios"
+                    : "Sin cambios"
+                  : "Crear"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 👇 MODAL DE CONFIRMACIÓN */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el traslado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-              // 👇 cursor-pointer
-              className="text-xs md:text-sm cursor-pointer"
-            >
-              {loading
-                ? "Guardando..."
-                : transfer
-                ? "Guardar cambios"
-                : "Crear"}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
