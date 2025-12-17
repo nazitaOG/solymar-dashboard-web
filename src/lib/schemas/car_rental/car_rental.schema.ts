@@ -1,14 +1,19 @@
 import { z } from "zod";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
+// 👇 Importamos la utilidad y la nueva config de error
+import { 
+  validateMinOneHourGap, 
+  dropoffDateErrorConfig,
+  validateEndAfterStart,
+  dropoffDateMinDurationErrorConfig
+} from "@/lib/schemas/utils/date-validations";
 
-// Si Currency es algo como: type Currency = "USD" | "ARS";
 const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 
 /**
- * 🚗 Base shape: Definimos SOLO la estructura de datos (z.object).
- * NO aplicamos .refine() aquí todavía para poder usar .extend() después.
+ * 🚗 Base shape: Definimos SOLO la estructura de datos
  */
-const carRentalShape = z.object({
+const carRentalBase = z.object({
   provider: z.string().min(1, "El proveedor es obligatorio"),
 
   bookingReference: z
@@ -45,7 +50,7 @@ const carRentalShape = z.object({
 
   totalPrice: z
     .coerce.number()
-    .min(0, "El precio total debe ser mayor o igual a 0"), // Corregido a min(0) para permitir 0 si es necesario, o dejalo en 1
+    .min(0, "El precio total no puede ser negativo"),
 
   amountPaid: z
     .coerce.number()
@@ -53,41 +58,33 @@ const carRentalShape = z.object({
 });
 
 /**
- * 🟢 CREATE:
- * 1. Extendemos el shape base.
- * 2. Agregamos currency y reservationId.
- * 3. APLICAMOS EL REFINE AQUÍ (al final).
+ * 🟢 CREATE
  */
-export const createCarRentalSchema = carRentalShape
+export const createCarRentalSchema = carRentalBase
   .extend({
     currency: z.enum(currencyValues, { message: "Moneda inválida" }).default(Currency.USD),
     reservationId: z.string().uuid("reservationId inválido"),
   })
-  // 🚦 Validación de fechas: dropoffDate >= pickupDate
-  .refine(
-    (data) => {
-      const start = new Date(data.pickupDate);
-      const end = new Date(data.dropoffDate);
-      return end >= start;
-    },
-    {
-      message: "La fecha de devolución no puede ser anterior a la de retiro",
-      path: ["dropoffDate"],
-    }
-  );
+  // 1️⃣ Orden
+  .refine(validateEndAfterStart, dropoffDateErrorConfig)
+  // 2️⃣ Duración
+  .refine(validateMinOneHourGap, dropoffDateMinDurationErrorConfig);
 
 /**
- * ✏️ UPDATE:
- * Usamos el shape base, lo hacemos parcial y validamos que haya cambios.
- * Nota: En updates parciales no solemos validar el rango de fechas porque
- * el usuario podría enviar solo una de las dos fechas.
+ * ✏️ UPDATE
  */
-export const updateCarRentalSchema = carRentalShape.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  {
-    message: "Debes modificar al menos un campo",
-  },
-);
+export const updateCarRentalSchema = carRentalBase
+  .partial()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    {
+      message: "Debes modificar al menos un campo",
+    }
+  )
+  // 1️⃣ Orden
+  .refine(validateEndAfterStart, dropoffDateErrorConfig)
+  // 2️⃣ Duración
+  .refine(validateMinOneHourGap, dropoffDateMinDurationErrorConfig);
 
 // Derivaciones tipadas
 export type CarRentalCreateSchema = z.infer<typeof createCarRentalSchema>;

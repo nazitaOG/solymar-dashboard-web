@@ -1,13 +1,10 @@
 import { z } from "zod";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 
-// Si Currency es algo como: type Currency = "USD" | "ARS";
 const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 
 /**
- * 🩺 Base para validación de asistencias médicas
- * - Valida coherencia de precios
- * - bookingReference puede omitirse
+ * 🩺 Objeto Base (Solo estructura, sin refinamientos complejos)
  */
 const medicalAssistBase = z.object({
   bookingReference: z
@@ -26,7 +23,8 @@ const medicalAssistBase = z.object({
 
   provider: z.string().min(1, "El proveedor es obligatorio"),
 
-  totalPrice: z.coerce.number().min(1, "El precio total debe ser mayor a 0"),
+  // Ajustado a min(0) para consistencia (permite 0, no negativos)
+  totalPrice: z.coerce.number().min(0, "El precio no puede ser negativo"),
 
   amountPaid: z.coerce
     .number()
@@ -34,22 +32,24 @@ const medicalAssistBase = z.object({
 });
 
 /**
- * 🟢 CREATE: incluye currency y reservationId
+ * 🟢 CREATE
  */
-export const createMedicalAssistSchema = medicalAssistBase.safeExtend({
+export const createMedicalAssistSchema = medicalAssistBase.extend({
   currency: z.enum(currencyValues, { message: "Moneda inválida" }).default(Currency.USD),
   reservationId: z.string().uuid("reservationId inválido"),
 });
 
 /**
- * ✏️ UPDATE: todos los campos opcionales, sin currency/reservationId
- * exige que al menos un campo se haya modificado
+ * ✏️ UPDATE
  */
 export const updateMedicalAssistSchema = medicalAssistBase
   .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "Debes modificar al menos un campo",
-  });
+  .refine(
+    (data) => Object.keys(data).length > 0, 
+    {
+      message: "Debes modificar al menos un campo",
+    }
+  );
 
 // Derivaciones tipadas
 export type MedicalAssistCreateSchema = z.infer<typeof createMedicalAssistSchema>;
