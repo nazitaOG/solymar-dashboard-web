@@ -4,31 +4,34 @@ import { Currency } from "@/lib/interfaces/currency/currency.interface";
 const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 
 /**
- * 🩺 Objeto Base (Solo estructura, sin refinamientos complejos)
+ * 🩺 Objeto Base: Estructura alineada con Prisma
  */
 const medicalAssistBase = z.object({
+  // DB: VarChar(255) - OBLIGATORIO según Prisma
   bookingReference: z
     .string()
     .trim()
     .min(1, "La referencia de reserva es obligatoria")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+    .max(255, "La referencia no puede superar los 255 caracteres"),
 
+  // DB: String? @db.VarChar(128) - Opcional
   assistType: z
     .string()
     .trim()
-    .min(1, "El tipo de asistencia es obligatorio")
+    .max(128, "El tipo de asistencia no puede superar los 128 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 
-  provider: z.string().min(1, "El proveedor es obligatorio"),
+  // DB: VarChar(128)
+  provider: z
+    .string()
+    .min(1, "El proveedor es obligatorio")
+    .max(128, "El proveedor no puede superar los 128 caracteres"),
 
-  // Ajustado a min(0) para consistencia (permite 0, no negativos)
+  // Precios
   totalPrice: z.coerce.number().min(0, "El precio no puede ser negativo"),
 
-  amountPaid: z.coerce
-    .number()
-    .nonnegative("El monto pagado debe ser positivo o cero"),
+  amountPaid: z.coerce.number().nonnegative("El monto pagado debe ser positivo"),
 });
 
 /**
@@ -36,7 +39,7 @@ const medicalAssistBase = z.object({
  */
 export const createMedicalAssistSchema = medicalAssistBase.extend({
   currency: z.enum(currencyValues, { message: "Moneda inválida" }).default(Currency.USD),
-  reservationId: z.string().uuid("reservationId inválido"),
+  reservationId: z.string().uuid("ID de reserva inválido"),
 });
 
 /**

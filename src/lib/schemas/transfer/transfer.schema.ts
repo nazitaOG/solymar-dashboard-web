@@ -1,11 +1,10 @@
 import { z } from "zod";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import { TransportType } from "@/lib/interfaces/transfer/transfer.interface";
-// 👇 Importamos la utilidad y la config específica para "arrivalDate"
 import { 
   validateMinOneHourGap, 
-  arrivalDateErrorConfig,
   validateEndAfterStart,
+  arrivalDateErrorConfig,
   arrivalDateMinDurationErrorConfig
 } from "@/lib/schemas/utils/date-validations";
 
@@ -13,13 +12,19 @@ const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 const transportValues = Object.values(TransportType) as [TransportType, ...TransportType[]];
 
 /**
- * 🚐 Objeto Base (Sin .refine todavía)
+ * 🚐 Objeto Base: Estructura alineada con Prisma
  */
 const transferBase = z.object({
-  origin: z.string().min(1, "El origen es obligatorio"),
+  // DB: VarChar(128)
+  origin: z
+    .string()
+    .min(1, "El origen es obligatorio")
+    .max(128, "El origen no puede superar los 128 caracteres"),
+
+  // DB: VarChar(128) (Nullable)
   destination: z
     .string()
-    .min(1, "El destino es obligatorio")
+    .max(128, "El destino no puede superar los 128 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)), 
 
@@ -37,15 +42,19 @@ const transferBase = z.object({
       message: "La fecha de llegada no es válida",
     }),
 
+  // DB: VarChar(128) (Nullable) - OJO: Aquí es 128, no 255
   bookingReference: z
     .string()
-    .min(1, "La referencia de reserva es obligatoria")
+    .max(128, "La referencia no puede superar los 128 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 
-  provider: z.string().min(1, "El proveedor es obligatorio"),
+  // DB: VarChar(128)
+  provider: z
+    .string()
+    .min(1, "El proveedor es obligatorio")
+    .max(128, "El proveedor no puede superar los 128 caracteres"),
 
-  // Ajustado a min(0) para consistencia (no negativos, permite gratis)
   totalPrice: z.coerce.number().min(0, "El precio no puede ser negativo"),
 
   amountPaid: z.coerce.number().nonnegative("El monto pagado debe ser positivo"),
@@ -61,10 +70,11 @@ const transferBase = z.object({
 export const createTransferSchema = transferBase
   .extend({
     currency: z.enum(currencyValues, { message: "Moneda inválida" }).default(Currency.USD),
-    reservationId: z.string().uuid("reservationId inválido"),
+    reservationId: z.string().uuid("ID de reserva inválido"),
   })
-  // 👇 Usamos la utilidad con la config de error para "arrivalDate"
+  // 1️⃣ Orden: Llegada >= Salida
   .refine(validateEndAfterStart, arrivalDateErrorConfig)
+  // 2️⃣ Duración: Diferencia >= 1 hora
   .refine(validateMinOneHourGap, arrivalDateMinDurationErrorConfig);
 
 /**

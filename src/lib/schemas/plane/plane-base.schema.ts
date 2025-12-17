@@ -1,15 +1,22 @@
-// src/lib/schemas/plane/plane-base.schema.ts
-
 import { z } from "zod";
 
 export const planeBaseSchema = z.object({
-  bookingReference: z.string().min(1, "La referencia de reserva es obligatoria"),
+  // DB: VarChar(255)
+  bookingReference: z
+    .string()
+    .min(1, "La referencia de reserva es obligatoria")
+    .max(255, "La referencia no puede superar los 255 caracteres"),
 
-  provider: z.string().max(128).optional().or(z.literal("").transform(() => undefined)),
+  // DB: VarChar(128)
+  provider: z
+    .string()
+    .max(128, "El proveedor no puede superar los 128 caracteres")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 
   totalPrice: z
     .coerce.number()
-    .min(0.01, "El precio total debe ser mayor que 0"),
+    .min(0, "El precio total no puede ser negativo"),
 
   amountPaid: z
     .coerce.number()
@@ -17,7 +24,6 @@ export const planeBaseSchema = z.object({
 
   notes: z
     .string()
-    .max(1024, "Las notas no deben superar los 1024 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 });

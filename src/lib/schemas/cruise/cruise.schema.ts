@@ -7,16 +7,30 @@ import {
 
 const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 
-// 🚢 BASE: Campos comunes
+// 🚢 BASE: Campos comunes alineados con Prisma
 const cruiseBase = z.object({
-  embarkationPort: z.string().min(1, "El puerto de embarque es obligatorio"),
-  arrivalPort: z.string().optional().nullable(),
+  // DB: VarChar(128)
+  embarkationPort: z
+    .string()
+    .min(1, "El puerto de embarque es obligatorio")
+    .max(128, "El puerto no puede tener más de 128 caracteres"),
+
+  // DB: String? @db.VarChar(128)
+  arrivalPort: z
+    .string()
+    .max(128, "El puerto no puede tener más de 128 caracteres")
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)), // Transforma string vacío a null
+
   startDate: z
     .string()
     .min(1, "La fecha de salida es obligatoria")
     .refine((val) => !isNaN(Date.parse(val)), {
       message: "La fecha de salida no es válida",
     }),
+
+  // DB: DateTime?
   endDate: z
     .string()
     .optional()
@@ -24,19 +38,25 @@ const cruiseBase = z.object({
     .refine((val) => !val || !isNaN(Date.parse(val)), {
       message: "La fecha de llegada no es válida",
     }),
+
+  // DB: String? @db.VarChar(255)
   bookingReference: z
     .string()
-    .min(1, "La referencia de reserva es obligatoria")
+    .max(255, "La referencia no puede tener más de 255 caracteres")
     .optional()
-    .nullable(),
-  provider: z.string().min(1, "La naviera (proveedor) es obligatoria"),
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+
+  // DB: VarChar(128)
+  provider: z
+    .string()
+    .min(1, "La naviera (proveedor) es obligatoria")
+    .max(128, "El proveedor no puede tener más de 128 caracteres"),
+
   totalPrice: z.coerce.number().min(0, "El precio no puede ser negativo"),
   amountPaid: z.coerce.number().nonnegative("El monto pagado debe ser positivo"),
-  notes: z
-    .string()
-    .max(2000, "Las notas no deben superar los 2000 caracteres")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+  
+  // ❌ 'notes' ELIMINADO: No existe en el modelo Cruise de Prisma
 });
 
 // 🟢 CREATE

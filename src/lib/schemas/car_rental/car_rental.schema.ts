@@ -1,30 +1,42 @@
 import { z } from "zod";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
-// 👇 Importamos la utilidad y la nueva config de error
 import { 
   validateMinOneHourGap, 
-  dropoffDateErrorConfig,
   validateEndAfterStart,
+  dropoffDateErrorConfig,
   dropoffDateMinDurationErrorConfig
 } from "@/lib/schemas/utils/date-validations";
 
 const currencyValues = Object.values(Currency) as [Currency, ...Currency[]];
 
 /**
- * 🚗 Base shape: Definimos SOLO la estructura de datos
+ * 🚗 Base shape: Estructura de datos alineada con Prisma
  */
 const carRentalBase = z.object({
-  provider: z.string().min(1, "El proveedor es obligatorio"),
+  // DB: VarChar(128)
+  provider: z
+    .string()
+    .min(1, "El proveedor es obligatorio")
+    .max(128, "El proveedor no puede superar los 128 caracteres"),
 
+  // DB: VarChar(255) (Nullable)
   bookingReference: z
     .string()
-    .min(1, "La referencia de reserva es obligatoria")
+    .max(255, "La referencia no puede superar los 255 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 
-  pickupLocation: z.string().min(1, "El lugar de retiro es obligatorio"),
+  // DB: VarChar(128)
+  pickupLocation: z
+    .string()
+    .min(1, "El lugar de retiro es obligatorio")
+    .max(128, "El lugar de retiro no puede superar los 128 caracteres"),
 
-  dropoffLocation: z.string().min(1, "El lugar de devolución es obligatorio"),
+  // DB: VarChar(128)
+  dropoffLocation: z
+    .string()
+    .min(1, "El lugar de devolución es obligatorio")
+    .max(128, "El lugar de devolución no puede superar los 128 caracteres"),
 
   pickupDate: z
     .string()
@@ -40,11 +52,16 @@ const carRentalBase = z.object({
       message: "La fecha de devolución no es válida",
     }),
 
-  carCategory: z.string().min(1, "La categoría del auto es obligatoria"),
+  // DB: VarChar(128)
+  carCategory: z
+    .string()
+    .min(1, "La categoría del auto es obligatoria")
+    .max(128, "La categoría no puede superar los 128 caracteres"),
 
+  // DB: VarChar(255) (Nullable)
   carModel: z
     .string()
-    .min(1, "El modelo es obligatorio")
+    .max(255, "El modelo no puede superar los 255 caracteres")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 
@@ -65,9 +82,9 @@ export const createCarRentalSchema = carRentalBase
     currency: z.enum(currencyValues, { message: "Moneda inválida" }).default(Currency.USD),
     reservationId: z.string().uuid("reservationId inválido"),
   })
-  // 1️⃣ Orden
+  // 1️⃣ Orden: Devolución >= Retiro
   .refine(validateEndAfterStart, dropoffDateErrorConfig)
-  // 2️⃣ Duración
+  // 2️⃣ Duración: Diferencia >= 1 hora
   .refine(validateMinOneHourGap, dropoffDateMinDurationErrorConfig);
 
 /**
