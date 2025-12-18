@@ -706,7 +706,7 @@ export default function ReservationDetailPage() {
       key: "roomType",
       label: "Habitación",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">{String(value || "—")}</span>
       ),
     },
     {
@@ -1222,9 +1222,6 @@ export default function ReservationDetailPage() {
                   <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateHotel}>
                     Crear Hotel
                   </Button>
-                </div>
-                <div className="text-[10px] md:text-xs text-muted-foreground mb-2">
-                  Total de hotels en estado: {reservation.hotels.length}
                 </div>
                 <div className="grid grid-cols-1 w-full">
                   {/* AQUÍ: sin max-w */}
