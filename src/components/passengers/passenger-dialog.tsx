@@ -358,6 +358,7 @@ export function PassengerDialog({
                     date={formData.dniExpirationDate}
                     setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
                     includeTime={false}
+                    showYearNavigation={true}
                     label="Seleccionar fecha"
                   />
                 </div>
@@ -414,6 +415,7 @@ export function PassengerDialog({
                     date={formData.passportExpirationDate}
                     setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
                     includeTime={false}
+                    showYearNavigation={true}
                     label="Seleccionar fecha"
                   />
                 </div>
