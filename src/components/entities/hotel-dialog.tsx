@@ -290,7 +290,7 @@ export function HotelDialog({
               { id: "city", label: "Ciudad *", placeholder: "Miami" },
               {
                 id: "roomType",
-                label: "Tipo de habitación *",
+                label: "Tipo de habitacion (opcional)",
                 placeholder: "Ocean View Suite",
               },
               {

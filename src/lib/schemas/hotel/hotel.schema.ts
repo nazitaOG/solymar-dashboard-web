@@ -39,7 +39,9 @@ const hotelBase = z.object({
   roomType: z
     .string()
     .min(1, "El tipo de habitación es obligatorio")
-    .max(255, "El tipo de habitación no puede superar los 255 caracteres"),
+    .max(255, "El tipo de habitación no puede superar los 255 caracteres")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   
   // DB: VarChar(128)
   provider: z
