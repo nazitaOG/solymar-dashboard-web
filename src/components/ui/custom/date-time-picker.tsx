@@ -20,7 +20,14 @@ interface DateTimePickerProps {
   withRange?: boolean;
 
   label?: string;
+  
+  // 👇 Props de Hora
   includeTime?: boolean;
+
+  // 👇 NUEVAS PROPS PARA AÑO/MES
+  showYearNavigation?: boolean; // Habilita los dropdowns de año/mes
+  startYear?: number;           // Año de inicio (ej: 1900)
+  endYear?: number;             // Año fin (ej: 2100)
 }
 
 interface TimePickerInputProps
@@ -178,6 +185,10 @@ export function DateTimePicker({
   withRange = false,
   label,
   includeTime = true,
+  // 👇 Valores por defecto
+  showYearNavigation = false,
+  startYear = 1930,
+  endYear = 2060,
 }: DateTimePickerProps) {
   const hourRef = React.useRef<HTMLInputElement>(null);
   const minuteRef = React.useRef<HTMLInputElement>(null);
@@ -259,7 +270,7 @@ export function DateTimePicker({
         side="bottom"
         sideOffset={4}
         avoidCollisions={false}
-        onWheel={(e) => e.stopPropagation()}      // Frena el evento de rueda para que no suba al Dialog
+        onWheel={(e) => e.stopPropagation()} 
         onTouchMove={(e) => e.stopPropagation()}
       >
         {withRange ? (
@@ -270,6 +281,10 @@ export function DateTimePicker({
             initialFocus
             locale={es}
             numberOfMonths={1}
+            // 👇 PROPS CONDICIONALES PARA NAVEGACIÓN
+            captionLayout={showYearNavigation ? "dropdown" : undefined}
+            fromYear={showYearNavigation ? startYear : undefined}
+            toYear={showYearNavigation ? endYear : undefined}
           />
         ) : (
           <Calendar
@@ -279,6 +294,10 @@ export function DateTimePicker({
             initialFocus
             locale={es}
             numberOfMonths={1}
+            // 👇 PROPS CONDICIONALES PARA NAVEGACIÓN
+            captionLayout={showYearNavigation ? "dropdown" : undefined}
+            fromYear={showYearNavigation ? startYear : undefined}
+            toYear={showYearNavigation ? endYear : undefined}
           />
         )}
 

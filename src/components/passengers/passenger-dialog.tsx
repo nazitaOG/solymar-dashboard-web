@@ -267,6 +267,7 @@ export function PassengerDialog({
                     date={formData.birthDate}
                     setDate={(date) => setFormData({ ...formData, birthDate: date })}
                     includeTime={false}
+                    showYearNavigation={true}
                     label="Seleccionar fecha"
                   />
                 </div>
