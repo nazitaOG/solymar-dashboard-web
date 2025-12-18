@@ -61,6 +61,21 @@ interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
+// 1. Definimos los valores por defecto afuera para reutilizarlos en comparaciones
+const defaultFormData: FormData = {
+  provider: "",
+  bookingReference: "",
+  pickupLocation: "",
+  dropoffLocation: "",
+  pickupDate: undefined,
+  dropoffDate: undefined,
+  carCategory: "",
+  carModel: "",
+  totalPrice: 0,
+  amountPaid: 0,
+  currency: Currency.USD,
+};
+
 export function CarRentalDialog({
   open,
   onOpenChange,
@@ -69,23 +84,14 @@ export function CarRentalDialog({
   onSave,
   onDelete,
 }: CarRentalDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    provider: "",
-    bookingReference: "",
-    pickupLocation: "",
-    dropoffLocation: "",
-    pickupDate: undefined,
-    dropoffDate: undefined,
-    carCategory: "",
-    carModel: "",
-    totalPrice: 0,
-    amountPaid: 0,
-    currency: "USD" as Currency,
-  });
-
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  
+  // Alertas
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false); // 👈 NUEVO ESTADO
+  
   const deleteLock = useRef(false);
 
   useEffect(() => {
@@ -104,60 +110,55 @@ export function CarRentalDialog({
         currency: carRental.currency ?? Currency.USD,
       });
     } else {
-      setFormData({
-        provider: "",
-        bookingReference: "",
-        pickupLocation: "",
-        dropoffLocation: "",
-        pickupDate: undefined,
-        dropoffDate: undefined,
-        carCategory: "",
-        carModel: "",
-        totalPrice: 0,
-        amountPaid: 0,
-        currency: Currency.USD,
-      });
+      setFormData(defaultFormData); // Usamos la const
     }
     setErrors({});
   }, [carRental, open]);
 
-  const hasChanges = useMemo(() => {
-    if (!carRental) return true;
+  // 2. Lógica "Dirty Check" mejorada: Compara contra el original (Edit) o contra vacíos (Create)
+  const isDirty = useMemo(() => {
+    const initialData = carRental
+      ? {
+          provider: carRental.provider ?? "",
+          bookingReference: carRental.bookingReference ?? "",
+          pickupLocation: carRental.pickupLocation ?? "",
+          dropoffLocation: carRental.dropoffLocation ?? "",
+          // Para fechas usamos timestamps para comparar fácil
+          pickupDate: carRental.pickupDate ? new Date(carRental.pickupDate).getTime() : 0,
+          dropoffDate: carRental.dropoffDate ? new Date(carRental.dropoffDate).getTime() : 0,
+          carCategory: carRental.carCategory ?? "",
+          carModel: carRental.carModel ?? "",
+          totalPrice: Number(carRental.totalPrice),
+          amountPaid: Number(carRental.amountPaid),
+          currency: carRental.currency ?? Currency.USD,
+        }
+      : {
+          ...defaultFormData,
+          pickupDate: 0,
+          dropoffDate: 0,
+        };
 
-    const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
+    const currentData = {
+      ...formData,
+      pickupDate: formData.pickupDate?.getTime() ?? 0,
+      dropoffDate: formData.dropoffDate?.getTime() ?? 0,
+      totalPrice: Number(formData.totalPrice),
+      amountPaid: Number(formData.amountPaid),
+    };
 
-    return !(
-      formData.provider === carRental.provider &&
-      formData.bookingReference === (carRental.bookingReference ?? "") &&
-      formData.pickupLocation === carRental.pickupLocation &&
-      formData.dropoffLocation === carRental.dropoffLocation &&
-      getTime(formData.pickupDate) === getIsoTime(carRental.pickupDate) &&
-      getTime(formData.dropoffDate) === getIsoTime(carRental.dropoffDate) &&
-      formData.carCategory === carRental.carCategory &&
-      formData.carModel === (carRental.carModel ?? "") &&
-      Number(formData.totalPrice) === Number(carRental.totalPrice) &&
-      Number(formData.amountPaid) === Number(carRental.amountPaid) &&
-      formData.currency === carRental.currency
-    );
+    // Compara campo por campo. Si ALGO es diferente, isDirty es true.
+    return JSON.stringify(initialData) !== JSON.stringify(currentData);
   }, [formData, carRental]);
 
   const handleSave = async () => {
     const isEdit = Boolean(carRental);
     const schema = isEdit ? updateCarRentalSchema : createCarRentalSchema;
     
-    // 👇 1. Creamos un acumulador de errores
     const newErrors: FormErrors = {};
 
-    // 👇 2. Validación manual de fechas (acumular, no retornar)
-    if (!formData.pickupDate) {
-      newErrors.pickupDate = "Requerido";
-    }
-    if (!formData.dropoffDate) {
-      newErrors.dropoffDate = "Requerido";
-    }
+    if (!formData.pickupDate) newErrors.pickupDate = "Requerido";
+    if (!formData.dropoffDate) newErrors.dropoffDate = "Requerido";
 
-    // 👇 3. Validación de Zod (acumular)
     const payloadToValidate = {
       ...formData,
       pickupDate: formData.pickupDate?.toISOString() ?? "",
@@ -172,29 +173,23 @@ export function CarRentalDialog({
     if (!result.success) {
       for (const err of result.error.issues) {
         const key = err.path[0] as string;
-        // Si ya tenemos un error manual (ej. fecha vacía), no lo sobrescribimos con el de Zod
-        if (!newErrors[key]) {
-          newErrors[key] = err.message;
-        }
+        if (!newErrors[key]) newErrors[key] = err.message;
       }
     }
 
-    // 👇 4. Validación lógica de Precios (acumular)
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
       newErrors.amountPaid = "El monto pagado no puede ser mayor que el total.";
     }
 
-    // 👇 5. SI HAY ERRORES ACUMULADOS, DETENEMOS AQUÍ Y LOS MOSTRAMOS TODOS
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // 👇 6. Validación de "Sin cambios" (solo si no hay otros errores de validación)
-    if (isEdit && !hasChanges) {
-      setErrors({
-        _general: "Debes modificar al menos un campo para guardar los cambios.",
-      });
+    // Si es Edit y no hay cambios, avisamos.
+    // Si es Create y está vacío (no dirty), avisamos que debe cargar algo.
+    if (isEdit && !isDirty) {
+      setErrors({ _general: "No se detectaron cambios para guardar." });
       return;
     }
 
@@ -203,18 +198,13 @@ export function CarRentalDialog({
       bookingReference: formData.bookingReference || null,
       pickupLocation: formData.pickupLocation,
       dropoffLocation: formData.dropoffLocation,
-      pickupDate: formData.pickupDate!.toISOString(), // El '!' es seguro aquí porque ya validamos arriba
+      pickupDate: formData.pickupDate!.toISOString(),
       dropoffDate: formData.dropoffDate!.toISOString(),
       carCategory: formData.carCategory,
       carModel: formData.carModel || null,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-      ...(isEdit
-        ? {}
-        : {
-            reservationId,
-            currency: formData.currency || "USD",
-          }),
+      ...(isEdit ? {} : { reservationId, currency: formData.currency || "USD" }),
     };
 
     try {
@@ -230,9 +220,7 @@ export function CarRentalDialog({
       onOpenChange(false);
       setTimeout(() => onSave(savedCarRental), 150);
     } catch {
-      setErrors({
-        _general: "Ocurrió un error al guardar el alquiler. Inténtalo nuevamente.",
-      });
+      setErrors({ _general: "Ocurrió un error al guardar el alquiler." });
     } finally {
       setLoading(false);
     }
@@ -240,7 +228,6 @@ export function CarRentalDialog({
 
   const handleDelete = async () => {
     setShowDeleteConfirm(false); 
-    
     if (!carRental || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -250,7 +237,6 @@ export function CarRentalDialog({
       onDelete?.(carRental.id);
       setTimeout(() => onOpenChange(false), 150);
     } catch (err) {
-      console.error("❌ Error al eliminar alquiler:", err);
       if (err instanceof Error) {
         setErrors({ _general: err.message || "Error al eliminar alquiler." });
       }
@@ -262,8 +248,26 @@ export function CarRentalDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+      {/* DIÁLOGO PRINCIPAL */}
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        // Interceptamos el cierre por tecla ESC o por setOpen(false) externo
+        if (!isOpen && isDirty) {
+          setShowDiscardConfirm(true);
+        } else {
+          onOpenChange(isOpen);
+        }
+      }}>
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          // 3. INTERCEPTOR CLICK AFUERA
+          onInteractOutside={(e) => {
+            if (isDirty) {
+              e.preventDefault(); // Bloquea el cierre automático
+              setShowDiscardConfirm(true); // Muestra la alerta
+            }
+            // Si no está sucio (isDirty false), deja que se cierre solo.
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {carRental ? "Editar Alquiler de Auto" : "Nuevo Alquiler de Auto"}
@@ -284,23 +288,15 @@ export function CarRentalDialog({
               { id: "dropoffLocation", label: "Lugar de Devolución *", placeholder: "Aeropuerto MCO" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   value={(formData[f.id as keyof FormData] as string) || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f.id]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
                   placeholder={f.placeholder}
                   className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
 
@@ -311,11 +307,7 @@ export function CarRentalDialog({
                 setDate={(date) => setFormData({ ...formData, pickupDate: date })}
                 includeTime={true}
               />
-              {errors.pickupDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.pickupDate}
-                </p>
-              )}
+              {errors.pickupDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.pickupDate}</p>}
             </div>
 
             <div className="space-y-1 [&>button]:cursor-pointer">
@@ -325,11 +317,7 @@ export function CarRentalDialog({
                 setDate={(date) => setFormData({ ...formData, dropoffDate: date })}
                 includeTime={true}
               />
-              {errors.dropoffDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.dropoffDate}
-                </p>
-              )}
+              {errors.dropoffDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.dropoffDate}</p>}
             </div>
 
             {[
@@ -337,23 +325,15 @@ export function CarRentalDialog({
               { id: "bookingReference", label: "Referencia", placeholder: "RES-12345" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   value={(formData[f.id as keyof FormData] as string) || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f.id]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
                   placeholder={f.placeholder}
                   className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
 
@@ -362,41 +342,26 @@ export function CarRentalDialog({
               { id: "carModel", label: "Modelo (Opcional)", placeholder: "Toyota Corolla o similar" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   value={(formData[f.id as keyof FormData] as string) || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f.id]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
                   placeholder={f.placeholder}
                   className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
 
             {!carRental && (
               <div className="space-y-1">
-                <Label htmlFor="currency" className="text-[11px] md:text-xs">
-                  Moneda *
-                </Label>
+                <Label htmlFor="currency" className="text-[11px] md:text-xs">Moneda *</Label>
                 <Select
                   value={formData.currency}
-                  onValueChange={(v: Currency) =>
-                    setFormData({ ...formData, currency: v })
-                  }
+                  onValueChange={(v: Currency) => setFormData({ ...formData, currency: v })}
                 >
-                  <SelectTrigger
-                    id="currency"
-                    className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
-                  >
+                  <SelectTrigger id="currency" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
@@ -404,11 +369,7 @@ export function CarRentalDialog({
                     <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.currency && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.currency}
-                  </p>
-                )}
+                {errors.currency && <p className="text-red-500 text-[10px] md:text-xs">{errors.currency}</p>}
               </div>
             )}
 
@@ -417,41 +378,23 @@ export function CarRentalDialog({
               { id: "amountPaid", label: "Monto pagado *", placeholder: "0.00" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   type="number"
-                  min={0} 
+                  min={0}
                   value={(formData[f.id as keyof FormData] as number) || 0}
-                  
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === "") {
-                      setFormData({ ...formData, [f.id]: 0 });
-                      return;
-                    }
+                    if (value === "") { setFormData({ ...formData, [f.id]: 0 }); return; }
                     const numValue = Number(value);
-                    if (numValue >= 0) {
-                      setFormData({ ...formData, [f.id]: numValue });
-                    }
+                    if (numValue >= 0) { setFormData({ ...formData, [f.id]: numValue }); }
                   }}
-                  
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "Minus") {
-                      e.preventDefault();
-                    }
-                  }}
-
+                  onKeyDown={(e) => { if (e.key === "-" || e.key === "Minus") e.preventDefault(); }}
                   placeholder={f.placeholder}
                   className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
           </div>
@@ -472,7 +415,11 @@ export function CarRentalDialog({
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                // 4. Botón Cancelar también verifica si está sucio
+                onClick={() => {
+                  if (isDirty) setShowDiscardConfirm(true);
+                  else onOpenChange(false);
+                }}
                 disabled={loading}
                 className="text-xs md:text-sm cursor-pointer"
               >
@@ -480,35 +427,54 @@ export function CarRentalDialog({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={loading || (carRental && !hasChanges)}
+                // Habilitamos el botón Create aunque no esté sucio para que salten las validaciones de 'requerido'
+                disabled={loading || (carRental && !isDirty)}
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading
-                  ? "Guardando..."
-                  : carRental
-                  ? "Guardar cambios"
-                  : "Crear"}
+                {loading ? "Guardando..." : carRental ? "Guardar cambios" : "Crear"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del alquiler.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el registro.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 cursor-pointer"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 cursor-pointer">
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALERT 2: DESCARTAR CAMBIOS (NUEVO) */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                onOpenChange(false); // Cierra forzosamente el modal padre
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

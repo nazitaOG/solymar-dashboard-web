@@ -1,138 +1,167 @@
-import { useState, useEffect, useTransition } from "react"
-import { Link } from "react-router"
+import { useState, useEffect, useRef, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select"
-import { DateTimePicker } from "@/components/ui/custom/date-time-picker"
+} from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
-import type { Pax } from "@/lib/interfaces/pax/pax.interface"
-import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema"
-import { fetchAPI } from "@/lib/api/fetchApi"
-import { paxToRequest } from "@/lib/utils/pax/pax_transform.utils"
-import type { CreatePaxRequest } from "@/lib/interfaces/pax/pax-request.interface"
-import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
+import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema";
+import { fetchAPI } from "@/lib/api/fetchApi";
+import { paxToRequest } from "@/lib/utils/pax/pax_transform.utils";
+import type { CreatePaxRequest } from "@/lib/interfaces/pax/pax-request.interface";
+import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger";
 
 // ----------------------------------------------------
 
 interface PassengerDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  passenger?: Pax
-  mode: "create" | "edit" | "view"
-  linkedReservations?: Array<{ id: string; state: string }>
-  onSave?: (passenger: Pax) => void
-  onDelete?: (id: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  passenger?: Pax;
+  mode: "create" | "edit" | "view";
+  linkedReservations?: Array<{ id: string; state: string }>;
+  onSave?: (passenger: Pax) => void;
+  onDelete?: (id: string) => void;
 }
-
-// ----------------------------------------------------
 
 // 🛠️ Definimos el tipo del estado local
 interface FormDataState {
-  name: string
-  birthDate: Date | undefined
-  nationality: string
-  dniNum: string
-  dniExpirationDate: Date | undefined
-  passportNum: string
-  passportExpirationDate: Date | undefined
+  name: string;
+  birthDate: Date | undefined;
+  nationality: string;
+  dniNum: string;
+  dniExpirationDate: Date | undefined;
+  passportNum: string;
+  passportExpirationDate: Date | undefined;
 }
+
+// 1. Constante para valores por defecto
+const defaultFormData: FormDataState = {
+  name: "",
+  birthDate: undefined,
+  nationality: "Argentina",
+  dniNum: "",
+  dniExpirationDate: undefined,
+  passportNum: "",
+  passportExpirationDate: undefined,
+};
+
+// 2. Función pura para calcular el estado inicial desde un pasajero
+// Esta es la "Single Source of Truth" para la carga de datos
+const getInitialData = (pax?: Pax): FormDataState => {
+  if (!pax) return defaultFormData;
+
+  const toDate = (value?: string | Date | null): Date | undefined => {
+    if (!value) return undefined;
+    const d = typeof value === "string" ? new Date(value) : value;
+    return isNaN(d.getTime()) ? undefined : d;
+  };
+
+  const normalizeNationality = (n?: string) => {
+    if (!n) return "Argentina";
+    return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+  };
+
+  return {
+    name: pax.name ?? "",
+    birthDate: toDate(pax.birthDate),
+    nationality: normalizeNationality(pax.nationality),
+    dniNum: pax.dni?.dniNum || "",
+    dniExpirationDate: toDate(pax.dni?.expirationDate),
+    passportNum: pax.passport?.passportNum || "",
+    passportExpirationDate: toDate(pax.passport?.expirationDate),
+  };
+};
+
+// 👇 3. NUEVO: Mapeo de placeholders por país (CORREGIDOS)
+// Usamos ejemplos con formatos visualmente amigables que Zod sabrá limpiar
+const docPlaceholders: Record<string, { dni: string; passport: string }> = {
+  Argentina: { dni: "35.123.456", passport: "AAB123456" },
+  Uruguay: { dni: "1.234.567-8", passport: "A123456" }, // Guion visual
+  Chile: { dni: "12.345.678-K", passport: "A1234567" }, // Guion visual
+  Brasil: { dni: "123.456.789-00", passport: "AA123456" },
+  Paraguay: { dni: "1234567", passport: "A123456" },
+  Perú: { dni: "12345678", passport: "123456789" },
+  Bolivia: { dni: "1234567", passport: "A123456" },
+  Otro: { dni: "Documento Nac.", passport: "Pasaporte" },
+};
 
 export function PassengerDialog({
   open,
   onOpenChange,
   passenger,
   mode,
-  linkedReservations = [],
   onSave,
   onDelete,
 }: PassengerDialogProps) {
-  const [formData, setFormData] = useState<FormDataState>({
-    name: "",
-    birthDate: undefined,
-    nationality: "Argentina",
-    dniNum: "",
-    dniExpirationDate: undefined,
-    passportNum: "",
-    passportExpirationDate: undefined,
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isPending, startTransition] = useTransition()
+  const [formData, setFormData] = useState<FormDataState>(defaultFormData);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPending, startTransition] = useTransition();
 
-  // Hook para eliminar pasajero
+  // Alertas
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  // Referencia para guardar la "foto" original de los datos
+  const initialDataRef = useRef<FormDataState>(defaultFormData);
+
   const { deletePassenger, isPending: isDeleting, error: deleteError } =
     useDeletePassenger({
       onDeleteSuccess: (id) => {
-        onDelete?.(id)
-        onOpenChange(false)
+        onDelete?.(id);
+        setShowDeleteConfirm(false);
+        onOpenChange(false);
       },
-    })
+    });
 
-  // ✨ Limpia todo el formulario
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      birthDate: undefined,
-      nationality: "Argentina",
-      dniNum: "",
-      dniExpirationDate: undefined,
-      passportNum: "",
-      passportExpirationDate: undefined,
-    })
-  }
-
-  // 🧭 Precarga de datos al abrir o cambiar pasajero
+  // 🔄 Cargar datos: Se ejecuta al abrir o cambiar pasajero
   useEffect(() => {
-    const toDate = (value?: string | Date | null): Date | undefined => {
-      if (!value) return undefined
-      const d = typeof value === "string" ? new Date(value) : value
-      return isNaN(d.getTime()) ? undefined : d
+    if (open) {
+      // Calculamos los datos iniciales UNA sola vez usando la función pura
+      const data = getInitialData(passenger);
+      
+      // Actualizamos el formulario
+      setFormData(data);
+      
+      // Guardamos la referencia exacta de lo que se cargó
+      initialDataRef.current = data;
+      
+      setErrors({});
     }
+  }, [passenger, open]);
 
-    if (passenger) {
-      const normalizeNationality = (n?: string) => {
-        if (!n) return "Argentina"
-        return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
-      }
+  // 4. Dirty Check: Comparamos el estado actual vs la referencia cargada
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialDataRef.current);
 
-      setFormData({
-        name: passenger.name,
-        birthDate: toDate(passenger.birthDate),
-        nationality: normalizeNationality(passenger.nationality),
-        dniNum: passenger.dni?.dniNum || "",
-        dniExpirationDate: toDate(passenger.dni?.expirationDate),
-        passportNum: passenger.passport?.passportNum || "",
-        passportExpirationDate: toDate(passenger.passport?.expirationDate),
-      })
-    } else {
-      resetForm()
-    }
-  }, [passenger, open])
+  // 👇 Calcular placeholders actuales según nacionalidad seleccionada
+  const currentPlaceholders =
+    docPlaceholders[formData.nationality] || docPlaceholders.Otro;
 
-  // 🔥 Reset automático al cerrar el diálogo
-  useEffect(() => {
-    if (!open) {
-      resetForm()
-      setErrors({})
-    }
-  }, [open])
-
-  // 💾 Guardar (crear / editar)
   const handleSave = () => {
     const zodData = {
       name: formData.name,
@@ -141,25 +170,29 @@ export function PassengerDialog({
       dniNum: formData.dniNum || undefined,
       dniExpirationDate: formData.dniExpirationDate?.toISOString() || undefined,
       passportNum: formData.passportNum || undefined,
-      passportExpirationDate: formData.passportExpirationDate?.toISOString() || undefined,
-    }
-  
-    // 1️⃣ Validación con Zod
-    const result = CreatePaxSchema.safeParse(zodData)
-  
+      passportExpirationDate:
+        formData.passportExpirationDate?.toISOString() || undefined,
+    };
+
+    const result = CreatePaxSchema.safeParse(zodData);
+
     if (!result.success) {
-      const fieldErrors: Record<string, string> = {}
+      const fieldErrors: Record<string, string> = {};
       for (const issue of result.error.issues) {
-        const field = issue.path[0] as string
-        fieldErrors[field] = issue.message
+        const field = issue.path[0] as string;
+        fieldErrors[field] = issue.message;
       }
-      setErrors(fieldErrors)
-      return
+      setErrors(fieldErrors);
+      return;
     }
-  
-    // 2️⃣ Si pasa Zod
-    setErrors({})
-  
+
+    setErrors({});
+
+    if (mode === 'edit' && !isDirty) {
+        onOpenChange(false); 
+        return;
+    }
+
     startTransition(async () => {
       try {
         const normalized: Partial<Pax> = {
@@ -182,327 +215,367 @@ export function PassengerDialog({
                   : undefined,
               }
             : undefined,
-        }
+        };
 
-        const requestBody: CreatePaxRequest = paxToRequest(normalized)
+        const requestBody: CreatePaxRequest = paxToRequest(normalized);
 
-        let saved: Pax
+        let saved: Pax;
         if (mode === "create") {
           saved = await fetchAPI<Pax>("/pax", {
             method: "POST",
             body: JSON.stringify(requestBody),
-          })
+          });
         } else if (mode === "edit" && passenger?.id) {
           saved = await fetchAPI<Pax>(`/pax/${passenger.id}`, {
             method: "PATCH",
             body: JSON.stringify(requestBody),
-          })
+          });
         } else {
-          throw new Error("Modo no válido o pasajero sin ID")
+          throw new Error("Modo no válido o pasajero sin ID");
         }
 
-        onSave?.(saved)
-        onOpenChange(false)
+        onSave?.(saved);
+        onOpenChange(false);
       } catch (error) {
         const msg =
           error instanceof Error && error.message
             ? error.message
-            : "Error al guardar el pasajero. Intenta más tarde."
-        setErrors({ general: msg })
+            : "Error al guardar el pasajero. Intenta más tarde.";
+        setErrors({ general: msg });
       }
-    })
-  }
-  
-  const isViewMode = mode === "view"
-  const isCreateMode = mode === "create"
+    });
+  };
+
+  const isViewMode = mode === "view";
+  const isCreateMode = mode === "create";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 👇 [&>button]:cursor-pointer para la X de cerrar */}
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
-        <DialogHeader>
-          <DialogTitle className="text-sm md:text-base">
-            {isCreateMode
-              ? "Crear Pasajero"
-              : isViewMode
+    <>
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          // Si intenta cerrar, hay cambios y no es modo vista -> Alerta
+          if (!isOpen && isDirty && !isViewMode) {
+            setShowDiscardConfirm(true);
+          } else {
+            onOpenChange(isOpen);
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          onInteractOutside={(e) => {
+            if (isDirty && !isViewMode) {
+              e.preventDefault();
+              setShowDiscardConfirm(true);
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-sm md:text-base">
+              {isCreateMode
+                ? "Crear Pasajero"
+                : isViewMode
                 ? "Ver Pasajero"
                 : "Editar Pasajero"}
-          </DialogTitle>
-        </DialogHeader>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Información básica */}
-          <div className="space-y-3">
-            <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
-            <div className="grid gap-3 md:grid-cols-2">
-              
-              {/* Nombre */}
-              <div className="space-y-1">
-                <Label htmlFor="name" className="text-[11px] md:text-xs">
-                  Nombre completo *
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  disabled={isViewMode}
-                  placeholder="Juan Pérez"
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.name ? "border-red-500" : ""}`}
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.name}
-                  </p>
-                )}
-              </div>
-
-              {/* ✅ Fecha de nacimiento con Custom Picker */}
-              <div className="space-y-1">
-                <Label htmlFor="birthDate" className="text-[11px] md:text-xs">
-                  Fecha de nacimiento *
-                </Label>
-                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
-                  <DateTimePicker
-                    date={formData.birthDate}
-                    setDate={(date) => setFormData({ ...formData, birthDate: date })}
-                    includeTime={false}
-                    showYearNavigation={true}
-                    label="Seleccionar fecha"
+          <div className="space-y-4">
+            {/* Información básica */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-[11px] md:text-xs">
+                    Nombre completo *
+                  </Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    disabled={isViewMode}
+                    placeholder="Lionel Andrés Messi"
+                    className={`h-8 md:h-9 text-xs md:text-sm ${
+                      errors.name ? "border-red-500" : ""
+                    }`}
                   />
+                  {errors.name && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.name}
+                    </p>
+                  )}
                 </div>
-                {errors.birthDate && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.birthDate}
-                  </p>
-                )}
-              </div>
 
-              {/* Nacionalidad */}
-              <div className="space-y-1">
-                <Label htmlFor="nationality" className="text-[11px] md:text-xs">
-                  Nacionalidad *
-                </Label>
-                <Select
-                  value={formData.nationality}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, nationality: value })
-                  }
-                  disabled={isViewMode}
-                >
-                  {/* 👇 cursor-pointer en trigger */}
-                  <SelectTrigger
-                    id="nationality"
-                    className={`bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer ${errors.nationality ? "border-red-500" : ""}`}
+                <div className="space-y-1">
+                  <Label htmlFor="birthDate" className="text-[11px] md:text-xs">
+                    Fecha de nacimiento *
+                  </Label>
+                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                    <DateTimePicker
+                      date={formData.birthDate}
+                      setDate={(date) =>
+                        setFormData({ ...formData, birthDate: date })
+                      }
+                      includeTime={false}
+                      showYearNavigation={true}
+                      startYear={1900}
+                      endYear={new Date().getFullYear()}
+                      label="Seleccionar fecha"
+                    />
+                  </div>
+                  {errors.birthDate && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.birthDate}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="nationality" className="text-[11px] md:text-xs">
+                    Nacionalidad *
+                  </Label>
+                  <Select
+                    value={formData.nationality}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, nationality: value })
+                    }
+                    disabled={isViewMode}
                   >
-                    <SelectValue placeholder="Argentina" />
-                  </SelectTrigger>
-                  <SelectContent className="text-xs md:text-sm">
-                    {/* 👇 cursor-pointer en items */}
-                    <SelectItem value="Argentina" className="cursor-pointer">Argentina</SelectItem>
-                    <SelectItem value="Uruguay" className="cursor-pointer">Uruguay</SelectItem>
-                    <SelectItem value="Chile" className="cursor-pointer">Chile</SelectItem>
-                    <SelectItem value="Brasil" className="cursor-pointer">Brasil</SelectItem>
-                    <SelectItem value="Paraguay" className="cursor-pointer">Paraguay</SelectItem>
-                    <SelectItem value="Perú" className="cursor-pointer">Perú</SelectItem>
-                    <SelectItem value="Bolivia" className="cursor-pointer">Bolivia</SelectItem>
-                    <SelectItem value="Otro" className="cursor-pointer">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.nationality && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.nationality}
-                  </p>
-                )}
+                    <SelectTrigger
+                      id="nationality"
+                      className={`bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer ${
+                        errors.nationality ? "border-red-500" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="Argentina" />
+                    </SelectTrigger>
+                    <SelectContent className="text-xs md:text-sm">
+                      {Object.keys(docPlaceholders).map((country) => (
+                        <SelectItem key={country} value={country} className="cursor-pointer">
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.nationality && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.nationality}
+                    </p>
+                  )}
+                </div>
               </div>
-
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* DNI */}
-          <div className="space-y-3">
-            <h4 className="font-medium text-xs md:text-sm">DNI</h4>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="dniNum" className="text-[11px] md:text-xs">
-                  Número de DNI *
-                </Label>
-                <Input
-                  id="dniNum"
-                  value={formData.dniNum}
-                  onChange={(e) => setFormData({ ...formData, dniNum: e.target.value })}
-                  disabled={isViewMode}
-                  placeholder="12345678"
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.dniNum ? "border-red-500" : ""}`}
-                />
-                {errors.dniNum && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.dniNum}
-                  </p>
-                )}
-              </div>
-
-              {/* ✅ Vencimiento DNI */}
-              <div className="space-y-1">
-                <Label
-                  htmlFor="dniExpiration"
-                  className="text-[11px] md:text-xs"
-                >
-                  Fecha de vencimiento (Opcional)
-                </Label>
-                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
-                  <DateTimePicker
-                    date={formData.dniExpirationDate}
-                    setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
-                    includeTime={false}
-                    showYearNavigation={true}
-                    label="Seleccionar fecha"
+            {/* DNI */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-xs md:text-sm">DNI</h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="dniNum" className="text-[11px] md:text-xs">
+                    Número de DNI *
+                  </Label>
+                  <Input
+                    id="dniNum"
+                    value={formData.dniNum}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dniNum: e.target.value })
+                    }
+                    disabled={isViewMode}
+                    // 👇 PLACEHOLDER DINÁMICO AQUÍ
+                    placeholder={currentPlaceholders.dni}
+                    className={`h-8 md:h-9 text-xs md:text-sm ${
+                      errors.dniNum ? "border-red-500" : ""
+                    }`}
                   />
+                  {errors.dniNum && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.dniNum}
+                    </p>
+                  )}
                 </div>
-                {errors.dniExpirationDate && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.dniExpirationDate}
-                  </p>
-                )}
+
+                <div className="space-y-1">
+                  <Label htmlFor="dniExpiration" className="text-[11px] md:text-xs">
+                    Fecha de vencimiento (Opcional)
+                  </Label>
+                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                    <DateTimePicker
+                      date={formData.dniExpirationDate}
+                      setDate={(date) =>
+                        setFormData({ ...formData, dniExpirationDate: date })
+                      }
+                      includeTime={false}
+                      showYearNavigation={true}
+                      startYear={new Date().getFullYear()}
+                      endYear={new Date().getFullYear() + 20}
+                      label="Seleccionar fecha"
+                    />
+                  </div>
+                  {errors.dniExpirationDate && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.dniExpirationDate}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Pasaporte */}
-          <div className="space-y-3">
-            <h4 className="font-medium text-xs md:text-sm">Pasaporte</h4>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="passportNum"
-                  className="text-[11px] md:text-xs"
-                >
-                  Número de pasaporte *
-                </Label>
-                <Input
-                  id="passportNum"
-                  value={formData.passportNum}
-                  onChange={(e) =>
-                    setFormData({ ...formData, passportNum: e.target.value })
-                  }
-                  disabled={isViewMode}
-                  placeholder="AAA123456"
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors.passportNum ? "border-red-500" : ""}`}
-                />
-                {errors.passportNum && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.passportNum}
-                  </p>
-                )}
-              </div>
-
-              {/* ✅ Vencimiento Pasaporte */}
-              <div className="space-y-1">
-                <Label
-                  htmlFor="passportExpiration"
-                  className="text-[11px] md:text-xs"
-                >
-                  Fecha de vencimiento (Opcional)
-                </Label>
-                {/* 👇 [&>button]:cursor-pointer si no es modo vista */}
-                <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
-                  <DateTimePicker
-                    date={formData.passportExpirationDate}
-                    setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
-                    includeTime={false}
-                    showYearNavigation={true}
-                    label="Seleccionar fecha"
+            {/* Pasaporte */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-xs md:text-sm">Pasaporte</h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="passportNum" className="text-[11px] md:text-xs">
+                    Número de pasaporte *
+                  </Label>
+                  <Input
+                    id="passportNum"
+                    value={formData.passportNum}
+                    onChange={(e) =>
+                      setFormData({ ...formData, passportNum: e.target.value })
+                    }
+                    disabled={isViewMode}
+                    // 👇 PLACEHOLDER DINÁMICO AQUÍ
+                    placeholder={currentPlaceholders.passport}
+                    className={`h-8 md:h-9 text-xs md:text-sm ${
+                      errors.passportNum ? "border-red-500" : ""
+                    }`}
                   />
+                  {errors.passportNum && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.passportNum}
+                    </p>
+                  )}
                 </div>
-                {errors.passportExpirationDate && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.passportExpirationDate}
-                  </p>
-                )}
+
+                <div className="space-y-1">
+                  <Label htmlFor="passportExpiration" className="text-[11px] md:text-xs">
+                    Fecha de vencimiento (Opcional)
+                  </Label>
+                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                    <DateTimePicker
+                      date={formData.passportExpirationDate}
+                      setDate={(date) =>
+                        setFormData({ ...formData, passportExpirationDate: date })
+                      }
+                      includeTime={false}
+                      showYearNavigation={true}
+                      startYear={new Date().getFullYear()}
+                      endYear={new Date().getFullYear() + 20}
+                      label="Seleccionar fecha"
+                    />
+                  </div>
+                  {errors.passportExpirationDate && (
+                    <p className="text-red-500 text-[10px] md:text-xs">
+                      {errors.passportExpirationDate}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Errores */}
-          {(errors.general || deleteError) && (
-            <p className="text-red-500 text-[10px] md:text-xs text-center mt-2">
-              {errors.general || deleteError}
-            </p>
-          )}
-
-          {/* Reservas vinculadas */}
-          {!isCreateMode && linkedReservations.length > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h4 className="font-medium text-xs md:text-sm">
-                  Reservas vinculadas
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {linkedReservations.map((reservation) => (
-                    <Link key={reservation.id} to={`/reservas/${reservation.id}`}>
-                      <Badge
-                        variant="outline"
-                        // 👇 cursor-pointer
-                        className="cursor-pointer hover:bg-accent text-[10px] md:text-xs px-2 py-0.5"
-                      >
-                        {reservation.id}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex justify-start">
-            {!isCreateMode && !isViewMode && (
-              <Button
-                variant="destructive"
-                onClick={() =>
-                  passenger?.id && deletePassenger(passenger.id, passenger.name)
-                }
-                disabled={isDeleting}
-                // 👇 cursor-pointer
-                className="text-xs md:text-sm cursor-pointer"
-              >
-                {isDeleting ? "Eliminando..." : "Eliminar"}
-              </Button>
+            {/* Errores Generales */}
+            {(errors.general || deleteError) && (
+              <p className="text-red-500 text-[10px] md:text-xs text-center mt-2">
+                {errors.general || deleteError}
+              </p>
             )}
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              // 👇 cursor-pointer
-              className="text-xs md:text-sm cursor-pointer"
-            >
-              {isViewMode ? "Cerrar" : "Cancelar"}
-            </Button>
-            {!isViewMode && (
+
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex justify-start">
+              {!isCreateMode && !isViewMode && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                  className="text-xs md:text-sm cursor-pointer"
+                >
+                  {isDeleting ? "Eliminando..." : "Eliminar"}
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
               <Button
-                onClick={handleSave}
-                disabled={isPending}
-                // 👇 cursor-pointer
+                variant="outline"
+                onClick={() => {
+                  if (isDirty && !isViewMode) setShowDiscardConfirm(true);
+                  else onOpenChange(false);
+                }}
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {isPending
-                  ? "Guardando..."
-                  : isCreateMode
+                {isViewMode ? "Cerrar" : "Cancelar"}
+              </Button>
+              {!isViewMode && (
+                <Button
+                  onClick={handleSave}
+                  disabled={isPending || (!isCreateMode && !isDirty)}
+                  className="text-xs md:text-sm cursor-pointer"
+                >
+                  {isPending
+                    ? "Guardando..."
+                    : isCreateMode
                     ? "Crear"
                     : "Guardar cambios"}
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ALERT 1: ELIMINAR */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al pasajero.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => passenger?.id && deletePassenger(passenger.id, passenger.name)}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALERT 2: DESCARTAR CAMBIOS */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                onOpenChange(false);
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

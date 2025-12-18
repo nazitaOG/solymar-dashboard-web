@@ -1,21 +1,22 @@
 import { z } from "zod";
 
 // ------------------------------------
-// Patrones de documento por país
+// 1. Patrones de documento por país (LIMPIOS)
 // ------------------------------------
+// Estas Regex esperan datos SANITIZADOS (sin puntos, guiones ni espacios)
 const dniPatterns = {
-  Argentina: /^\d{7,8}$/, // 7–8 dígitos
-  Uruguay: /^\d{1,8}-?\d$/, // hasta 8 dígitos + guion opcional
-  Chile: /^\d{7,8}-[0-9Kk]$/, // 7–8 dígitos + guion + dígito o K
-  Brasil: /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, // 11 dígitos con o sin separadores
-  Paraguay: /^\d{6,8}$/, // 6–8 dígitos
-  Perú: /^\d{8}$/, // exactamente 8 dígitos
-  Bolivia: /^[A-Z0-9]{5,9}$/i, // 5–9 alfanuméricos
-  Otro: /^[A-Za-z0-9]{4,15}$/, // 4–15 alfanuméricos genéricos
+  Argentina: /^\d{7,8}$/,             // 7 u 8 dígitos
+  Uruguay: /^\d{7,9}$/,               // Solo dígitos (incl. verificador)
+  Chile: /^\d{7,8}[0-9K]$/,           // Dígitos + K
+  Brasil: /^\d{11}$/,                 // 11 dígitos (CPF)
+  Paraguay: /^\d{6,8}$/,              // Solo dígitos
+  Perú: /^\d{8}$/,                    // 8 dígitos exactos
+  Bolivia: /^[A-Z0-9]{5,9}$/,         // Alfanumérico
+  Otro: /^[A-Z0-9]{4,15}$/,           // Genérico
 } as const;
 
 // ------------------------------------
-// Fechas base (hoy y límite de nacimiento)
+// 2. Fechas base
 // ------------------------------------
 const today = new Date();
 today.setHours(0, 0, 0, 0);
@@ -24,11 +25,11 @@ const maxBirthDate = new Date(today);
 maxBirthDate.setMonth(maxBirthDate.getMonth() + 9);
 
 // ------------------------------------
-// Schema principal
+// 3. Schema principal
 // ------------------------------------
 export const CreatePaxSchema = z
   .object({
-    // Información básica
+    // --- Información básica ---
     name: z
       .string()
       .trim()
@@ -40,8 +41,7 @@ export const CreatePaxSchema = z
       .min(1, "La fecha de nacimiento es obligatoria")
       .transform((v) => new Date(v))
       .refine((v) => v <= maxBirthDate, {
-        message:
-          "La fecha de nacimiento no puede ser posterior a 9 meses desde hoy.",
+        message: "La fecha de nacimiento no puede ser posterior a 9 meses desde hoy.",
       }),
 
     nationality: z
@@ -51,16 +51,24 @@ export const CreatePaxSchema = z
       .max(128)
       .transform((v) => v.toUpperCase()),
 
-    // PASAPORTE
+    // --- PASAPORTE (Sanitizado) ---
     passportNum: z
       .string()
       .trim()
-      .regex(/^[A-Za-z0-9]{6,9}$/, {
-        message: "Passport: debe ser alfanumérico de 6 a 9 caracteres",
+      .optional() // 1. Aceptamos undefined
+      .or(z.literal("")) // 2. Aceptamos string vacío
+      .transform((val) => {
+        // 3. Limpieza profunda
+        if (!val) return undefined;
+        // Quitamos todo lo que no sea alfanumérico
+        const cleaned = val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+        // Si quedó vacío después de limpiar, devolvemos undefined
+        return cleaned === "" ? undefined : cleaned;
       })
-      .max(128)
-      .transform((v) => v.toUpperCase())
-      .optional(),
+      // 4. Validación (se ejecuta sobre el string limpio)
+      .refine((val) => !val || /^[A-Z0-9]{6,9}$/.test(val), {
+        message: "Passport: debe tener entre 6 y 9 caracteres alfanuméricos.",
+      }),
 
     passportExpirationDate: z
       .union([z.coerce.date(), z.literal("")])
@@ -70,8 +78,18 @@ export const CreatePaxSchema = z
         message: "La fecha de vencimiento no puede ser anterior a hoy.",
       }),
 
-    // DNI
-    dniNum: z.string().trim().optional(),
+    // --- DNI (Sanitizado) ---
+    dniNum: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal(""))
+      .transform((val) => {
+        // Limpieza profunda: quita puntos, guiones, espacios
+        if (!val) return undefined;
+        const cleaned = val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+        return cleaned === "" ? undefined : cleaned;
+      }),
 
     dniExpirationDate: z
       .union([z.coerce.date(), z.literal("")])
@@ -82,57 +100,79 @@ export const CreatePaxSchema = z
       }),
   })
   .superRefine((data, ctx) => {
-    const hasPassport = !!data.passportNum;
-    const hasDni = !!data.dniNum;
+    // Normalizamos booleans (data.dniNum y passportNum ya vienen limpios o undefined)
+    const hasPassportNum = !!data.passportNum;
+    const hasPassportDate = !!data.passportExpirationDate;
+    
+    const hasDniNum = !!data.dniNum;
+    const hasDniDate = !!data.dniExpirationDate;
 
-    // 1️⃣ Al menos un documento
-    if (!hasPassport && !hasDni) {
+    // 1️⃣ REGLA DE INTEGRIDAD: Si pones Número, necesitas Fecha (y viceversa)
+    
+    // --- Validación DNI ---
+    if (hasDniNum && !hasDniDate) {
       ctx.addIssue({
         code: "custom",
-        path: ["passportNum"],
-        message: "Debe ingresar DNI o Pasaporte.",
+        path: ["dniExpirationDate"],
+        message: "Si ingresa número de DNI, la fecha de vencimiento es obligatoria.",
       });
+    }
+    if (!hasDniNum && hasDniDate) {
       ctx.addIssue({
         code: "custom",
         path: ["dniNum"],
-        message: "Debe ingresar DNI o Pasaporte.",
+        message: "Si ingresa fecha de vencimiento, el número de DNI es obligatorio.",
       });
     }
 
-    // 2️⃣ Validar formato de DNI según país
-    if (data.dniNum) {
+    // --- Validación Pasaporte ---
+    if (hasPassportNum && !hasPassportDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["passportExpirationDate"],
+        message: "Si ingresa número de pasaporte, la fecha de vencimiento es obligatoria.",
+      });
+    }
+    if (!hasPassportNum && hasPassportDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["passportNum"],
+        message: "Si ingresa fecha de vencimiento, el número de pasaporte es obligatorio.",
+      });
+    }
+
+    // 2️⃣ REGLA MÍNIMA: Al menos un documento COMPLETO
+    const hasCompleteDni = hasDniNum && hasDniDate;
+    const hasCompletePassport = hasPassportNum && hasPassportDate;
+
+    if (!hasCompleteDni && !hasCompletePassport) {
+      // Si no hay ninguno completo, verificamos si al menos intentó llenar uno
+      if (!hasDniNum && !hasPassportNum) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["dniNum"],
+          message: "Debe completar al menos un documento (DNI o Pasaporte).",
+        });
+      }
+    }
+
+    // 3️⃣ FORMATO DNI POR PAÍS (Sobre el dato limpio)
+    if (hasDniNum) {
       const nationalityKey = Object.keys(dniPatterns).find(
         (k) => k.toUpperCase() === data.nationality.toUpperCase()
       ) as keyof typeof dniPatterns;
     
+      // Si no encuentra la nacionalidad, usa 'Otro'
       const regex = nationalityKey ? dniPatterns[nationalityKey] : dniPatterns.Otro;
     
-      if (!regex.test(data.dniNum.trim())) {
+      // data.dniNum ya no tiene puntos ni guiones
+      if (!regex.test(data.dniNum!)) {
         ctx.addIssue({
           code: "custom",
           path: ["dniNum"],
-          message: `El formato del documento no es válido para el país seleccionado: ${data.nationality}.`,
+          message: `Formato inválido para ${data.nationality}.`,
         });
       }
-    }
-    
-
-    // 3️⃣ No permitir fecha sin número
-    if (!hasPassport && data.passportExpirationDate) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["passportExpirationDate"],
-        message:
-          "No puede ingresar fecha de pasaporte sin número de pasaporte.",
-      });
-    }
-
-    if (!hasDni && data.dniExpirationDate) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["dniExpirationDate"],
-        message: "No puede ingresar fecha de DNI sin número de DNI.",
-      });
     }
   });
 

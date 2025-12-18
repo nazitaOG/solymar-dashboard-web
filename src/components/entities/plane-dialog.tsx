@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -63,10 +63,20 @@ type FormData = Omit<z.input<typeof createPlaneSchema>, "reservationId" | "segme
   }[];
 };
 
-// Permitimos claves dinámicas para los errores de segmentos
 interface FormErrors extends Record<string, string | undefined> {
   _general?: string;
 }
+
+// 1. Constante para valores por defecto
+const defaultFormData: FormData = {
+  bookingReference: "",
+  provider: "",
+  totalPrice: 0,
+  amountPaid: 0,
+  notes: "",
+  currency: Currency.USD,
+  segments: [],
+};
 
 export function PlaneDialog({
   open,
@@ -76,67 +86,99 @@ export function PlaneDialog({
   onSave,
   onDelete,
 }: PlaneDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    bookingReference: "",
-    provider: "",
-    totalPrice: 0,
-    amountPaid: 0,
-    notes: "",
-    currency: Currency.USD,
-    segments: [],
-  });
-
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  
+  // Alertas
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false); // 👈 Nuevo estado
+  
   const deleteLock = useRef(false);
 
+  // 🔄 Cargar datos
   useEffect(() => {
-    if (!open) {
-      setFormData({
-        bookingReference: "",
-        provider: "",
-        totalPrice: 0,
-        amountPaid: 0,
-        notes: "",
-        currency: Currency.USD,
-        segments: [],
-      });
+    if (open) {
+      if (plane) {
+        setFormData({
+          bookingReference: plane.bookingReference ?? "",
+          provider: plane.provider ?? "",
+          totalPrice: plane.totalPrice,
+          amountPaid: plane.amountPaid,
+          notes: plane.notes ?? "",
+          currency: plane.currency,
+          segments: plane.segments.map((s) => ({
+            segmentOrder: s.segmentOrder,
+            departure: s.departure,
+            arrival: s.arrival,
+            departureDate: s.departureDate ? new Date(s.departureDate) : undefined,
+            arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
+            airline: s.airline ?? "",
+            flightNumber: s.flightNumber ?? "",
+          })),
+        });
+      } else {
+        setFormData(defaultFormData);
+      }
       setErrors({});
-      return;
     }
-
-    if (plane) {
-      setFormData({
-        bookingReference: plane.bookingReference ?? "",
-        provider: plane.provider ?? "",
-        totalPrice: plane.totalPrice,
-        amountPaid: plane.amountPaid,
-        notes: plane.notes ?? "",
-        currency: plane.currency,
-        segments: plane.segments.map((s) => ({
-          segmentOrder: s.segmentOrder,
-          departure: s.departure,
-          arrival: s.arrival,
-          departureDate: s.departureDate ? new Date(s.departureDate) : undefined,
-          arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
-          airline: s.airline ?? "",
-          flightNumber: s.flightNumber ?? "",
-        })),
-      });
-    } else {
-      setFormData({
-        bookingReference: "",
-        provider: "",
-        totalPrice: 0,
-        amountPaid: 0,
-        notes: "",
-        currency: Currency.USD,
-        segments: [],
-      });
-    }
-    setErrors({});
   }, [open, plane]);
+
+  // 2. Lógica "Dirty Check" Avanzada (Maneja Arrays anidados)
+  const isDirty = useMemo(() => {
+    // Helper para normalizar fechas a timestamps (números) para comparación fácil
+    const getTime = (d?: Date | string) => {
+        if (!d) return 0;
+        return typeof d === 'string' ? new Date(d).getTime() : d.getTime();
+    };
+
+    // Función que transforma cualquier data a la estructura plana de comparación
+    const normalize = (data: FormData) => ({
+      bookingReference: data.bookingReference ?? "",
+      provider: data.provider ?? "",
+      totalPrice: Number(data.totalPrice),
+      amountPaid: Number(data.amountPaid),
+      notes: data.notes ?? "",
+      currency: data.currency,
+      // Mapeamos los segmentos para comparar solo los campos relevantes (sin IDs)
+      segments: data.segments.map((s) => ({
+        segmentOrder: s.segmentOrder,
+        departure: s.departure,
+        arrival: s.arrival,
+        airline: s.airline ?? "",
+        flightNumber: s.flightNumber ?? "",
+        departureDate: getTime(s.departureDate),
+        arrivalDate: getTime(s.arrivalDate),
+      })),
+    });
+
+    // 1. Crear snapshot de la data inicial (sea del avión existente o del default)
+    const initialData = plane
+      ? normalize({
+          bookingReference: plane.bookingReference ?? "",
+          provider: plane.provider ?? "",
+          totalPrice: plane.totalPrice,
+          amountPaid: plane.amountPaid,
+          notes: plane.notes ?? "",
+          currency: plane.currency,
+          segments: plane.segments.map((s) => ({
+            segmentOrder: s.segmentOrder,
+            departure: s.departure,
+            arrival: s.arrival,
+            departureDate: s.departureDate ? new Date(s.departureDate) : undefined,
+            arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
+            airline: s.airline ?? "",
+            flightNumber: s.flightNumber ?? "",
+          })),
+        } as FormData)
+      : normalize(defaultFormData);
+
+    // 2. Crear snapshot de la data actual del formulario
+    const currentData = normalize(formData);
+
+    // 3. Comparar strings JSON
+    return JSON.stringify(initialData) !== JSON.stringify(currentData);
+  }, [formData, plane]);
 
   const updateSegment = (
     index: number,
@@ -231,6 +273,12 @@ export function PlaneDialog({
       return;
     }
 
+    // Validación de cambios vacíos
+    if (isEdit && !isDirty) {
+      setErrors({ _general: "No se detectaron cambios para guardar." });
+      return;
+    }
+
     try {
       setLoading(true);
       const endpoint = isEdit ? `/planes/${plane!.id}` : "/planes";
@@ -254,7 +302,6 @@ export function PlaneDialog({
 
   const handleDelete = async () => {
     setShowDeleteConfirm(false); 
-
     if (!plane || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -273,8 +320,27 @@ export function PlaneDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+      {/* DIÁLOGO PRINCIPAL */}
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen && isDirty) {
+            setShowDiscardConfirm(true);
+          } else {
+            onOpenChange(isOpen);
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          // 3. INTERCEPTOR CLICK AFUERA
+          onInteractOutside={(e) => {
+            if (isDirty) {
+              e.preventDefault(); 
+              setShowDiscardConfirm(true);
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {plane ? "Editar Vuelo" : "Crear Vuelo"}
@@ -514,7 +580,6 @@ export function PlaneDialog({
                   </div>
                 </div>
 
-                {/* 👇 AQUI ESTAN LOS TITULOS (LABELS) AGREGADOS */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-[11px] md:text-xs">Aerolínea (Opcional)</Label>
@@ -574,7 +639,11 @@ export function PlaneDialog({
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                // 4. Botón Cancelar verifica suciedad
+                onClick={() => {
+                  if (isDirty) setShowDiscardConfirm(true);
+                  else onOpenChange(false);
+                }}
                 disabled={loading}
                 className="text-xs md:text-sm cursor-pointer"
               >
@@ -582,7 +651,7 @@ export function PlaneDialog({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={loading}
+                disabled={loading || (plane && !isDirty)}
                 className="text-xs md:text-sm cursor-pointer"
               >
                 {loading
@@ -596,6 +665,7 @@ export function PlaneDialog({
         </DialogContent>
       </Dialog>
 
+      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -611,6 +681,30 @@ export function PlaneDialog({
               className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALERT 2: DESCARTAR CAMBIOS */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                onOpenChange(false);
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

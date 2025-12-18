@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -6,6 +6,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
@@ -52,47 +63,76 @@ export function ReservationDialog({
 }: ReservationDialogProps) {
   const isEdit = mode === "edit"
 
-  // Estado principal
+  // Estado del formulario
   const [state, setState] = useState<ReservationState>(ReservationState.PENDING)
   const [selectedPassengers, setSelectedPassengers] = useState<Pax[]>([])
 
-  // 🔹 Lista de pasajeros locales (reactiva para el buscador)
+  // Lista de pasajeros locales (para el buscador)
   const [passengers, setPassengers] = useState<Pax[]>(availablePassengers)
 
-  // 🔹 Estado para PassengerDialog
+  // Estado de modales hijos
   const [passengerDialogOpen, setPassengerDialogOpen] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false) // 👈 Nuevo estado
 
-  // 🔄 Mantiene sincronizada la lista local con el padre
+  // 🔄 Mantiene sincronizada la lista local
   useEffect(() => {
     setPassengers(availablePassengers)
   }, [availablePassengers])
 
-
-  // --------------------------------------------------
-  // 🧭 Prellenar en modo edición
+  // 🧭 Prellenar datos al abrir
   useEffect(() => {
-    if (isEdit && reservation) {
-      setState(reservation.state)
-
-      const normalized = reservation.paxReservations.map((paxRes) => {
-        const pax = paxRes.pax as Partial<Pax>
-        return {
-          id: pax.id ?? "",
-          name: pax.name ?? "",
-          birthDate: pax.birthDate ?? "",
-          nationality: pax.nationality ?? "",
-          passport: pax.passport,
-          dni: pax.dni,
-        } satisfies Pax
-      })
-      setSelectedPassengers(normalized)
-    } else if (!isEdit) {
-      setState(ReservationState.PENDING)
-      setSelectedPassengers([])
+    if (open) {
+      if (isEdit && reservation) {
+        setState(reservation.state)
+        const normalized = reservation.paxReservations.map((paxRes) => {
+          const pax = paxRes.pax as Partial<Pax>
+          return {
+            id: pax.id ?? "",
+            name: pax.name ?? "",
+            birthDate: pax.birthDate ?? "",
+            nationality: pax.nationality ?? "",
+            passport: pax.passport,
+            dni: pax.dni,
+          } satisfies Pax
+        })
+        setSelectedPassengers(normalized)
+      } else {
+        setState(ReservationState.PENDING)
+        setSelectedPassengers([])
+      }
     }
-  }, [isEdit, reservation])
+  }, [open, isEdit, reservation])
 
-  // --------------------------------------------------
+  // 🔎 Dirty Check (Comparar si hubo cambios)
+  const isDirty = useMemo(() => {
+    // 1. Estado Inicial
+    const initialData =
+      isEdit && reservation
+        ? {
+            state: reservation.state,
+            // IDs de pasajeros ordenados para comparar arrays
+            passengerIds: reservation.paxReservations
+              .map((pr) => pr.pax.id)
+              .sort()
+              .join(","),
+          }
+        : {
+            state: ReservationState.PENDING,
+            passengerIds: "",
+          }
+
+    // 2. Estado Actual
+    const currentData = {
+      state,
+      passengerIds: selectedPassengers
+        .map((p) => p.id)
+        .sort()
+        .join(","),
+    }
+
+    return JSON.stringify(initialData) !== JSON.stringify(currentData)
+  }, [state, selectedPassengers, isEdit, reservation])
+
   // Funciones auxiliares
   const removePassenger = (id: string) => {
     setSelectedPassengers((prev) => prev.filter((p) => p.id !== id))
@@ -116,9 +156,27 @@ export function ReservationDialog({
   return (
     <>
       {/* 🌍 Diálogo principal */}
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* 👇 [&>button]:cursor-pointer para la X de cerrar */}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          // Interceptamos cierre
+          if (!isOpen && isDirty) {
+            setShowDiscardConfirm(true)
+          } else {
+            onOpenChange(isOpen)
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          // 3. INTERCEPTOR CLICK AFUERA
+          onInteractOutside={(e) => {
+            if (isDirty) {
+              e.preventDefault()
+              setShowDiscardConfirm(true)
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {isEdit ? "Editar Reserva" : "Crear Nueva Reserva"}
@@ -133,12 +191,10 @@ export function ReservationDialog({
                 value={state}
                 onValueChange={(v) => setState(v as ReservationState)}
               >
-                {/* 👇 cursor-pointer en trigger */}
                 <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="text-xs md:text-sm">
-                  {/* 👇 cursor-pointer en items */}
                   <SelectItem value="PENDING" className="cursor-pointer">Pendiente</SelectItem>
                   <SelectItem value="CONFIRMED" className="cursor-pointer">Confirmada</SelectItem>
                   <SelectItem value="CANCELLED" className="cursor-pointer">Cancelada</SelectItem>
@@ -168,7 +224,6 @@ export function ReservationDialog({
                           e.stopPropagation()
                           removePassenger(passenger.id)
                         }}
-                        // 👇 cursor-pointer en botón X de borrar pax
                         className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
                         aria-label={`Eliminar pasajero ${passenger.name}`}
                       >
@@ -187,7 +242,6 @@ export function ReservationDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    // 👇 cursor-pointer
                     className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                   >
                     <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -209,7 +263,6 @@ export function ReservationDialog({
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addPassenger(passenger)}
-                              // 👇 cursor-pointer
                               className="text-xs md:text-sm cursor-pointer"
                             >
                               <div className="flex flex-col">
@@ -233,7 +286,6 @@ export function ReservationDialog({
             <Button
               variant="outline"
               onClick={() => setPassengerDialogOpen(true)}
-              // 👇 cursor-pointer
               className="w-full h-8 md:h-9 text-xs md:text-sm cursor-pointer"
             >
               <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -254,16 +306,19 @@ export function ReservationDialog({
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              // 👇 cursor-pointer
+              // 4. Botón Cancelar verifica suciedad
+              onClick={() => {
+                if (isDirty) setShowDiscardConfirm(true)
+                else onOpenChange(false)
+              }}
               className="text-xs md:text-sm cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirm}
+              // Bloqueamos crear si no hay pasajeros (a menos que sea edit)
               disabled={!isEdit && selectedPassengers.length === 0}
-              // 👇 cursor-pointer
               className="text-xs md:text-sm cursor-pointer"
             >
               {isEdit ? "Guardar Cambios" : "Crear Reserva"}
@@ -280,10 +335,34 @@ export function ReservationDialog({
         onSave={(createdPax) => {
           addPassenger(createdPax)
           setPassengers((prev) => [...prev, createdPax])
-          onPassengerCreated?.(createdPax) // 🔥 notifica al padre
+          onPassengerCreated?.(createdPax) 
           setPassengerDialogOpen(false)
         }}
       />
+
+      {/* ALERT: DESCARTAR CAMBIOS */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false)
+                onOpenChange(false)
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

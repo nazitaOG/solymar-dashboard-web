@@ -61,6 +61,19 @@ interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
+// 1. Constante para valores por defecto (limpieza y comparación)
+const defaultFormData: FormData = {
+  provider: "",
+  embarkationPort: "",
+  arrivalPort: "",
+  bookingReference: "",
+  startDate: undefined,
+  endDate: undefined,
+  totalPrice: 0,
+  amountPaid: 0,
+  currency: Currency.USD,
+};
+
 export function CruiseDialog({
   open,
   onOpenChange,
@@ -69,25 +82,17 @@ export function CruiseDialog({
   onSave,
   onDelete,
 }: CruiseDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    provider: "",
-    embarkationPort: "",
-    arrivalPort: "",
-    bookingReference: "",
-    startDate: undefined,
-    endDate: undefined,
-    totalPrice: 0,
-    amountPaid: 0,
-    currency: Currency.USD,
-  });
-
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  // 👇 Nuevo estado para el diálogo de confirmación
+  
+  // Alertas
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false); // 👈 Nuevo estado
+  
   const deleteLock = useRef(false);
 
-  // 🔄 Prellenar datos
+  // 🔄 Carga de datos
   useEffect(() => {
     if (cruise) {
       setFormData({
@@ -102,55 +107,54 @@ export function CruiseDialog({
         currency: cruise.currency,
       });
     } else {
-      setFormData({
-        provider: "",
-        embarkationPort: "",
-        arrivalPort: "",
-        bookingReference: "",
-        startDate: undefined,
-        endDate: undefined,
-        totalPrice: 0,
-        amountPaid: 0,
-        currency: Currency.USD,
-      });
+      setFormData(defaultFormData);
     }
     setErrors({});
   }, [cruise, open]);
 
-  // 🧭 Detectar cambios
-  const hasChanges = useMemo(() => {
-    if (!cruise) return true;
+  // 2. Lógica "Dirty Check" (¿El usuario modificó algo?)
+  const isDirty = useMemo(() => {
+    const initialData = cruise
+      ? {
+          provider: cruise.provider ?? "",
+          embarkationPort: cruise.embarkationPort ?? "",
+          arrivalPort: cruise.arrivalPort ?? "",
+          bookingReference: cruise.bookingReference ?? "",
+          // Convertimos fechas a timestamp para comparar fácil
+          startDate: cruise.startDate ? new Date(cruise.startDate).getTime() : 0,
+          endDate: cruise.endDate ? new Date(cruise.endDate).getTime() : 0,
+          totalPrice: Number(cruise.totalPrice),
+          amountPaid: Number(cruise.amountPaid),
+          currency: cruise.currency,
+        }
+      : {
+          ...defaultFormData,
+          startDate: 0,
+          endDate: 0,
+        };
 
-    const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
+    const currentData = {
+      ...formData,
+      startDate: formData.startDate?.getTime() ?? 0,
+      endDate: formData.endDate?.getTime() ?? 0,
+      totalPrice: Number(formData.totalPrice),
+      amountPaid: Number(formData.amountPaid),
+    };
 
-    return !(
-      formData.provider === (cruise.provider ?? "") &&
-      formData.embarkationPort === (cruise.embarkationPort ?? "") &&
-      formData.arrivalPort === (cruise.arrivalPort ?? "") &&
-      formData.bookingReference === (cruise.bookingReference ?? "") &&
-      getTime(formData.startDate) === getIsoTime(cruise.startDate) &&
-      getTime(formData.endDate) === getIsoTime(cruise.endDate) &&
-      Number(formData.totalPrice) === Number(cruise.totalPrice) &&
-      Number(formData.amountPaid) === Number(cruise.amountPaid) &&
-      formData.currency === cruise.currency
-    );
+    return JSON.stringify(initialData) !== JSON.stringify(currentData);
   }, [formData, cruise]);
 
-  // 💾 Guardar crucero con validación acumulativa
+  // 💾 Guardar
   const handleSave = async () => {
     const isEdit = Boolean(cruise);
     const schema = isEdit ? updateCruiseSchema : createCruiseSchema;
 
-    // 👇 1. Acumulador de errores
     const newErrors: FormErrors = {};
 
-    // 👇 2. Validación Manual de Fechas
     if (!formData.startDate) {
       newErrors.startDate = "La fecha de salida es obligatoria.";
     }
 
-    // 👇 3. Validación Zod
     const payloadToValidate = {
       ...formData,
       startDate: formData.startDate?.toISOString() ?? "",
@@ -165,47 +169,35 @@ export function CruiseDialog({
     if (!result.success) {
       for (const err of result.error.issues) {
         const key = err.path[0] as string;
-        if (!newErrors[key]) {
-            newErrors[key] = err.message;
-        }
+        if (!newErrors[key]) newErrors[key] = err.message;
       }
     }
 
-    // 👇 4. Validación Lógica de Precios
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
       newErrors.amountPaid = "El monto pagado no puede ser mayor que el total.";
     }
 
-    // 👇 5. Si hay errores, mostramos todo y cortamos
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // 👇 6. Validación de cambios (solo si editamos)
-    if (isEdit && !hasChanges) {
-      setErrors({
-        _general: "Debes modificar al menos un campo para guardar los cambios.",
-      });
+    // Validación de cambios vacíos
+    if (isEdit && !isDirty) {
+      setErrors({ _general: "No se detectaron cambios para guardar." });
       return;
     }
 
-    // Preparar payload final
     const finalPayload = {
       provider: formData.provider,
       embarkationPort: formData.embarkationPort,
       arrivalPort: formData.arrivalPort || null,
       bookingReference: formData.bookingReference || null,
-      startDate: formData.startDate!.toISOString(), // Seguro porque ya validamos arriba
+      startDate: formData.startDate!.toISOString(),
       endDate: formData.endDate ? formData.endDate.toISOString() : null,
       totalPrice: Number(formData.totalPrice),
       amountPaid: Number(formData.amountPaid),
-      ...(isEdit
-        ? {}
-        : {
-            reservationId,
-            currency: formData.currency || "USD",
-          }),
+      ...(isEdit ? {} : { reservationId, currency: formData.currency || "USD" }),
     };
 
     try {
@@ -221,18 +213,14 @@ export function CruiseDialog({
       onOpenChange(false);
       setTimeout(() => onSave(savedCruise), 150);
     } catch {
-      setErrors({
-        _general: "Ocurrió un error al guardar el crucero. Inténtalo nuevamente.",
-      });
+      setErrors({ _general: "Ocurrió un error al guardar el crucero." });
     } finally {
       setLoading(false);
     }
   };
 
-  // 🗑️ Eliminar crucero
   const handleDelete = async () => {
-    setShowDeleteConfirm(false); // Cerramos el modal de confirmación
-
+    setShowDeleteConfirm(false); 
     if (!cruise || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -242,7 +230,6 @@ export function CruiseDialog({
       onDelete?.(cruise.id);
       setTimeout(() => onOpenChange(false), 150);
     } catch (err) {
-      console.error("❌ Error al eliminar crucero:", err);
       if (err instanceof Error) {
         setErrors({ _general: err.message || "Error al eliminar crucero." });
       }
@@ -252,11 +239,30 @@ export function CruiseDialog({
     }
   };
 
-  // 🧱 Render
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+      {/* DIÁLOGO PRINCIPAL */}
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          // Interceptamos cierre con ESC o setOpen externo
+          if (!isOpen && isDirty) {
+            setShowDiscardConfirm(true);
+          } else {
+            onOpenChange(isOpen);
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          // 3. INTERCEPTOR CLICK AFUERA
+          onInteractOutside={(e) => {
+            if (isDirty) {
+              e.preventDefault(); 
+              setShowDiscardConfirm(true);
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {cruise ? "Editar Crucero" : "Crear Crucero"}
@@ -271,7 +277,6 @@ export function CruiseDialog({
             </div>
           )}
 
-          {/* Formulario */}
           <div className="grid gap-3 md:grid-cols-2">
             {[
               { id: "provider", label: "Proveedor *", placeholder: "MSC Cruises" },
@@ -280,32 +285,18 @@ export function CruiseDialog({
               { id: "bookingReference", label: "Referencia", placeholder: "CR-56789" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label
-                  htmlFor={f.id}
-                  className="text-[11px] md:text-xs"
-                >
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   value={(formData[f.id as keyof FormData] as string) || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f.id]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
                   placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${
-                    errors[f.id] ? "border-red-500" : ""
-                  }`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
 
-            {/* Fechas */}
             <div className="space-y-1 [&>button]:cursor-pointer">
               <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
               <DateTimePicker
@@ -313,11 +304,7 @@ export function CruiseDialog({
                 setDate={(date) => setFormData({ ...formData, startDate: date })}
                 includeTime={false}
               />
-              {errors.startDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.startDate}
-                </p>
-              )}
+              {errors.startDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.startDate}</p>}
             </div>
 
             <div className="space-y-1 [&>button]:cursor-pointer">
@@ -327,32 +314,17 @@ export function CruiseDialog({
                 setDate={(date) => setFormData({ ...formData, endDate: date })}
                 includeTime={false}
               />
-              {errors.endDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.endDate}
-                </p>
-              )}
+              {errors.endDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.endDate}</p>}
             </div>
 
-            {/* Moneda (solo en creación) */}
             {!cruise && (
               <div className="space-y-1">
-                <Label
-                  htmlFor="currency"
-                  className="text-[11px] md:text-xs"
-                >
-                  Moneda *
-                </Label>
+                <Label htmlFor="currency" className="text-[11px] md:text-xs">Moneda *</Label>
                 <Select
                   value={formData.currency}
-                  onValueChange={(v: Currency) =>
-                    setFormData({ ...formData, currency: v })
-                  }
+                  onValueChange={(v: Currency) => setFormData({ ...formData, currency: v })}
                 >
-                  <SelectTrigger
-                    id="currency"
-                    className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
-                  >
+                  <SelectTrigger id="currency" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
@@ -360,62 +332,32 @@ export function CruiseDialog({
                     <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.currency && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.currency}
-                  </p>
-                )}
+                {errors.currency && <p className="text-red-500 text-[10px] md:text-xs">{errors.currency}</p>}
               </div>
             )}
 
-            {/* 👇 INPUTS DE PRECIOS MEJORADOS (Bloqueo de negativos) */}
             {[
               { id: "totalPrice", label: "Precio total *", placeholder: "2000" },
               { id: "amountPaid", label: "Monto pagado *", placeholder: "500" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label
-                  htmlFor={f.id}
-                  className="text-[11px] md:text-xs"
-                >
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   type="number"
-                  min={0} // 1. Restricción nativa
+                  min={0}
                   value={(formData[f.id as keyof FormData] as number) || 0}
-                  
-                  // 2. Validación en onChange
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === "") {
-                      setFormData({ ...formData, [f.id]: 0 });
-                      return;
-                    }
+                    if (value === "") { setFormData({ ...formData, [f.id]: 0 }); return; }
                     const numValue = Number(value);
-                    if (numValue >= 0) {
-                      setFormData({ ...formData, [f.id]: numValue });
-                    }
+                    if (numValue >= 0) { setFormData({ ...formData, [f.id]: numValue }); }
                   }}
-
-                  // 3. Bloqueo de la tecla menos
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "Minus") {
-                      e.preventDefault();
-                    }
-                  }}
-                  
+                  onKeyDown={(e) => { if (e.key === "-" || e.key === "Minus") e.preventDefault(); }}
                   placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${
-                    errors[f.id] ? "border-red-500" : ""
-                  }`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
           </div>
@@ -425,7 +367,6 @@ export function CruiseDialog({
               {cruise && (
                 <Button
                   variant="destructive"
-                  // 👇 Ahora abre el modal de confirmación
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={loading}
                   className="text-xs md:text-sm cursor-pointer"
@@ -437,7 +378,11 @@ export function CruiseDialog({
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                // 4. Botón Cancelar verifica suciedad
+                onClick={() => {
+                  if (isDirty) setShowDiscardConfirm(true);
+                  else onOpenChange(false);
+                }}
                 disabled={loading}
                 className="text-xs md:text-sm cursor-pointer"
               >
@@ -445,23 +390,18 @@ export function CruiseDialog({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={loading || (cruise && !hasChanges)}
+                // Habilitamos botón para que salten validaciones de requeridos si está vacío
+                disabled={loading || (cruise && !isDirty)}
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading
-                  ? "Guardando..."
-                  : cruise
-                  ? hasChanges
-                    ? "Guardar cambios"
-                    : "Sin cambios"
-                  : "Crear"}
+                {loading ? "Guardando..." : cruise ? "Guardar cambios" : "Crear"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 👇 MODAL DE CONFIRMACIÓN */}
+      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -472,11 +412,32 @@ export function CruiseDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 cursor-pointer"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 cursor-pointer">
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALERT 2: DESCARTAR CAMBIOS */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                onOpenChange(false); // Cierra el modal principal
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

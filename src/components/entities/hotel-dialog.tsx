@@ -61,6 +61,20 @@ interface FormErrors extends Partial<Record<string, string>> {
   _general?: string;
 }
 
+// 1. Constante para valores por defecto
+const defaultFormData: FormData = {
+  startDate: undefined,
+  endDate: undefined,
+  city: "",
+  hotelName: "",
+  bookingReference: "",
+  totalPrice: 0,
+  amountPaid: 0,
+  roomType: "",
+  provider: "",
+  currency: Currency.USD,
+};
+
 export function HotelDialog({
   open,
   onOpenChange,
@@ -69,26 +83,17 @@ export function HotelDialog({
   onSave,
   onDelete,
 }: HotelDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    startDate: undefined,
-    endDate: undefined,
-    city: "",
-    hotelName: "",
-    bookingReference: "",
-    totalPrice: 0,
-    amountPaid: 0,
-    roomType: "",
-    provider: "",
-    currency: Currency.USD,
-  });
-
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  // 👇 Nuevo estado para confirmación
+  
+  // Alertas
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false); // 👈 Nuevo estado
+  
   const deleteLock = useRef(false);
 
-  // 🔄 Prellenar datos al abrir
+  // 🔄 Cargar datos
   useEffect(() => {
     if (hotel) {
       setFormData({
@@ -104,59 +109,54 @@ export function HotelDialog({
         currency: hotel.currency,
       });
     } else {
-      setFormData({
-        startDate: undefined,
-        endDate: undefined,
-        city: "",
-        hotelName: "",
-        bookingReference: "",
-        totalPrice: 0,
-        amountPaid: 0,
-        roomType: "",
-        provider: "",
-        currency: Currency.USD,
-      });
+      setFormData(defaultFormData);
     }
     setErrors({});
   }, [hotel, open]);
 
-  // 🧭 Comparar si hubo cambios (solo modo edición)
-  const hasChanges = useMemo(() => {
-    if (!hotel) return true;
+  // 2. Lógica "Dirty Check"
+  const isDirty = useMemo(() => {
+    const initialData = hotel
+      ? {
+          city: hotel.city,
+          hotelName: hotel.hotelName,
+          bookingReference: hotel.bookingReference,
+          roomType: hotel.roomType,
+          provider: hotel.provider,
+          // Timestamps para comparar fechas
+          startDate: hotel.startDate ? new Date(hotel.startDate).getTime() : 0,
+          endDate: hotel.endDate ? new Date(hotel.endDate).getTime() : 0,
+          totalPrice: Number(hotel.totalPrice),
+          amountPaid: Number(hotel.amountPaid),
+          currency: hotel.currency,
+        }
+      : {
+          ...defaultFormData,
+          startDate: 0,
+          endDate: 0,
+        };
 
-    const getTime = (d?: Date) => d?.getTime() ?? 0;
-    const getIsoTime = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
+    const currentData = {
+      ...formData,
+      startDate: formData.startDate?.getTime() ?? 0,
+      endDate: formData.endDate?.getTime() ?? 0,
+      totalPrice: Number(formData.totalPrice),
+      amountPaid: Number(formData.amountPaid),
+    };
 
-    return !(
-      getTime(formData.startDate) === getIsoTime(hotel.startDate) &&
-      getTime(formData.endDate) === getIsoTime(hotel.endDate) &&
-      formData.city === hotel.city &&
-      formData.hotelName === hotel.hotelName &&
-      formData.bookingReference === hotel.bookingReference &&
-      Number(formData.totalPrice) === Number(hotel.totalPrice) &&
-      Number(formData.amountPaid) === Number(hotel.amountPaid) &&
-      formData.roomType === hotel.roomType &&
-      formData.provider === hotel.provider
-    );
+    return JSON.stringify(initialData) !== JSON.stringify(currentData);
   }, [formData, hotel]);
 
-  // 💾 Guardar (creación o edición) con validación acumulativa
+  // 💾 Guardar
   const handleSave = async () => {
     const isEdit = Boolean(hotel);
     const schema = isEdit ? updateHotelSchema : createHotelSchema;
 
-    // 👇 1. Acumulador de errores
     const newErrors: FormErrors = {};
 
-    // 👇 2. Validación manual de fechas
-    if (!formData.startDate) {
-      newErrors.startDate = "Requerido";
-    }
-    if (!formData.endDate) {
-      newErrors.endDate = "Requerido";
-    }
+    if (!formData.startDate) newErrors.startDate = "Requerido";
+    if (!formData.endDate) newErrors.endDate = "Requerido";
 
-    // 👇 3. Validación Zod
     const payloadToValidate = {
       ...formData,
       startDate: formData.startDate?.toISOString() ?? "",
@@ -171,34 +171,27 @@ export function HotelDialog({
     if (!result.success) {
       for (const err of result.error.issues) {
         const key = err.path[0] as string;
-        if (!newErrors[key]) {
-          newErrors[key] = err.message;
-        }
+        if (!newErrors[key]) newErrors[key] = err.message;
       }
     }
 
-    // 👇 4. Validación lógica de precios
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
       newErrors.amountPaid = "El monto pagado no puede ser mayor que el total.";
     }
 
-    // 👇 5. Si hay errores, mostrar y detener
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // 👇 6. Validación de cambios
-    if (isEdit && !hasChanges) {
-      setErrors({
-        _general: "Debes modificar al menos un campo para guardar los cambios.",
-      });
+    // Validación de cambios vacíos
+    if (isEdit && !isDirty) {
+      setErrors({ _general: "No se detectaron cambios para guardar." });
       return;
     }
 
-    // Preparar payload
     const payload = {
-      startDate: formData.startDate!.toISOString(), // Seguro porque ya validamos
+      startDate: formData.startDate!.toISOString(),
       endDate: formData.endDate!.toISOString(),
       city: formData.city,
       hotelName: formData.hotelName,
@@ -207,12 +200,7 @@ export function HotelDialog({
       amountPaid: Number(formData.amountPaid),
       roomType: formData.roomType,
       provider: formData.provider,
-      ...(isEdit
-        ? {}
-        : {
-            reservationId,
-            currency: formData.currency || "USD",
-          }),
+      ...(isEdit ? {} : { reservationId, currency: formData.currency || "USD" }),
     };
 
     try {
@@ -228,18 +216,14 @@ export function HotelDialog({
       onSave(savedHotel);
       setTimeout(() => onOpenChange(false), 100);
     } catch {
-      setErrors({
-        _general: "Ocurrió un error al guardar el hotel. Inténtalo nuevamente.",
-      });
+      setErrors({ _general: "Ocurrió un error al guardar el hotel." });
     } finally {
       setLoading(false);
     }
   };
 
-  // 🗑️ Eliminar hotel
   const handleDelete = async () => {
-    setShowDeleteConfirm(false); // Cerrar confirmación
-
+    setShowDeleteConfirm(false); 
     if (!hotel || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -249,7 +233,6 @@ export function HotelDialog({
       onDelete?.(hotel.id);
       setTimeout(() => onOpenChange(false), 150);
     } catch (err) {
-      console.error("❌ Error al eliminar hotel:", err);
       if (err instanceof Error) {
         setErrors({ _general: err.message || "Error al eliminar hotel." });
       }
@@ -259,12 +242,29 @@ export function HotelDialog({
     }
   };
 
-  // 🧱 Render
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+      {/* DIÁLOGO PRINCIPAL */}
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen && isDirty) {
+            setShowDiscardConfirm(true);
+          } else {
+            onOpenChange(isOpen);
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          // 3. INTERCEPTOR CLICK AFUERA
+          onInteractOutside={(e) => {
+            if (isDirty) {
+              e.preventDefault(); 
+              setShowDiscardConfirm(true);
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               {hotel ? "Editar Hotel" : "Crear Hotel"}
@@ -280,57 +280,26 @@ export function HotelDialog({
           )}
 
           <div className="grid gap-3 md:grid-cols-2">
-            {/* Campos principales */}
             {[
-              {
-                id: "hotelName",
-                label: "Nombre del hotel *",
-                placeholder: "Fontainebleau Miami Beach",
-              },
+              { id: "hotelName", label: "Nombre del hotel *", placeholder: "Fontainebleau Miami Beach" },
               { id: "city", label: "Ciudad *", placeholder: "Miami" },
-              {
-                id: "roomType",
-                label: "Tipo de habitacion (opcional)",
-                placeholder: "Ocean View Suite",
-              },
-              {
-                id: "provider",
-                label: "Proveedor *",
-                placeholder: "Booking.com",
-              },
-              {
-                id: "bookingReference",
-                label: "Referencia de reserva *",
-                placeholder: "FB-2025-001",
-              },
+              { id: "roomType", label: "Tipo de habitacion (opcional)", placeholder: "Ocean View Suite" },
+              { id: "provider", label: "Proveedor *", placeholder: "Booking.com" },
+              { id: "bookingReference", label: "Referencia de reserva *", placeholder: "FB-2025-001" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label
-                  htmlFor={f.id}
-                  className="text-[11px] md:text-xs"
-                >
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   value={(formData[f.id as keyof typeof formData] as string) || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f.id]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
                   placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${
-                    errors[f.id] ? "border-red-500" : ""
-                  }`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
 
-            {/* ✅ Fechas con DateTimePicker */}
             <div className="space-y-1 [&>button]:cursor-pointer">
               <Label className="text-[11px] md:text-xs">Fecha de entrada *</Label>
               <DateTimePicker
@@ -338,11 +307,7 @@ export function HotelDialog({
                 setDate={(date) => setFormData({ ...formData, startDate: date })}
                 includeTime={false}
               />
-              {errors.startDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.startDate}
-                </p>
-              )}
+              {errors.startDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.startDate}</p>}
             </div>
 
             <div className="space-y-1 [&>button]:cursor-pointer">
@@ -352,32 +317,17 @@ export function HotelDialog({
                 setDate={(date) => setFormData({ ...formData, endDate: date })}
                 includeTime={false}
               />
-              {errors.endDate && (
-                <p className="text-red-500 text-[10px] md:text-xs">
-                  {errors.endDate}
-                </p>
-              )}
+              {errors.endDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.endDate}</p>}
             </div>
 
-            {/* Moneda solo en creación */}
             {!hotel && (
               <div className="space-y-1">
-                <Label
-                  htmlFor="currency"
-                  className="text-[11px] md:text-xs"
-                >
-                  Moneda *
-                </Label>
+                <Label htmlFor="currency" className="text-[11px] md:text-xs">Moneda *</Label>
                 <Select
                   value={formData.currency}
-                  onValueChange={(v: Currency) =>
-                    setFormData({ ...formData, currency: v })
-                  }
+                  onValueChange={(v: Currency) => setFormData({ ...formData, currency: v })}
                 >
-                  <SelectTrigger
-                    id="currency"
-                    className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
-                  >
+                  <SelectTrigger id="currency" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
@@ -385,70 +335,32 @@ export function HotelDialog({
                     <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.currency && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors.currency}
-                  </p>
-                )}
+                {errors.currency && <p className="text-red-500 text-[10px] md:text-xs">{errors.currency}</p>}
               </div>
             )}
 
-            {/* 👇 INPUTS DE PRECIOS MEJORADOS */}
             {[
-              {
-                id: "totalPrice",
-                label: "Precio total *",
-                placeholder: "1500",
-              },
-              {
-                id: "amountPaid",
-                label: "Monto pagado *",
-                placeholder: "1000",
-              },
+              { id: "totalPrice", label: "Precio total *", placeholder: "1500" },
+              { id: "amountPaid", label: "Monto pagado *", placeholder: "1000" },
             ].map((f) => (
               <div key={f.id} className="space-y-1">
-                <Label
-                  htmlFor={f.id}
-                  className="text-[11px] md:text-xs"
-                >
-                  {f.label}
-                </Label>
+                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
                 <Input
                   id={f.id}
                   type="number"
-                  min={0} // 1. Restricción nativa
+                  min={0}
                   value={(formData[f.id as keyof FormData] as number) || 0}
-                  
-                  // 2. Validación en onChange
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === "") {
-                      setFormData({ ...formData, [f.id]: 0 });
-                      return;
-                    }
+                    if (value === "") { setFormData({ ...formData, [f.id]: 0 }); return; }
                     const numValue = Number(value);
-                    if (numValue >= 0) {
-                      setFormData({ ...formData, [f.id]: numValue });
-                    }
+                    if (numValue >= 0) { setFormData({ ...formData, [f.id]: numValue }); }
                   }}
-
-                  // 3. Bloqueo de tecla menos
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "Minus") {
-                      e.preventDefault();
-                    }
-                  }}
-
+                  onKeyDown={(e) => { if (e.key === "-" || e.key === "Minus") e.preventDefault(); }}
                   placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${
-                    errors[f.id] ? "border-red-500" : ""
-                  }`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && (
-                  <p className="text-red-500 text-[10px] md:text-xs">
-                    {errors[f.id]}
-                  </p>
-                )}
+                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
               </div>
             ))}
           </div>
@@ -458,7 +370,6 @@ export function HotelDialog({
               {hotel && (
                 <Button
                   variant="destructive"
-                  // 👇 Abre confirmación
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={loading}
                   className="text-xs md:text-sm cursor-pointer"
@@ -470,7 +381,11 @@ export function HotelDialog({
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                // 4. Botón Cancelar verifica suciedad
+                onClick={() => {
+                  if (isDirty) setShowDiscardConfirm(true);
+                  else onOpenChange(false);
+                }}
                 disabled={loading}
                 className="text-xs md:text-sm cursor-pointer"
               >
@@ -478,23 +393,17 @@ export function HotelDialog({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={loading || (hotel && !hasChanges)}
+                disabled={loading || (hotel && !isDirty)}
                 className="text-xs md:text-sm cursor-pointer"
               >
-                {loading
-                  ? "Guardando..."
-                  : hotel
-                  ? hasChanges
-                    ? "Guardar cambios"
-                    : "Sin cambios"
-                  : "Crear"}
+                {loading ? "Guardando..." : hotel ? "Guardar cambios" : "Crear"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 👇 MODAL DE CONFIRMACIÓN */}
+      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -505,11 +414,32 @@ export function HotelDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 cursor-pointer"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 cursor-pointer">
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALERT 2: DESCARTAR CAMBIOS */}
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                onOpenChange(false);
+              }} 
+              className="cursor-pointer"
+            >
+              Descartar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
