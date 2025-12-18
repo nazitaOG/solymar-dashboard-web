@@ -28,6 +28,7 @@ export interface Reservation {
   updatedBy: string;
   paxReservations: PaxReservation[];
   currencyTotals: CurrencyTotal[];
+  notes: string;
 }
 
 export interface ReservationFilters {

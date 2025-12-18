@@ -5,6 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 import type { Pax } from "@/lib/interfaces/pax/pax.interface"
 import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger"
 
@@ -24,12 +35,18 @@ export function PassengersTable({
   onDelete,
 }: PassengersTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
+  
+  // 👇 Estado para controlar el diálogo de eliminación
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
 
-  // hook unificado
   const { deletePassenger, isPending, error } = useDeletePassenger({
-    onDeleteSuccess: onDelete,
+    onDeleteSuccess: (id) => {
+      onDelete(id)
+      setDeleteTarget(null) // Cerrar diálogo al terminar
+    },
   })
 
+  // Paginación
   const totalPages = Math.ceil(passengers.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
@@ -71,32 +88,28 @@ export function PassengersTable({
     )
   }
 
+  // 👇 Handler para el botón de confirmar borrado
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      deletePassenger(deleteTarget.id, deleteTarget.name)
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {/* 1. Wrapper Grid para contener el layout */}
+      {/* 1. Wrapper Grid */}
       <div className="grid grid-cols-1 w-full">
-        {/* 2. Wrapper con scroll horizontal forzado en móvil */}
+        {/* 2. Wrapper Scroll */}
         <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
-          {/* 3. Ancho mínimo responsivo */}
+          {/* 3. Tabla */}
           <Table className="min-w-[600px] md:min-w-[1000px] w-full">
             <TableHeader>
-              {/* 4. Fondo sólido */}
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
-                  Nombre
-                </TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
-                  Fecha de nacimiento
-                </TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
-                  Nacionalidad
-                </TableHead>
-                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
-                  Documento
-                </TableHead>
-                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4">
-                  Acciones
-                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nombre</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Fecha de nacimiento</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Nacionalidad</TableHead>
+                <TableHead className="whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Documento</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-xs md:text-sm px-2 md:px-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,12 +168,12 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 md:h-9 md:w-9 cursor-pointer"
+                          className="h-7 w-7 md:h-9 md:w-9 cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={(e) => {
                             e.stopPropagation()
-                            deletePassenger(passenger.id, passenger.name)
+                            // 👇 Abre el diálogo
+                            setDeleteTarget({ id: passenger.id, name: passenger.name })
                           }}
-                          disabled={isPending}
                         >
                           <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           <span className="sr-only">Eliminar</span>
@@ -177,7 +190,7 @@ export function PassengersTable({
 
       {/* Error visual si falla eliminación */}
       {error && (
-        <p className="text-sm text-red-500 text-center mt-2">
+        <p className="text-xs md:text-sm text-red-500 text-center mt-2 font-medium">
           {error}
         </p>
       )}
@@ -213,6 +226,32 @@ export function PassengersTable({
           </div>
         </div>
       )}
+
+      {/* 👇 DIÁLOGO DE CONFIRMACIÓN DE BORRADO */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente al pasajero{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              . No podrás deshacer esta acción.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer text-white"
+            >
+              {isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

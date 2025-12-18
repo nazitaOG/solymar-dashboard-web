@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams, useLocation } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
@@ -12,6 +12,7 @@ import { TransferDialog } from "@/components/entities/transfer-dialog";
 import { ExcursionDialog } from "@/components/entities/excursion-dialog";
 import { MedicalAssistDialog } from "@/components/entities/medical-assist-dialog";
 import { CarRentalDialog } from "@/components/entities/car-rental-dialog";
+import { ReservationNotes } from "@/components/ui/custom/reservation-notes";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +24,6 @@ import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservat
 
 import { ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type {
-  Reservation,
   ReservationCurrencyTotal,
   ReservationDetail,
 } from "@/lib/interfaces/reservation/reservation.interface";
@@ -43,8 +43,9 @@ import { Currency, CurrencyTotal } from "@/lib/interfaces/currency/currency.inte
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const passedReservation = location.state as Reservation | undefined;
+  // Eliminamos dependencia de location.state para datos críticos para evitar inconsistencias al recargar
+  // const location = useLocation(); 
+  // const passedReservation = location.state as Reservation | undefined;
 
   const initialReservation: ReservationDetail = {
     id: "",
@@ -65,6 +66,7 @@ export default function ReservationDetailPage() {
     paxReservations: [],
     createdAt: "",
     updatedAt: "",
+    notes: "",
   };
 
   const [reservation, setReservation] = useState<ReservationDetail>(initialReservation);
@@ -98,7 +100,9 @@ export default function ReservationDetailPage() {
   const updateReservationMetadata = useCallback(async () => {
     if (!id) return;
     try {
-      const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}`);
+      // 👇 Cache Busting: agregamos timestamp para forzar lectura fresca
+      const t = new Date().getTime();
+      const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}?_t=${t}`);
 
       setReservation((prev) => ({
         ...prev,
@@ -109,6 +113,24 @@ export default function ReservationDetailPage() {
       console.error("⚠️ No se pudo actualizar la metadata de la reserva:", err);
     }
   }, [id]);
+
+  const handleSaveNotes = async (newNotes: string) => {
+    if (!id) return;
+    try {
+      await fetchAPI<void>(`/reservations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: newNotes }),
+      });
+      
+      // Actualizamos estado local inmediatamente
+      setReservation((prev) => ({ ...prev, notes: newNotes }));
+      
+      updateReservationMetadata();
+    } catch (error) {
+      console.error("❌ Error saving notes:", error);
+      alert("Error al guardar las notas.");
+    }
+  };
 
   // DELETE handlers
   const handleDeleteHotelServer = useCallback(
@@ -307,7 +329,9 @@ export default function ReservationDetailPage() {
     [updateReservationMetadata],
   );
 
-  // Fetch detalle de reserva
+  // ---------------------------------------------------------
+  // 🔥 FETCH DE LA RESERVA (CORREGIDO CON CACHE BUSTING URL)
+  // ---------------------------------------------------------
   useEffect(() => {
     if (!id) return;
 
@@ -315,24 +339,14 @@ export default function ReservationDetailPage() {
       try {
         setLoading(true);
 
-        let baseReservation: ReservationDetail;
+        // 👇 CACHE BUSTER: Generamos un timestamp único
+        const t = new Date().getTime();
 
-        if (passedReservation) {
-          baseReservation = {
-            ...passedReservation,
-            hotels: [],
-            planes: [],
-            cruises: [],
-            transfers: [],
-            excursions: [],
-            medicalAssists: [],
-            carRentals: [],
-          } as ReservationDetail;
-        } else {
-          baseReservation = await fetchAPI<ReservationDetail>(
-            `/reservations/${id}?include=paxReservations,currencyTotals`,
-          );
-        }
+        // Siempre hacemos fetch fresco, ignorando passedReservation para evitar datos viejos al recargar
+        // Agregamos `&_t=${t}` a la URL. Esto es infalible.
+        const baseReservation = await fetchAPI<ReservationDetail>(
+          `/reservations/${id}?include=paxReservations,currencyTotals&_t=${t}`,
+        );
 
         const [hotels, planes, cruises, transfers, excursions, medicalAssists, carRentals] =
           await Promise.all([
@@ -355,7 +369,13 @@ export default function ReservationDetailPage() {
           medicalAssists,
         });
 
-        setReservation({ ...normalized, carRentals });
+        // 👇 Aseguramos que las notas vengan de la respuesta fresca de la API
+        setReservation({ 
+            ...normalized, 
+            carRentals, 
+            notes: baseReservation.notes ?? "" // Asegura que usamos la nota fresca
+        });
+
       } catch (err) {
         console.error("Error al cargar reserva:", err);
         setError("No se pudo cargar la reserva");
@@ -365,7 +385,7 @@ export default function ReservationDetailPage() {
     };
 
     fetchEntities();
-  }, [id, passedReservation]);
+  }, [id]); // Quitamos passedReservation de dependencias para forzar fetch
 
   // Recalcular currencyTotals cuando cambian las entidades
   useEffect(() => {
@@ -417,6 +437,7 @@ export default function ReservationDetailPage() {
       }),
     );
 
+    // Mantenemos las notas existentes al recalcular totales
     setReservation((prev) =>
       prev
         ? {
@@ -1372,6 +1393,12 @@ export default function ReservationDetailPage() {
               </TabsContent>
             </Tabs>
           </div>
+
+          <ReservationNotes 
+            notes={reservation.notes} 
+            onSave={handleSaveNotes}
+            disabled={loading}
+          />
 
           {/* --- BLOQUE INFERIOR: Audit Panel --- */}
           <div className="w-full mt-4 border-t pt-8">

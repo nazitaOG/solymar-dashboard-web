@@ -1,12 +1,11 @@
 import type React from "react"
-import { useState } from "react" // 1. Importar useState
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
-// 2. Importar componentes de AlertDialog
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +38,6 @@ export function EntityTable({
   onDelete,
   emptyMessage = "No hay datos",
 }: EntityTableProps) {
-  // 3. Estado para controlar qué ID se está intentando eliminar
-  // Si es null, el modal está cerrado. Si tiene un string, el modal está abierto.
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
 
   const formatDate = (dateString?: string) => {
@@ -69,11 +66,10 @@ export function EntityTable({
 
   const noData = filteredData.length === 0
 
-  // 4. Función que ejecuta la eliminación real
   const confirmDelete = () => {
     if (itemToDelete) {
       onDelete(itemToDelete)
-      setItemToDelete(null) // Cerramos el modal / limpiamos el estado
+      setItemToDelete(null)
     }
   }
 
@@ -82,7 +78,8 @@ export function EntityTable({
       <div className="rounded-lg border md:border-border bg-card w-full overflow-x-auto">
         <Table className="min-w-[800px] w-full">
           <TableHeader>
-            <TableRow>
+            {/* 👇 CAMBIO AQUÍ: Agregado bg-muted/50 para el fondo gris */}
+            <TableRow className="bg-muted/100 hover:bg-muted/100">
               {columns.map((col) => (
                 <TableHead key={col.key} className="whitespace-nowrap px-4">
                   {col.label}
@@ -128,7 +125,6 @@ export function EntityTable({
                         className="cursor-pointer"
                         variant="ghost"
                         size="icon"
-                        // 5. CAMBIO AQUÍ: En lugar de onDelete directo, guardamos el ID en el estado
                         onClick={() => setItemToDelete(String(item.id))}
                         aria-label="Eliminar"
                       >
@@ -143,7 +139,6 @@ export function EntityTable({
         </Table>
       </div>
 
-      {/* 6. Componente de Alerta al final */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
