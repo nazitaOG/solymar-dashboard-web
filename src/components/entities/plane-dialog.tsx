@@ -88,7 +88,6 @@ export function PlaneDialog({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  // 👇 Nuevo estado para confirmación
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const deleteLock = useRef(false);
 
@@ -171,10 +170,8 @@ export function PlaneDialog({
   };
 
   const handleSave = async () => {
-    // 👇 1. Acumulador de errores
     const allErrors: FormErrors = {};
 
-    // 👇 2. Validaciones manuales de segmentos
     formData.segments.forEach((s, index) => {
       if (!s.departureDate) {
         allErrors[`segments.${index}.departureDate`] = "La fecha de salida es obligatoria";
@@ -214,7 +211,6 @@ export function PlaneDialog({
       ...(isEdit ? {} : { reservationId }),
     };
 
-    // 👇 3. Validación Zod
     const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
@@ -226,12 +222,10 @@ export function PlaneDialog({
       }
     }
 
-    // 👇 4. Validación lógica de precios
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
         allErrors["amountPaid"] = "El monto pagado no puede ser mayor que el total.";
     }
 
-    // 👇 5. Si hay errores, mostrar y detener
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
       return;
@@ -259,7 +253,7 @@ export function PlaneDialog({
   };
 
   const handleDelete = async () => {
-    setShowDeleteConfirm(false); // Cerrar confirmación
+    setShowDeleteConfirm(false); 
 
     if (!plane || deleteLock.current) return;
     deleteLock.current = true;
@@ -280,7 +274,6 @@ export function PlaneDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* 👇 [&>button]:cursor-pointer asegura la mano en la X de cerrar */}
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
@@ -297,20 +290,17 @@ export function PlaneDialog({
           )}
 
           <div className="grid gap-3 md:grid-cols-2">
+            {/* Referencia y Proveedor */}
             {(["bookingReference", "provider"] as const).map((key) => (
               <div key={key} className="space-y-1">
-                <Label
-                  htmlFor={key}
-                  className="text-[11px] md:text-xs"
-                >
+                <Label htmlFor={key} className="text-[11px] md:text-xs">
                   {key === "bookingReference" ? "Referencia *" : "Proveedor (opcional)"}
                 </Label>
                 <Input
                   id={key}
                   value={formData[key]}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [key]: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                  placeholder={key === "bookingReference" ? "Ej: PNR-XYZ123" : "Ej: Despegar / Aerolíneas"}
                   className={`h-8 md:h-9 text-xs md:text-sm ${
                     errors[key] ? "border-red-500" : ""
                   }`}
@@ -321,22 +311,17 @@ export function PlaneDialog({
               </div>
             ))}
 
-            {/* 👇 INPUTS DE PRECIOS MEJORADOS */}
+            {/* Precios */}
             {(["totalPrice", "amountPaid"] as const).map((key) => (
               <div key={key} className="space-y-1">
-                <Label
-                  htmlFor={key}
-                  className="text-[11px] md:text-xs"
-                >
+                <Label htmlFor={key} className="text-[11px] md:text-xs">
                   {key === "totalPrice" ? "Precio total *" : "Monto pagado *"}
                 </Label>
                 <Input
                   id={key}
                   type="number"
-                  min={0} // 1. Restricción nativa
+                  min={0}
                   value={formData[key as keyof FormData] as string | number}
-                  
-                  // 2. Validación en onChange
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value === "") {
@@ -348,14 +333,12 @@ export function PlaneDialog({
                         setFormData({ ...formData, [key]: numValue });
                     }
                   }}
-
-                  // 3. Bloqueo de tecla menos
                   onKeyDown={(e) => {
                     if (e.key === "-" || e.key === "Minus") {
                         e.preventDefault();
                     }
                   }}
-
+                  placeholder={key === "totalPrice" ? "Ej: 1500" : "Ej: 500"}
                   className={`h-8 md:h-9 text-xs md:text-sm ${
                     errors[key] ? "border-red-500" : ""
                   }`}
@@ -375,12 +358,10 @@ export function PlaneDialog({
                     setFormData({ ...formData, currency: v })
                   }
                 >
-                  {/* 👇 cursor-pointer en trigger */}
                   <SelectTrigger className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
-                    {/* 👇 cursor-pointer en items */}
                     <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
                     <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
                   </SelectContent>
@@ -400,6 +381,7 @@ export function PlaneDialog({
               value={formData.notes ?? ""}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
+              placeholder="Ej: Solicitar menú vegetariano, asientos en pasillo..."
               className="text-xs md:text-sm"
             />
           </div>
@@ -429,7 +411,6 @@ export function PlaneDialog({
                       ],
                     })
                   }
-                  // 👇 cursor-pointer en botón de agregar tramo
                   className="h-7 md:h-8 px-2 text-[11px] md:text-xs cursor-pointer"
                 >
                   + Agregar tramo
@@ -454,7 +435,6 @@ export function PlaneDialog({
                   <Button
                     variant="ghost"
                     size="sm"
-                    // 👇 cursor-pointer en botón de eliminar tramo
                     className="text-red-500 h-7 md:h-8 px-2 text-[11px] md:text-xs hover:text-red-600 cursor-pointer"
                     onClick={() => removeSegment(index)}
                   >
@@ -464,14 +444,15 @@ export function PlaneDialog({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-[11px] md:text-xs">Origen</Label>
+                    <Label className="text-[11px] md:text-xs">Origen (IATA)</Label>
                     <Input
-                      placeholder="EZE"
+                      placeholder="Ej: EZE"
                       value={seg.departure}
                       onChange={(e) =>
-                        updateSegment(index, "departure", e.target.value)
+                        updateSegment(index, "departure", e.target.value.toUpperCase())
                       }
-                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                      maxLength={3} 
+                      className={`h-8 md:h-9 text-xs md:text-sm uppercase ${
                         errors[`segments.${index}.departure`] ? "border-red-500" : ""
                       }`}
                     />
@@ -482,14 +463,15 @@ export function PlaneDialog({
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] md:text-xs">Destino</Label>
+                    <Label className="text-[11px] md:text-xs">Destino (IATA)</Label>
                     <Input
-                      placeholder="MIA"
+                      placeholder="Ej: MIA"
                       value={seg.arrival}
                       onChange={(e) =>
-                        updateSegment(index, "arrival", e.target.value)
+                        updateSegment(index, "arrival", e.target.value.toUpperCase())
                       }
-                      className={`h-8 md:h-9 text-xs md:text-sm ${
+                      maxLength={3} 
+                      className={`h-8 md:h-9 text-xs md:text-sm uppercase ${
                         errors[`segments.${index}.arrival`] ? "border-red-500" : ""
                       }`}
                     />
@@ -502,7 +484,6 @@ export function PlaneDialog({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
                   <div className="space-y-1 [&>button]:cursor-pointer">
                     <Label className="text-[11px] md:text-xs">Salida</Label>
                     <DateTimePicker
@@ -517,7 +498,6 @@ export function PlaneDialog({
                       </p>
                     )}
                   </div>
-                  {/* 👇 [&>button]:cursor-pointer en contenedor del calendario */}
                   <div className="space-y-1 [&>button]:cursor-pointer">
                     <Label className="text-[11px] md:text-xs">Llegada</Label>
                     <DateTimePicker
@@ -534,10 +514,12 @@ export function PlaneDialog({
                   </div>
                 </div>
 
+                {/* 👇 AQUI ESTAN LOS TITULOS (LABELS) AGREGADOS */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
+                    <Label className="text-[11px] md:text-xs">Aerolínea (Opcional)</Label>
                     <Input
-                      placeholder="Aerolínea"
+                      placeholder="Ej: Aerolíneas Argentinas"
                       value={seg.airline ?? ""}
                       onChange={(e) =>
                         updateSegment(index, "airline", e.target.value)
@@ -553,8 +535,9 @@ export function PlaneDialog({
                     )}
                   </div>
                   <div className="space-y-1">
+                    <Label className="text-[11px] md:text-xs">Nro. Vuelo (Opcional)</Label>
                     <Input
-                      placeholder="Nro. Vuelo"
+                      placeholder="Ej: AR1302"
                       value={seg.flightNumber ?? ""}
                       onChange={(e) =>
                         updateSegment(index, "flightNumber", e.target.value)
@@ -581,7 +564,6 @@ export function PlaneDialog({
                   variant="destructive"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={loading}
-                  // 👇 cursor-pointer en botón Eliminar
                   className="text-xs md:text-sm cursor-pointer"
                 >
                   {loading ? "Eliminando..." : "Eliminar"}
@@ -594,7 +576,6 @@ export function PlaneDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
-                // 👇 cursor-pointer en botón Cancelar
                 className="text-xs md:text-sm cursor-pointer"
               >
                 Cancelar
@@ -602,7 +583,6 @@ export function PlaneDialog({
               <Button
                 onClick={handleSave}
                 disabled={loading}
-                // 👇 cursor-pointer en botón Guardar
                 className="text-xs md:text-sm cursor-pointer"
               >
                 {loading
@@ -616,7 +596,6 @@ export function PlaneDialog({
         </DialogContent>
       </Dialog>
 
-      {/* 👇 MODAL DE CONFIRMACIÓN */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
