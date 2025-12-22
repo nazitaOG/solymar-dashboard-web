@@ -123,3 +123,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer base {
+  /* HACK PARA ELIMINAR EL FONDO AMARILLO DE AUTOFILL */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+      /* 1. Pinta el texto de blanco */
+      -webkit-text-fill-color: white !important;
+      
+      /* 2. Pinta el fondo usando una sombra interna sólida.
+            Calculé este color (#23212b) para que coincida con tu bg-white/5 
+            sobre el fondo #17151f */
+      -webkit-box-shadow: 0 0 0 30px #23212b inset !important;
+      
+      /* 3. Asegura que el borde no se vea amarillo */
+      background-clip: content-box !important;
+      
+      /* 4. Cambia el color del cursor */
+      caret-color: white !important;
+  }
+}

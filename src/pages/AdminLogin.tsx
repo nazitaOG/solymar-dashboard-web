@@ -103,7 +103,7 @@ export default function AdminLogin() {
       } catch (err) {
         // Solo mostramos error si es algo técnico (500), no validación lógica
         console.error(err)
-        setError("Ocurrió un error al intentar enviar el correo. Intenta nuevamente.")
+        setError("Ocurrió un error al intentar enviar el correo. Intenta nuevamente mas tarde.")
       }
     })
   }
