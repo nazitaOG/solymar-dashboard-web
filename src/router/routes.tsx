@@ -18,7 +18,7 @@ const Reservas = lazy(() => import("@/pages/reservas/List"));
 const ReservaDetail = lazy(() => import("@/pages/reservas/Detail"));
 const Pasajeros = lazy(() => import("@/pages/pasajeros/List"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
-
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 // Wrapper para Suspense
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense fallback={<FullPageLoader />}>
@@ -83,7 +83,15 @@ export const routes: AppRoute[] = [
       <GuestRoute>
         {withSuspense(AdminLogin)}
       </GuestRoute>
+    ),  
+  },
+  {
+    path: "/reset-password",
+    name: "ResetPassword",
+    element: (
+      <GuestRoute>
+        {withSuspense(ResetPasswordPage)}
+      </GuestRoute>
     ),
   },
-  
 ];
