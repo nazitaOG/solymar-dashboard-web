@@ -5,7 +5,6 @@ import { PassengersTable } from "@/components/passengers/passengers-table";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { mockReservations } from "@/lib/mock-data";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { usePassengersStore } from "@/stores/usePassengerStore";
@@ -96,13 +95,7 @@ export default function PasajerosPage() {
     removePassenger(id);
   };
 
-  const linkedReservations = selectedPassenger
-    ? mockReservations
-      .filter((r) =>
-        r.paxReservations.some((pr: { pax: Pax }) => pr.pax.id === selectedPassenger.id)
-      )
-      .map((r) => ({ id: r.id, state: r.state }))
-    : [];
+
 
   return (
     <DashboardLayout>
@@ -161,7 +154,6 @@ export default function PasajerosPage() {
           }}
           passenger={selectedPassenger}
           mode={dialogMode}
-          linkedReservations={linkedReservations}
           onSave={handleSave}
           onDelete={handleDelete}
         />

@@ -44,7 +44,6 @@ interface PassengerDialogProps {
   onOpenChange: (open: boolean) => void;
   passenger?: Pax;
   mode: "create" | "edit" | "view";
-  linkedReservations?: Array<{ id: string; state: string }>;
   onSave?: (passenger: Pax) => void;
   onDelete?: (id: string) => void;
 }
