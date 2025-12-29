@@ -256,7 +256,7 @@ export default function AdminLogin() {
 
                 <div className="flex items-center gap-2 text-sm">
                   <Checkbox
-                    className="rounded-sm border-none bg-white/5 cursor-pointer"
+                    className="rounded-sm border-none bg-white/20 cursor-pointer"
                     checked={rememberMe}
                     onCheckedChange={(v) => setRememberMe(!!v)}
                   />
