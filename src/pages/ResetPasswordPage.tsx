@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label"
 import { Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2 } from "lucide-react"
 import { fetchAPI } from "@/lib/api/fetchApi"
 import { resetPasswordSchema } from "@/lib/schemas/login/login.schema"
+// 👇 1. IMPORTAR EL COMPONENTE HEAD
+import { Head } from "@/components/seo/Head"
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
@@ -92,118 +94,129 @@ export default function ResetPasswordPage() {
   // --- RENDERIZADO DE ESTADOS (Loading, Error, Success) ---
   if (isVerifying) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
-          <Loader2 className="w-10 h-10 animate-spin text-white/80" />
-          <p className="text-sm text-white/60 font-medium">Verificando enlace...</p>
+      <>
+        <Head title="Verificando enlace..." />
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
+          <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+            <Loader2 className="w-10 h-10 animate-spin text-white/80" />
+            <p className="text-sm text-white/60 font-medium">Verificando enlace...</p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   if (!isTokenValid) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
-        <div className="w-full max-w-md bg-[#17151f] border border-red-500/20 p-8 rounded-md text-center shadow-2xl animate-in zoom-in-95">
-          <div className="flex justify-center mb-6">
-            <div className="bg-red-500/10 p-4 rounded-full">
-              <AlertTriangle className="w-12 h-12 text-red-400" />
+      <>
+        <Head title="Enlace Expirado" description="El enlace de recuperación ya no es válido." />
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
+          <div className="w-full max-w-md bg-[#17151f] border border-red-500/20 p-8 rounded-md text-center shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-center mb-6">
+              <div className="bg-red-500/10 p-4 rounded-full">
+                <AlertTriangle className="w-12 h-12 text-red-400" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Enlace no válido</h2>
+            <p className="text-white/70 mb-6 text-sm">
+              Este enlace de recuperación ha expirado, ya fue utilizado o no existe.
+            </p>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/login")}
+                className="w-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+              >
+                Volver al inicio
+              </Button>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Enlace no válido</h2>
-          <p className="text-white/70 mb-6 text-sm">
-            Este enlace de recuperación ha expirado, ya fue utilizado o no existe.
-          </p>
-          <div className="space-y-3">
-            <Button
-              onClick={() => navigate("/login")}
-              className="w-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
-            >
-              Volver al inicio
-            </Button>
-          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   if (success) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
-        <div className="w-full max-w-md bg-[#17151f] border border-green-500/20 p-8 rounded-md text-center shadow-2xl animate-in zoom-in-95">
-          <div className="flex justify-center mb-6">
-            <div className="bg-green-500/10 p-4 rounded-full">
-              <CheckCircle className="w-12 h-12 text-green-400" />
+      <>
+        <Head title="Contraseña Restablecida" />
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
+          <div className="w-full max-w-md bg-[#17151f] border border-green-500/20 p-8 rounded-md text-center shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-center mb-6">
+              <div className="bg-green-500/10 p-4 rounded-full">
+                <CheckCircle className="w-12 h-12 text-green-400" />
+              </div>
             </div>
+            <h2 className="text-2xl font-bold text-white mb-2">¡Contraseña restablecida!</h2>
+            <p className="text-white/70 mb-4 text-sm">Serás redirigido al login en unos segundos...</p>
+            <Button onClick={() => navigate("/login")} className="w-full bg-white/10 hover:bg-white/20 text-white cursor-pointer">
+              Ir al Login ahora
+            </Button>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">¡Contraseña restablecida!</h2>
-          <p className="text-white/70 mb-4 text-sm">Serás redirigido al login en unos segundos...</p>
-          <Button onClick={() => navigate("/login")} className="w-full bg-white/10 hover:bg-white/20 text-white cursor-pointer">
-            Ir al Login ahora
-          </Button>
         </div>
-      </div>
+      </>
     )
   }
 
   // --- RENDERIZADO DEL FORMULARIO PRINCIPAL ---
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
-      <div className="w-full max-w-md bg-[#17151f] text-white rounded-md shadow-xl border border-white/5 p-8 sm:p-10 animate-in fade-in duration-500">
-        <h1 className="text-2xl font-semibold mb-2">Nueva Contraseña</h1>
-        <p className="text-sm text-white/70 mb-6">Ingresa tu nueva clave segura.</p>
+    <>
+      <Head 
+        title="Nueva Contraseña" 
+        description="Ingresa tu nueva contraseña para acceder a Solymar Viajes." 
+      />
+      
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#17151f]/96 px-4">
+        <div className="w-full max-w-md bg-[#17151f] text-white rounded-md shadow-xl border border-white/5 p-8 sm:p-10 animate-in fade-in duration-500">
+          <h1 className="text-2xl font-semibold mb-2">Nueva Contraseña</h1>
+          <p className="text-sm text-white/70 mb-6">Ingresa tu nueva clave segura.</p>
 
-        <form onSubmit={handleReset} className="space-y-5">
-          {/* ✅ USO DEL COMPONENTE DRY 
-              Cada uno maneja su propia visibilidad internamente.
-          */}
-          <PasswordInput
-            id="new-password"
-            label="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isPending}
-            placeholder="••••••••"
-          />
+          <form onSubmit={handleReset} className="space-y-5">
+            <PasswordInput
+              id="new-password"
+              label="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isPending}
+              placeholder="••••••••"
+            />
 
-          <PasswordInput
-            id="confirm-password"
-            label="Confirmar contraseña"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={isPending}
-            placeholder="••••••••"
-          />
+            <PasswordInput
+              id="confirm-password"
+              label="Confirmar contraseña"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isPending}
+              placeholder="••••••••"
+            />
 
-          {error && (
-            <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded animate-in fade-in">{error}</p>
-          )}
+            {error && (
+              <p className="text-red-400 text-sm bg-red-500/10 p-2 rounded animate-in fade-in">{error}</p>
+            )}
 
-          <Button
-            type="submit"
-            disabled={isPending}
-            className={`cursor-pointer w-full bg-white/10 hover:bg-white/20 text-white ${isPending ? "opacity-70" : ""}`}
-          >
-            {isPending ? "Restableciendo..." : "Cambiar contraseña"}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              disabled={isPending}
+              className={`cursor-pointer w-full bg-white/10 hover:bg-white/20 text-white ${isPending ? "opacity-70" : ""}`}
+            >
+              {isPending ? "Restableciendo..." : "Cambiar contraseña"}
+            </Button>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
 // ----------------------------------------------------------------------
 // 🧩 COMPONENTE REUTILIZABLE (DRY)
 // ----------------------------------------------------------------------
-// Este componente encapsula la lógica de visibilidad (show/hide).
-// Puedes moverlo a /components/ui/password-input.tsx si prefieres.
 
 interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string
 }
 
 function PasswordInput({ label, id, disabled, ...props }: PasswordInputProps) {
-  const [isVisible, setIsVisible] = useState(false) // Estado interno independiente
+  const [isVisible, setIsVisible] = useState(false)
 
   return (
     <div>
@@ -218,13 +231,13 @@ function PasswordInput({ label, id, disabled, ...props }: PasswordInputProps) {
           type={isVisible ? "text" : "password"}
           className="pl-9 pr-10 rounded-md border-none bg-white/5 h-10"
           disabled={disabled}
-          autoComplete="new-password" // Mantiene tu fix de autocompletado
+          autoComplete="new-password"
         />
         <button
           type="button"
           onClick={() => setIsVisible(!isVisible)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white cursor-pointer p-1"
-          tabIndex={-1} // Evita que el tab se detenga en el ojito, mejora UX
+          tabIndex={-1}
         >
           {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>

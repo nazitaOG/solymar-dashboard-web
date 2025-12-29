@@ -39,6 +39,7 @@ import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Currency, CurrencyTotal } from "@/lib/interfaces/currency/currency.interface";
+import { Head } from "@/components/seo/Head";
 
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
@@ -121,10 +122,10 @@ export default function ReservationDetailPage() {
         method: "PATCH",
         body: JSON.stringify({ notes: newNotes }),
       });
-      
+
       // Actualizamos estado local inmediatamente
       setReservation((prev) => ({ ...prev, notes: newNotes }));
-      
+
       updateReservationMetadata();
     } catch (error) {
       console.error("❌ Error saving notes:", error);
@@ -370,10 +371,10 @@ export default function ReservationDetailPage() {
         });
 
         // 👇 Aseguramos que las notas vengan de la respuesta fresca de la API
-        setReservation({ 
-            ...normalized, 
-            carRentals, 
-            notes: baseReservation.notes ?? "" // Asegura que usamos la nota fresca
+        setReservation({
+          ...normalized,
+          carRentals,
+          notes: baseReservation.notes ?? "" // Asegura que usamos la nota fresca
         });
 
       } catch (err) {
@@ -428,8 +429,8 @@ export default function ReservationDetailPage() {
           currencyCode === "USD"
             ? Currency.USD
             : currencyCode === "ARS"
-            ? Currency.ARS
-            : (currencyCode as Currency),
+              ? Currency.ARS
+              : (currencyCode as Currency),
         totalPrice: totals.totalPrice,
         amountPaid: totals.amountPaid,
         createdAt: reservation.createdAt,
@@ -441,9 +442,9 @@ export default function ReservationDetailPage() {
     setReservation((prev) =>
       prev
         ? {
-            ...prev,
-            currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
-          }
+          ...prev,
+          currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
+        }
         : prev,
     );
   }, [
@@ -1158,338 +1159,345 @@ export default function ReservationDetailPage() {
 
   // ---------------- Render ----------------
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/reservas")}
-          className="gap-2 text-xs md:text-sm"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver a reservas
-        </Button>
+    <>
+      <Head 
+        title={`Reserva #${reservation.code} - ${reservation.name || 'Sin nombre'}`} 
+        description={`Gestión de reserva #${reservation.code}. Estado: ${reservation.state}.`} 
+      />
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/reservas")}
+            className="gap-2 text-xs md:text-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver a reservas
+          </Button>
 
-        <div className="flex flex-col gap-8">
-          {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
-          <div className="space-y-6 ">
-            <ReservationDetailHeader
-              reservation={reservation}
-              onStateChange={handleStateChange}
-              onPassengersChange={handlePassengersChange}
-              paymentItems={financialItems}
-              onNameChange={handleNameChange}
-            />
+          <div className="flex flex-col gap-8">
+            {/* --- BLOQUE SUPERIOR: Header y Tabs --- */}
+            <div className="space-y-6 ">
+              <ReservationDetailHeader
+                reservation={reservation}
+                onStateChange={handleStateChange}
+                onPassengersChange={handlePassengersChange}
+                paymentItems={financialItems}
+                onNameChange={handleNameChange}
+              />
 
-            <Tabs defaultValue="hotels" className="w-full">
-              <div className="grid grid-cols-1 w-full">
-                {/* AQUÍ: sin max-w */}
-                <div className="overflow-x-auto pb-2 w-full">
-                  <TabsList className="flex  w-full min-w-max items-stretch gap-1 md:gap-2">
-                    <TabsTrigger
-                      value="hotels"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Hotel className="h-4 w-4 shrink-0" /> Hoteles
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="planes"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Plane className="h-4 w-4 shrink-0" /> Vuelos
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="cruises"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Ship className="h-4 w-4 shrink-0" /> Cruceros
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="transfers"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Car className="h-4 w-4 shrink-0" /> Traslados
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="carRentals"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <CarFront className="h-4 w-4 shrink-0" /> Autos
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="excursions"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Compass className="h-4 w-4 shrink-0" /> Excursiones
-                    </TabsTrigger>
-
-                    <TabsTrigger
-                      value="medical"
-                      className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Heart className="h-4 w-4 shrink-0" /> Asistencias
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-              </div>
-
-              {/* HOTELS */}
-              <TabsContent value="hotels" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateHotel}>
-                    Crear Hotel
-                  </Button>
-                </div>
+              <Tabs defaultValue="hotels" className="w-full">
                 <div className="grid grid-cols-1 w-full">
                   {/* AQUÍ: sin max-w */}
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.hotels as unknown as Record<string, unknown>[]}
-                        columns={hotelColumns}
-                        onEdit={handleEditHotel}
-                        onDelete={handleDeleteHotelServer}
-                        emptyMessage="No hay hoteles agregados aún"
-                      />
-                    </div>
+                  <div className="overflow-x-auto pb-2 w-full">
+                    <TabsList className="flex  w-full min-w-max items-stretch gap-1 md:gap-2">
+                      <TabsTrigger
+                        value="hotels"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Hotel className="h-4 w-4 shrink-0" /> Hoteles
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="planes"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Plane className="h-4 w-4 shrink-0" /> Vuelos
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="cruises"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Ship className="h-4 w-4 shrink-0" /> Cruceros
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="transfers"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Car className="h-4 w-4 shrink-0" /> Traslados
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="carRentals"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <CarFront className="h-4 w-4 shrink-0" /> Autos
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="excursions"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Compass className="h-4 w-4 shrink-0" /> Excursiones
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="medical"
+                        className="flex cursor-pointer items-center gap-1 md:gap-2 px-2 md:px-3 py-1 text-xs md:text-sm shrink-0 whitespace-nowrap"
+                      >
+                        <Heart className="h-4 w-4 shrink-0" /> Asistencias
+                      </TabsTrigger>
+                    </TabsList>
                   </div>
                 </div>
-              </TabsContent>
 
-              {/* PLANES */}
-              <TabsContent value="planes" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreatePlane}>
-                    Crear Vuelo
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.planes as unknown as Record<string, unknown>[]}
-                        columns={planeColumns}
-                        onEdit={handleEditPlane}
-                        onDelete={handleDeletePlaneServer}
-                        emptyMessage="No hay vuelos agregados aún"
-                      />
+                {/* HOTELS */}
+                <TabsContent value="hotels" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateHotel}>
+                      Crear Hotel
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    {/* AQUÍ: sin max-w */}
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.hotels as unknown as Record<string, unknown>[]}
+                          columns={hotelColumns}
+                          onEdit={handleEditHotel}
+                          onDelete={handleDeleteHotelServer}
+                          emptyMessage="No hay hoteles agregados aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* CRUISES */}
-              <TabsContent value="cruises" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCruise}>
-                    Crear Crucero
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.cruises as unknown as Record<string, unknown>[]}
-                        columns={cruiseColumns}
-                        onEdit={handleEditCruise}
-                        onDelete={handleDeleteCruiseServer}
-                        emptyMessage="No hay cruceros agregados aún"
-                      />
+                {/* PLANES */}
+                <TabsContent value="planes" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreatePlane}>
+                      Crear Vuelo
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.planes as unknown as Record<string, unknown>[]}
+                          columns={planeColumns}
+                          onEdit={handleEditPlane}
+                          onDelete={handleDeletePlaneServer}
+                          emptyMessage="No hay vuelos agregados aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* TRANSFERS */}
-              <TabsContent value="transfers" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateTransfer}>
-                    Crear Traslado
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.transfers as unknown as Record<string, unknown>[]}
-                        columns={transferColumns}
-                        onEdit={handleEditTransfer}
-                        onDelete={handleDeleteTransferServer}
-                        emptyMessage="No hay traslados agregados aún"
-                      />
+                {/* CRUISES */}
+                <TabsContent value="cruises" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCruise}>
+                      Crear Crucero
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.cruises as unknown as Record<string, unknown>[]}
+                          columns={cruiseColumns}
+                          onEdit={handleEditCruise}
+                          onDelete={handleDeleteCruiseServer}
+                          emptyMessage="No hay cruceros agregados aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* CAR RENTALS */}
-              <TabsContent value="carRentals" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCarRental}>
-                    Crear Auto
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
-                        columns={carRentalColumns}
-                        onEdit={handleEditCarRental}
-                        onDelete={handleDeleteCarRentalServer}
-                        emptyMessage="No hay alquileres de autos agregados aún"
-                      />
+                {/* TRANSFERS */}
+                <TabsContent value="transfers" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateTransfer}>
+                      Crear Traslado
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.transfers as unknown as Record<string, unknown>[]}
+                          columns={transferColumns}
+                          onEdit={handleEditTransfer}
+                          onDelete={handleDeleteTransferServer}
+                          emptyMessage="No hay traslados agregados aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* EXCURSIONS */}
-              <TabsContent value="excursions" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateExcursion}>
-                    Crear Excursión
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.excursions as unknown as Record<string, unknown>[]}
-                        columns={excursionColumns}
-                        onEdit={handleEditExcursion}
-                        onDelete={handleDeleteExcursionServer}
-                        emptyMessage="No hay excursiones agregadas aún"
-                      />
+                {/* CAR RENTALS */}
+                <TabsContent value="carRentals" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCarRental}>
+                      Crear Auto
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
+                          columns={carRentalColumns}
+                          onEdit={handleEditCarRental}
+                          onDelete={handleDeleteCarRentalServer}
+                          emptyMessage="No hay alquileres de autos agregados aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              {/* MEDICAL */}
-              <TabsContent value="medical" className="space-y-4">
-                <div className="flex mt-2 justify-start">
-                  <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateMedicalAssist}>
-                    Crear Asistencia
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 w-full">
-                  <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
-                    <div className="min-w-[600px] md:min-w-[1000px]">
-                      <EntityTable
-                        data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
-                        columns={medicalAssistColumns}
-                        onEdit={handleEditMedicalAssist}
-                        onDelete={handleDeleteMedicalAssistServer}
-                        emptyMessage="No hay asistencias agregadas aún"
-                      />
+                {/* EXCURSIONS */}
+                <TabsContent value="excursions" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateExcursion}>
+                      Crear Excursión
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.excursions as unknown as Record<string, unknown>[]}
+                          columns={excursionColumns}
+                          onEdit={handleEditExcursion}
+                          onDelete={handleDeleteExcursionServer}
+                          emptyMessage="No hay excursiones agregadas aún"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+                </TabsContent>
 
-          <ReservationNotes 
-            notes={reservation.notes} 
-            onSave={handleSaveNotes}
-            disabled={loading}
-          />
+                {/* MEDICAL */}
+                <TabsContent value="medical" className="space-y-4">
+                  <div className="flex mt-2 justify-start">
+                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateMedicalAssist}>
+                      Crear Asistencia
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 w-full">
+                    <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
+                      <div className="min-w-[600px] md:min-w-[1000px]">
+                        <EntityTable
+                          data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
+                          columns={medicalAssistColumns}
+                          onEdit={handleEditMedicalAssist}
+                          onDelete={handleDeleteMedicalAssistServer}
+                          emptyMessage="No hay asistencias agregadas aún"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
 
-          {/* --- BLOQUE INFERIOR: Audit Panel --- */}
-          <div className="w-full mt-4 border-t pt-8">
-            <h3 className="mb-4 text-lg font-semibold">Historial de Cambios</h3>
-            <AuditPanel reservation={reservation} />
+            <ReservationNotes
+              notes={reservation.notes}
+              onSave={handleSaveNotes}
+              disabled={loading}
+            />
+
+            {/* --- BLOQUE INFERIOR: Audit Panel --- */}
+            <div className="w-full mt-4 border-t pt-8">
+              <h3 className="mb-4 text-lg font-semibold">Historial de Cambios</h3>
+              <AuditPanel reservation={reservation} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {hotelDialogOpen && (
-        <HotelDialog
-          key="hotel-dialog"
-          open={hotelDialogOpen}
-          onOpenChange={setHotelDialogOpen}
-          hotel={selectedHotel}
-          reservationId={id}
-          onSave={handleSaveHotel}
-          onDelete={handleDeleteHotelLocal}
-        />
-      )}
-      {planeDialogOpen && (
-        <PlaneDialog
-          key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : "new-plane"}
-          open={planeDialogOpen}
-          onOpenChange={setPlaneDialogOpen}
-          plane={selectedPlane}
-          reservationId={id}
-          onSave={handleSavePlane}
-          onDelete={handleDeletePlaneLocal}
-        />
-      )}
+        {hotelDialogOpen && (
+          <HotelDialog
+            key="hotel-dialog"
+            open={hotelDialogOpen}
+            onOpenChange={setHotelDialogOpen}
+            hotel={selectedHotel}
+            reservationId={id}
+            onSave={handleSaveHotel}
+            onDelete={handleDeleteHotelLocal}
+          />
+        )}
+        {planeDialogOpen && (
+          <PlaneDialog
+            key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : "new-plane"}
+            open={planeDialogOpen}
+            onOpenChange={setPlaneDialogOpen}
+            plane={selectedPlane}
+            reservationId={id}
+            onSave={handleSavePlane}
+            onDelete={handleDeletePlaneLocal}
+          />
+        )}
 
-      {cruiseDialogOpen && (
-        <CruiseDialog
-          key="cruise-dialog"
-          open={cruiseDialogOpen}
-          onOpenChange={setCruiseDialogOpen}
-          cruise={selectedCruise}
-          reservationId={id}
-          onSave={handleSaveCruise}
-          onDelete={handleDeleteCruiseLocal}
-        />
-      )}
+        {cruiseDialogOpen && (
+          <CruiseDialog
+            key="cruise-dialog"
+            open={cruiseDialogOpen}
+            onOpenChange={setCruiseDialogOpen}
+            cruise={selectedCruise}
+            reservationId={id}
+            onSave={handleSaveCruise}
+            onDelete={handleDeleteCruiseLocal}
+          />
+        )}
 
-      {transferDialogOpen && (
-        <TransferDialog
-          key="transfer-dialog"
-          open={transferDialogOpen}
-          onOpenChange={setTransferDialogOpen}
-          transfer={selectedTransfer}
-          reservationId={id}
-          onSave={handleSaveTransfer}
-          onDelete={handleDeleteTransferLocal}
-        />
-      )}
+        {transferDialogOpen && (
+          <TransferDialog
+            key="transfer-dialog"
+            open={transferDialogOpen}
+            onOpenChange={setTransferDialogOpen}
+            transfer={selectedTransfer}
+            reservationId={id}
+            onSave={handleSaveTransfer}
+            onDelete={handleDeleteTransferLocal}
+          />
+        )}
 
-      {carRentalDialogOpen && (
-        <CarRentalDialog
-          key="car-rental-dialog"
-          open={carRentalDialogOpen}
-          onOpenChange={setCarRentalDialogOpen}
-          carRental={selectedCarRental}
-          reservationId={id}
-          onSave={handleSaveCarRental}
-          onDelete={handleDeleteCarRentalLocal}
-        />
-      )}
+        {carRentalDialogOpen && (
+          <CarRentalDialog
+            key="car-rental-dialog"
+            open={carRentalDialogOpen}
+            onOpenChange={setCarRentalDialogOpen}
+            carRental={selectedCarRental}
+            reservationId={id}
+            onSave={handleSaveCarRental}
+            onDelete={handleDeleteCarRentalLocal}
+          />
+        )}
 
-      {excursionDialogOpen && (
-        <ExcursionDialog
-          key="excursion-dialog"
-          open={excursionDialogOpen}
-          onOpenChange={setExcursionDialogOpen}
-          excursion={selectedExcursion}
-          reservationId={id}
-          onSave={handleSaveExcursion}
-          onDelete={handleDeleteExcursionLocal}
-        />
-      )}
+        {excursionDialogOpen && (
+          <ExcursionDialog
+            key="excursion-dialog"
+            open={excursionDialogOpen}
+            onOpenChange={setExcursionDialogOpen}
+            excursion={selectedExcursion}
+            reservationId={id}
+            onSave={handleSaveExcursion}
+            onDelete={handleDeleteExcursionLocal}
+          />
+        )}
 
-      {medicalAssistDialogOpen && (
-        <MedicalAssistDialog
-          key="medical-assist-dialog"
-          open={medicalAssistDialogOpen}
-          onOpenChange={setMedicalAssistDialogOpen}
-          assist={selectedMedicalAssist}
-          reservationId={id}
-          onSave={handleSaveMedicalAssist}
-          onDelete={handleDeleteMedicalAssistLocal}
-        />
-      )}
-    </DashboardLayout>
+        {medicalAssistDialogOpen && (
+          <MedicalAssistDialog
+            key="medical-assist-dialog"
+            open={medicalAssistDialogOpen}
+            onOpenChange={setMedicalAssistDialogOpen}
+            assist={selectedMedicalAssist}
+            reservationId={id}
+            onSave={handleSaveMedicalAssist}
+            onDelete={handleDeleteMedicalAssistLocal}
+          />
+        )}
+      </DashboardLayout>
+    </>
+
   );
 }

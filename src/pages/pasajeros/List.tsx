@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { usePassengersStore } from "@/stores/usePassengerStore";
+import { Head } from "@/components/seo/Head";
 
 export default function PasajerosPage() {
   const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>([]);
@@ -98,66 +99,73 @@ export default function PasajerosPage() {
 
 
   return (
-    <DashboardLayout>
-      <Suspense fallback={<FullPageLoader />}>
-        <div className="space-y-6">
-          {/* Header Responsivo */}
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              {/* Título: 2xl en móvil, 3xl en desktop */}
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Pasajeros</h1>
+    <>
+      <Head
+        title="Pasajeros"
+        description="Administra la información de todos los pasajeros."
+      />
+      <DashboardLayout>
+        <Suspense fallback={<FullPageLoader />}>
+          <div className="space-y-6">
+            {/* Header Responsivo */}
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                {/* Título: 2xl en móvil, 3xl en desktop */}
+                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Pasajeros</h1>
 
-              {/* Subtítulo: xs en móvil, sm en desktop */}
-              <p className="text-xs text-muted-foreground md:text-sm">
-                Administra la información de todos los pasajeros
-              </p>
+                {/* Subtítulo: xs en móvil, sm en desktop */}
+                <p className="text-xs text-muted-foreground md:text-sm">
+                  Administra la información de todos los pasajeros
+                </p>
+              </div>
+
+              <Button
+                onClick={() => {
+                  setSelectedPassenger(undefined);
+                  setDialogMode("create");
+                  setDialogOpen(true);
+                }}
+                // Botón: h-8/text-xs en móvil | h-10/text-sm en desktop
+                className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+                disabled={isPending}
+              >
+                {/* Icono ajustado */}
+                <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                {isPending ? "Cargando..." : "Crear Pasajero"}
+              </Button>
             </div>
 
-            <Button
-              onClick={() => {
-                setSelectedPassenger(undefined);
-                setDialogMode("create");
-                setDialogOpen(true);
-              }}
-              // Botón: h-8/text-xs en móvil | h-10/text-sm en desktop
-              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
-              disabled={isPending}
-            >
-              {/* Icono ajustado */}
-              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              {isPending ? "Cargando..." : "Crear Pasajero"}
-            </Button>
+            {/* Filtros */}
+            <PassengerFilters onFilterChange={handleFilterChange} />
+
+            {/* Tabla */}
+            <PassengersTable
+              passengers={filteredPassengers}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           </div>
 
-          {/* Filtros */}
-          <PassengerFilters onFilterChange={handleFilterChange} />
-
-          {/* Tabla */}
-          <PassengersTable
-            passengers={filteredPassengers}
-            onView={handleView}
-            onEdit={handleEdit}
+          {/* Diálogo */}
+          <PassengerDialog
+            key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`}
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedPassenger(undefined);
+                setDialogMode("create");
+              }
+              setDialogOpen(open);
+            }}
+            passenger={selectedPassenger}
+            mode={dialogMode}
+            onSave={handleSave}
             onDelete={handleDelete}
           />
-        </div>
+        </Suspense>
+      </DashboardLayout>
+    </>
 
-        {/* Diálogo */}
-        <PassengerDialog
-          key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`}
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              setSelectedPassenger(undefined);
-              setDialogMode("create");
-            }
-            setDialogOpen(open);
-          }}
-          passenger={selectedPassenger}
-          mode={dialogMode}
-          onSave={handleSave}
-          onDelete={handleDelete}
-        />
-      </Suspense>
-    </DashboardLayout>
   );
 }

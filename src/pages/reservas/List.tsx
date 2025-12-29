@@ -20,19 +20,20 @@ import type {
 } from "@/lib/interfaces/reservation/reservation.interface";
 
 import { usePassengersStore } from "@/stores/usePassengerStore";
+import { Head } from "@/components/seo/Head";
 
 export default function ReservasPage() {
   const navigate = useNavigate();
-  
+
   const { passengers, setPassengers, addPassenger, fetched, setFetched } = usePassengersStore();
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
-  
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  
+
   const [isPending, startTransition] = useTransition();
 
   // 🧭 Fetch inicial
@@ -177,58 +178,66 @@ export default function ReservasPage() {
   };
 
   return (
-    <DashboardLayout>
-      <Suspense fallback={<FullPageLoader />}>
-        {/* CORRECCIÓN: Eliminado w-[100vw] y pr-6. Ahora es idéntico a PasajerosPage */}
-        <div className="space-y-6 w-full">
-          
-          {/* Header Responsivo */}
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
-              <p className="text-xs text-muted-foreground md:text-sm">
-                Administra todas las reservas de viajes
-              </p>
+    <>
+      <Head
+        title="Reservas"
+        description="Listado y gestión de todas las reservas de viajes."
+      />
+      <DashboardLayout>
+        <Suspense fallback={<FullPageLoader />}>
+          {/* CORRECCIÓN: Eliminado w-[100vw] y pr-6. Ahora es idéntico a PasajerosPage */}
+          <div className="space-y-6 w-full">
+
+            {/* Header Responsivo */}
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
+                <p className="text-xs text-muted-foreground md:text-sm">
+                  Administra todas las reservas de viajes
+                </p>
+              </div>
+
+              <Button
+                onClick={() => {
+                  setDialogMode("create");
+                  setDialogOpen(true);
+                }}
+                // Clases idénticas a PasajerosPage
+                className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+                disabled={isPending}
+              >
+                <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                {isPending ? "Cargando..." : "Crear Reserva"}
+              </Button>
             </div>
 
-            <Button
-              onClick={() => {
-                setDialogMode("create");
-                setDialogOpen(true);
-              }}
-              // Clases idénticas a PasajerosPage
-              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
-              disabled={isPending}
-            >
-              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              {isPending ? "Cargando..." : "Crear Reserva"}
-            </Button>
+            {/* Filtros */}
+            <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
+
+            {/* Tabla */}
+            <ReservationsTable
+              reservations={filteredReservations}
+              onDelete={handleDeleteReservation}
+              onEdit={handleEditReservation}
+            />
           </div>
 
-          {/* Filtros */}
-          <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
-
-          {/* Tabla */}
-          <ReservationsTable
-            reservations={filteredReservations}
-            onDelete={handleDeleteReservation}
-            onEdit={handleEditReservation}
+          {/* Diálogos y Outlet */}
+          <ReservationDialog
+            open={dialogOpen}
+            mode={dialogMode}
+            onOpenChange={setDialogOpen}
+            availablePassengers={passengers}
+            reservation={selectedReservation}
+            onConfirm={handleConfirmDialog}
+            onPassengerCreated={(newPax) => addPassenger(newPax)}
           />
-        </div>
 
-        {/* Diálogos y Outlet */}
-        <ReservationDialog
-          open={dialogOpen}
-          mode={dialogMode}
-          onOpenChange={setDialogOpen}
-          availablePassengers={passengers}
-          reservation={selectedReservation}
-          onConfirm={handleConfirmDialog}
-          onPassengerCreated={(newPax) => addPassenger(newPax)}
-        />
+          <Outlet />
+        </Suspense>
+      </DashboardLayout>
 
-        <Outlet />
-      </Suspense>
-    </DashboardLayout>
+    </>
+
   );
 }
