@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Globe, Mail, Lock, Eye, EyeOff, ArrowLeft, UserCheck } from "lucide-react" // Agregué ArrowLeft
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, UserCheck } from "lucide-react" // Agregué ArrowLeft
 import { useAuthStore } from "@/stores/useAuthStore"
 import { fetchAPI } from "@/lib/api/fetchApi"
 import { loginSchema, forgotPasswordSchema } from "@/lib/schemas/login/login.schema"
@@ -163,8 +163,7 @@ export default function AdminLogin() {
           {/* Slideshow (Igual que antes) */}
           <div className="relative w-full h-48 sm:h-64 md:h-full md:m-3 md:rounded-md overflow-hidden">
             <div className="absolute top-3 left-3 flex items-center gap-2 text-white/90 z-10">
-              <Globe className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-              <span className="font-semibold">Sol y Mar Viajes y Turismo</span>
+              <img src="/logo.png" alt="Sol y Mar Viajes y Turismo" className="w-44 h-10" />
             </div>
 
             <div className="absolute inset-0">

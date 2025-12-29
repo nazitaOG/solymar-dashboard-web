@@ -1,5 +1,5 @@
 import { useState, useTransition, useEffect, Suspense } from "react";
-import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PassengerFilters } from "@/components/passengers/passenger-filters";
 import { PassengersTable } from "@/components/passengers/passengers-table";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";

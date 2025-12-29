@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition, Suspense } from "react";
 import { useNavigate, Outlet } from "react-router";
 
-import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationFilters } from "@/components/reservations/reservation-filters";
 import { ReservationsTable } from "@/components/reservations/reservations-table";
 import { ReservationDialog } from "@/components/reservations/reservation-dialog";

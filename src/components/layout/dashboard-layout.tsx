@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "@/components/entities/layout/sidebar";
+import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react"; // Importamos X
 

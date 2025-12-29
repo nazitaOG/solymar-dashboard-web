@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";
-import { useTheme } from "../../theme-context";
+import { useTheme } from "@/components/theme-context";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 type NavItem = {
@@ -81,9 +81,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex h-full flex-col">
           {/* Header del Sidebar */}
           {/* Eliminamos el botón de cerrar interno para usar el del Layout */}
-          <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-            <Plane className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold">Solymar Travel</span>
+          <div className="flex  h-20 items-center gap-2 border-b border-border px-5">
+            <img src="/logo.png" alt="Sol y Mar Viajes y Turismo" className="w-full h-12" />
           </div>
 
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">

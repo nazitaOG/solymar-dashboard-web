@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { DashboardLayout } from "@/components/entities/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
 import { AuditPanel } from "@/components/reservations/audit-panel";
 import { EntityTable, type Column } from "@/components/entities/table/entity-table";
