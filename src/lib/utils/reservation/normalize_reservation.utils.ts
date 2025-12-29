@@ -28,7 +28,7 @@ export function normalizeReservation(
     updatedAt: safeDate(partial?.updatedAt),
     createdBy: partial?.createdBy ?? "",
     updatedBy: partial?.updatedBy ?? "",
-
+    notes: partial?.notes ?? "",
     paxReservations: keepArray(partial?.paxReservations),
     currencyTotals: keepArray(partial?.currencyTotals),
     hotels: keepArray(partial?.hotels),

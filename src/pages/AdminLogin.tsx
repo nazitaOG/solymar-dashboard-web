@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Globe, Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react" // Agregué ArrowLeft
+import { Globe, Mail, Lock, Eye, EyeOff, ArrowLeft, UserCheck } from "lucide-react" // Agregué ArrowLeft
 import { useAuthStore } from "@/stores/useAuthStore"
 import { fetchAPI } from "@/lib/api/fetchApi"
 import { loginSchema, forgotPasswordSchema } from "@/lib/schemas/login/login.schema"
@@ -47,13 +47,15 @@ export default function AdminLogin() {
   const navigate = useNavigate()
   const [isPending, startTransition] = useTransition()
 
+  const isDemoMode = import.meta.env.VITE_APP_MODE === 'demo'
+  const demoEmail = import.meta.env.VITE_DEMO_EMAIL || 'demo@solymar.com'
+  const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || 'Demo123!'
+
   // --- HANDLERS ---
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const performLogin = (loginEmail: string, loginPass: string) => {
     setError(null)
-
-    const parsed = loginSchema.safeParse({ email, password })
+    const parsed = loginSchema.safeParse({ email: loginEmail, password: loginPass })
     if (!parsed.success) {
       setError(parsed.error.issues[0].message)
       return
@@ -63,12 +65,12 @@ export default function AdminLogin() {
       try {
         const res = await fetchAPI<LoginResponse>("/auth/login", {
           method: "POST",
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: loginEmail, password: loginPass }),
         })
 
         setToken(res.token)
 
-        if (rememberMe) localStorage.setItem("rememberEmail", email)
+        if (rememberMe) localStorage.setItem("rememberEmail", loginEmail)
         else localStorage.removeItem("rememberEmail")
 
         navigate("/reservas", { replace: true })
@@ -76,6 +78,21 @@ export default function AdminLogin() {
         setError(err instanceof Error ? err.message : "Error inesperado.")
       }
     })
+  }
+
+  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    performLogin(email, password)
+  }
+
+  // 🆕 HANDLER PARA EL BOTÓN DEMO
+  const handleDemoLogin = () => {
+    // 1. Llenamos los campos visualmente (efecto WOW)
+    setEmail(demoEmail)
+    setPassword(demoPassword)
+    
+    // 2. Ejecutamos el login automáticamente
+    performLogin(demoEmail, demoPassword)
   }
 
   const handleForgotPassword = (e: FormEvent<HTMLFormElement>) => {
@@ -107,6 +124,7 @@ export default function AdminLogin() {
       }
     })
   }
+  
 
   // --- EFFECTS ---
 
@@ -171,6 +189,7 @@ export default function AdminLogin() {
           
           {/* VISTA 1: LOGIN */}
           {view === "login" && (
+            <div className="w-full max-w-md mx-auto space-y-6">
             <form onSubmit={handleLogin} className="w-full max-w-md mx-auto space-y-6">
               <div>
                 <h1 className="text-3xl font-semibold mb-1">Inicia sesión</h1>
@@ -255,6 +274,31 @@ export default function AdminLogin() {
                 </Button>
               </div>
             </form>
+            {/* 🆕 SECCIÓN SOLO VISIBLE EN DEMO */}
+            {isDemoMode && (
+                <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-white/10"></div>
+                        <span className="flex-shrink-0 mx-4 text-white/30 text-xs uppercase">Modo Portafolio</span>
+                        <div className="flex-grow border-t border-white/10"></div>
+                    </div>
+                    
+                    <Button
+                        type="button"
+                        onClick={handleDemoLogin}
+                        disabled={isPending}
+                        className="w-full cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/50 transition-all gap-2"
+                    >
+                        <UserCheck className="w-4 h-4" />
+                        {isPending ? "Accediendo..." : "Ingresar como Reclutador (Demo)"}
+                    </Button>
+                    <p className="text-center text-[10px] text-white/30 mt-2">
+                        Acceso con datos de prueba, crea y edita reservas, clientes y más.
+                    </p>
+                </div>
+            )}
+            </div>
+            
           )}
 
           {/* VISTA 2: FORGOT PASSWORD */}
