@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -278,6 +279,11 @@ export function PassengerDialog({
                 ? "Ver Pasajero"
                 : "Editar Pasajero"}
             </DialogTitle>
+            <DialogDescription>
+              {isViewMode 
+                ? "Detalles de la información del pasajero." 
+                : "Ingresa los datos personales y documentos del pasajero."}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
