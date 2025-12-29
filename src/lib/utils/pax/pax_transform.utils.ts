@@ -1,4 +1,4 @@
-import type { Pax } from "@/lib/types";
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import type { CreatePaxRequest } from "@/lib/interfaces/pax/pax-request.interface";
 
 export function paxToRequest(pax: Partial<Pax>): CreatePaxRequest {
