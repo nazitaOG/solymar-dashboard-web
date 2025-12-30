@@ -91,7 +91,7 @@ export function PassengersTable({
   // 👇 Handler para el botón de confirmar borrado
   const confirmDelete = () => {
     if (deleteTarget) {
-      deletePassenger(deleteTarget.id, deleteTarget.name)
+      deletePassenger(deleteTarget.id)
     }
   }
 
