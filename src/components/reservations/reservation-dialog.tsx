@@ -62,6 +62,9 @@ export function ReservationDialog({
   onPassengerCreated,
 }: ReservationDialogProps) {
   const isEdit = mode === "edit"
+  
+  // 🔑 Key para forzar el remonte del PassengerDialog y limpiar su estado interno
+  const [paxDialogKey, setPaxDialogKey] = useState(0)
 
   // Estado del formulario
   const [state, setState] = useState<ReservationState>(ReservationState.PENDING)
@@ -72,14 +75,14 @@ export function ReservationDialog({
 
   // Estado de modales hijos
   const [passengerDialogOpen, setPassengerDialogOpen] = useState(false)
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false) // 👈 Nuevo estado
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
-  // 🔄 Mantiene sincronizada la lista local
+  // 🔄 Mantiene sincronizada la lista local cuando cambian los pasajeros externos
   useEffect(() => {
     setPassengers(availablePassengers)
   }, [availablePassengers])
 
-  // 🧭 Prellenar datos al abrir
+  // 🧭 Cargar/Resetear datos al abrir o cambiar de modo
   useEffect(() => {
     if (open) {
       if (isEdit && reservation) {
@@ -103,25 +106,24 @@ export function ReservationDialog({
     }
   }, [open, isEdit, reservation])
 
-  // 🔎 Dirty Check (Comparar si hubo cambios)
+  // 🔎 Dirty Check (Comparar si hubo cambios respecto al estado inicial)
   const isDirty = useMemo(() => {
-    // 1. Estado Inicial
+    if (!open) return false
+
     const initialData =
       isEdit && reservation
         ? {
-            state: reservation.state,
-            // IDs de pasajeros ordenados para comparar arrays
-            passengerIds: reservation.paxReservations
-              .map((pr) => pr.pax.id)
-              .sort()
-              .join(","),
-          }
+          state: reservation.state,
+          passengerIds: reservation.paxReservations
+            .map((pr) => pr.pax.id)
+            .sort()
+            .join(","),
+        }
         : {
-            state: ReservationState.PENDING,
-            passengerIds: "",
-          }
+          state: ReservationState.PENDING,
+          passengerIds: "",
+        }
 
-    // 2. Estado Actual
     const currentData = {
       state,
       passengerIds: selectedPassengers
@@ -131,7 +133,7 @@ export function ReservationDialog({
     }
 
     return JSON.stringify(initialData) !== JSON.stringify(currentData)
-  }, [state, selectedPassengers, isEdit, reservation])
+  }, [state, selectedPassengers, isEdit, reservation, open])
 
   // Funciones auxiliares
   const removePassenger = (id: string) => {
@@ -155,11 +157,10 @@ export function ReservationDialog({
 
   return (
     <>
-      {/* 🌍 Diálogo principal */}
-      <Dialog 
-        open={open} 
+      <Dialog
+        open={open}
         onOpenChange={(isOpen) => {
-          // Interceptamos cierre
+          // Bloqueo de cierre si hay cambios sin guardar
           if (!isOpen && isDirty) {
             setShowDiscardConfirm(true)
           } else {
@@ -167,10 +168,16 @@ export function ReservationDialog({
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer"
-          // 3. INTERCEPTOR CLICK AFUERA
           onInteractOutside={(e) => {
+            // 🛡️ FIX CRÍTICO: Si el diálogo de pasajeros está abierto, 
+            // ignoramos cualquier interacción fuera de este diálogo padre.
+            if (passengerDialogOpen) {
+              e.preventDefault();
+              return;
+            }
+
             if (isDirty) {
               e.preventDefault()
               setShowDiscardConfirm(true)
@@ -184,7 +191,7 @@ export function ReservationDialog({
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Estado */}
+            {/* Selector de Estado */}
             <div className="space-y-2">
               <Label className="text-[11px] md:text-xs">Estado</Label>
               <Select
@@ -202,7 +209,7 @@ export function ReservationDialog({
               </Select>
             </div>
 
-            {/* Pasajeros vinculados */}
+            {/* Listado de Pasajeros vinculados */}
             <div className="space-y-2">
               <Label className="text-[11px] md:text-xs">Pasajeros vinculados</Label>
               <div className="flex flex-wrap gap-2 min-h-[40px] rounded-lg border border-border bg-muted/50 p-3">
@@ -225,7 +232,6 @@ export function ReservationDialog({
                           removePassenger(passenger.id)
                         }}
                         className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
-                        aria-label={`Eliminar pasajero ${passenger.name}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -235,7 +241,7 @@ export function ReservationDialog({
               </div>
             </div>
 
-            {/* Buscar pasajero existente */}
+            {/* Buscador de Pasajeros Existentes */}
             <div className="space-y-2">
               <Label className="text-[11px] md:text-xs">Agregar pasajero existente</Label>
               <Popover>
@@ -266,9 +272,7 @@ export function ReservationDialog({
                               className="text-xs md:text-sm cursor-pointer"
                             >
                               <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {passenger.name}
-                                </span>
+                                <span className="font-medium">{passenger.name}</span>
                                 <span className="text-[10px] md:text-xs text-muted-foreground">
                                   {passenger.nationality}
                                 </span>
@@ -282,7 +286,7 @@ export function ReservationDialog({
               </Popover>
             </div>
 
-            {/* Crear nuevo pasajero */}
+            {/* Botón para crear pasajero nuevo */}
             <Button
               variant="outline"
               onClick={() => setPassengerDialogOpen(true)}
@@ -292,12 +296,10 @@ export function ReservationDialog({
               Crear nuevo pasajero
             </Button>
 
-            {/* Info */}
             {!isEdit && (
               <div className="rounded-lg border border-border bg-muted/50 p-3 md:p-4">
                 <p className="text-[11px] md:text-xs text-muted-foreground">
-                  Después de crear la reserva, podrás agregar hoteles, vuelos, cruceros
-                  y otros servicios desde la página de detalle.
+                  Después de crear la reserva, podrás agregar servicios adicionales desde el detalle.
                 </p>
               </div>
             )}
@@ -306,7 +308,6 @@ export function ReservationDialog({
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               variant="outline"
-              // 4. Botón Cancelar verifica suciedad
               onClick={() => {
                 if (isDirty) setShowDiscardConfirm(true)
                 else onOpenChange(false)
@@ -317,7 +318,6 @@ export function ReservationDialog({
             </Button>
             <Button
               onClick={handleConfirm}
-              // Bloqueamos crear si no hay pasajeros (a menos que sea edit)
               disabled={!isEdit && selectedPassengers.length === 0}
               className="text-xs md:text-sm cursor-pointer"
             >
@@ -327,35 +327,42 @@ export function ReservationDialog({
         </DialogContent>
       </Dialog>
 
-      {/* ✨ Diálogo de creación de pasajero reutilizable */}
+      {/* ✨ PassengerDialog con Key Reset dinámico */}
       <PassengerDialog
+        key={`pax-dialog-${paxDialogKey}`}
         open={passengerDialogOpen}
-        onOpenChange={setPassengerDialogOpen}
+        onOpenChange={(isOpen) => {
+          setPassengerDialogOpen(isOpen)
+          // Cuando se cierra el modal, incrementamos la key para destruir la instancia vieja
+          if (!isOpen) {
+            setPaxDialogKey(prev => prev + 1)
+          }
+        }}
         mode="create"
         onSave={(createdPax) => {
           addPassenger(createdPax)
           setPassengers((prev) => [...prev, createdPax])
-          onPassengerCreated?.(createdPax) 
+          onPassengerCreated?.(createdPax)
           setPassengerDialogOpen(false)
         }}
       />
 
-      {/* ALERT: DESCARTAR CAMBIOS */}
+      {/* AlertDialog de Descarte */}
       <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
+              Tienes cambios sin guardar en la reserva. Si sales ahora, se perderán.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 setShowDiscardConfirm(false)
                 onOpenChange(false)
-              }} 
+              }}
               className="cursor-pointer"
             >
               Descartar

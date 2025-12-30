@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +49,6 @@ interface PassengerDialogProps {
   onDelete?: (id: string) => void;
 }
 
-// 🛠️ Definimos el tipo del estado local
 interface FormDataState {
   name: string;
   birthDate: Date | undefined;
@@ -60,7 +59,6 @@ interface FormDataState {
   passportExpirationDate: Date | undefined;
 }
 
-// 1. Constante para valores por defecto
 const defaultFormData: FormDataState = {
   name: "",
   birthDate: undefined,
@@ -71,8 +69,6 @@ const defaultFormData: FormDataState = {
   passportExpirationDate: undefined,
 };
 
-// 2. Función pura para calcular el estado inicial desde un pasajero
-// Esta es la "Single Source of Truth" para la carga de datos
 const getInitialData = (pax?: Pax): FormDataState => {
   if (!pax) return defaultFormData;
 
@@ -84,7 +80,15 @@ const getInitialData = (pax?: Pax): FormDataState => {
 
   const normalizeNationality = (n?: string) => {
     if (!n) return "Argentina";
-    return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+    const upper = n.toUpperCase();
+    if (upper === "ARGENTINA") return "Argentina";
+    if (upper === "URUGUAY") return "Uruguay";
+    if (upper === "CHILE") return "Chile";
+    if (upper === "BRASIL") return "Brasil";
+    if (upper === "PARAGUAY") return "Paraguay";
+    if (upper === "PERU" || upper === "PERÚ") return "Perú";
+    if (upper === "BOLIVIA") return "Bolivia";
+    return "Otro";
   };
 
   return {
@@ -98,17 +102,15 @@ const getInitialData = (pax?: Pax): FormDataState => {
   };
 };
 
-// 👇 3. NUEVO: Mapeo de placeholders por país (CORREGIDOS)
-// Usamos ejemplos con formatos visualmente amigables que Zod sabrá limpiar
 const docPlaceholders: Record<string, { dni: string; passport: string }> = {
-  Argentina: { dni: "35.123.456", passport: "AAB123456" },
-  Uruguay: { dni: "1.234.567-8", passport: "A123456" }, // Guion visual
-  Chile: { dni: "12.345.678-K", passport: "A1234567" }, // Guion visual
-  Brasil: { dni: "123.456.789-00", passport: "AA123456" },
-  Paraguay: { dni: "1234567", passport: "A123456" },
-  Perú: { dni: "12345678", passport: "123456789" },
-  Bolivia: { dni: "1234567", passport: "A123456" },
-  Otro: { dni: "Documento Nac.", passport: "Pasaporte" },
+  Argentina: { dni: "Ej: 35.123.456", passport: "Ej: AAA123456" },
+  Uruguay: { dni: "Ej: 1.234.567-8", passport: "Ej: AA123456" },
+  Chile: { dni: "Ej: 12.345.678-K", passport: "Ej: 12345678" },
+  Brasil: { dni: "Ej: 123.456.789-00", passport: "Ej: AB123456" },
+  Paraguay: { dni: "Ej: 1234567", passport: "Ej: AA012345" },
+  Perú: { dni: "Ej: 12345678", passport: "Ej: 123456789" },
+  Bolivia: { dni: "Ej: 1234567", passport: "Ej: AA12345" },
+  Otro: { dni: "Nro. Documento", passport: "Nro. Pasaporte" },
 };
 
 export function PassengerDialog({
@@ -123,11 +125,9 @@ export function PassengerDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
-  // Alertas
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
-  // Referencia para guardar la "foto" original de los datos
   const initialDataRef = useRef<FormDataState>(defaultFormData);
 
   const { deletePassenger, isPending: isDeleting, error: deleteError } =
@@ -139,49 +139,65 @@ export function PassengerDialog({
       },
     });
 
-  // 🔄 Cargar datos: Se ejecuta al abrir o cambiar pasajero
+  // 🔄 EFECTO CRÍTICO: Sincronización al abrir/cerrar
   useEffect(() => {
     if (open) {
-      // Calculamos los datos iniciales UNA sola vez usando la función pura
       const data = getInitialData(passenger);
-      
-      // Actualizamos el formulario
       setFormData(data);
-      
-      // Guardamos la referencia exacta de lo que se cargó
       initialDataRef.current = data;
-      
       setErrors({});
+    } else {
+      // Limpieza total para prevenir leaks de estado en la segunda apertura
+      setFormData(defaultFormData);
+      initialDataRef.current = defaultFormData;
+      setErrors({});
+      setShowDiscardConfirm(false);
     }
   }, [passenger, open]);
 
-  // 4. Dirty Check: Comparamos el estado actual vs la referencia cargada
-  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialDataRef.current);
+  // 🔎 Dirty Check con normalización estricta de fechas
+  const isDirty = useMemo(() => {
+    // Si el diálogo está cerrándose o cerrado, forzamos dirty a false
+    if (!open) return false;
 
-  // 👇 Calcular placeholders actuales según nacionalidad seleccionada
+    const normalize = (data: FormDataState) => ({
+      name: data.name?.trim() || "",
+      birthDate: data.birthDate?.getTime() ?? 0,
+      nationality: data.nationality || "Argentina",
+      dniNum: data.dniNum?.trim() || "",
+      dniExpirationDate: data.dniExpirationDate?.getTime() ?? 0,
+      passportNum: data.passportNum?.trim() || "",
+      passportExpirationDate: data.passportExpirationDate?.getTime() ?? 0,
+    });
+
+    const current = JSON.stringify(normalize(formData));
+    const initial = JSON.stringify(normalize(initialDataRef.current));
+
+    return current !== initial;
+  }, [formData, open]);
+
   const currentPlaceholders =
     docPlaceholders[formData.nationality] || docPlaceholders.Otro;
 
   const handleSave = () => {
-    const zodData = {
+    const payloadForZod = {
       name: formData.name,
-      birthDate: formData.birthDate?.toISOString(),
+      birthDate: formData.birthDate ? formData.birthDate.toISOString() : "",
       nationality: formData.nationality,
-      dniNum: formData.dniNum || undefined,
-      dniExpirationDate: formData.dniExpirationDate?.toISOString() || undefined,
-      passportNum: formData.passportNum || undefined,
-      passportExpirationDate:
-        formData.passportExpirationDate?.toISOString() || undefined,
+      passportNum: formData.passportNum,
+      passportExpirationDate: formData.passportExpirationDate || "",
+      dniNum: formData.dniNum,
+      dniExpirationDate: formData.dniExpirationDate || "",
     };
 
-    const result = CreatePaxSchema.safeParse(zodData);
+    const result = CreatePaxSchema.safeParse(payloadForZod);
 
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as string;
-        fieldErrors[field] = issue.message;
-      }
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0] as string;
+        if (!fieldErrors[path]) fieldErrors[path] = issue.message;
+      });
       setErrors(fieldErrors);
       return;
     }
@@ -202,17 +218,13 @@ export function PassengerDialog({
           dni: result.data.dniNum
             ? {
                 dniNum: result.data.dniNum,
-                expirationDate: result.data.dniExpirationDate
-                  ? result.data.dniExpirationDate.toISOString()
-                  : undefined,
+                expirationDate: result.data.dniExpirationDate?.toISOString(),
               }
             : undefined,
           passport: result.data.passportNum
             ? {
                 passportNum: result.data.passportNum,
-                expirationDate: result.data.passportExpirationDate
-                  ? result.data.passportExpirationDate.toISOString()
-                  : undefined,
+                expirationDate: result.data.passportExpirationDate?.toISOString(),
               }
             : undefined,
         };
@@ -231,16 +243,20 @@ export function PassengerDialog({
             body: JSON.stringify(requestBody),
           });
         } else {
-          throw new Error("Modo no válido o pasajero sin ID");
+          throw new Error("Modo no válido");
         }
 
         onSave?.(saved);
         onOpenChange(false);
       } catch (error) {
-        const msg =
-          error instanceof Error && error.message
-            ? error.message
-            : "Error al guardar el pasajero. Intenta más tarde.";
+        let msg = "Error al guardar el pasajero.";
+        if (error instanceof Error) {
+          if (error.message.includes("unique constraint (dniNum)")) {
+            msg = "Ya existe un pasajero registrado con este número de DNI.";
+          } else {
+            msg = error.message;
+          }
+        }
         setErrors({ general: msg });
       }
     });
@@ -254,17 +270,19 @@ export function PassengerDialog({
       <Dialog 
         open={open} 
         onOpenChange={(isOpen) => {
-          // Si intenta cerrar, hay cambios y no es modo vista -> Alerta
+          // Si el usuario intenta cerrar manualmente (isOpen=false) y está sucio
           if (!isOpen && isDirty && !isViewMode) {
             setShowDiscardConfirm(true);
-          } else {
-            onOpenChange(isOpen);
+          } else if (!isOpen) {
+            onOpenChange(false);
           }
         }}
       >
         <DialogContent 
-          className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer"
+          className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer scrollbar-thin"
+          onWheel={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
+            // Evitar cierres accidentales por clics fuera si hay cambios
             if (isDirty && !isViewMode) {
               e.preventDefault();
               setShowDiscardConfirm(true);
@@ -273,307 +291,182 @@ export function PassengerDialog({
         >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
-              {isCreateMode
-                ? "Crear Pasajero"
-                : isViewMode
-                ? "Ver Pasajero"
-                : "Editar Pasajero"}
+              {isCreateMode ? "Crear Pasajero" : isViewMode ? "Ver Pasajero" : "Editar Pasajero"}
             </DialogTitle>
-            <DialogDescription>
-              {isViewMode 
-                ? "Detalles de la información del pasajero." 
-                : "Ingresa los datos personales y documentos del pasajero."}
+            <DialogDescription className="text-[11px] md:text-xs">
+              {isViewMode ? "Detalles del pasajero." : "Ingresa los datos personales."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Información básica */}
             <div className="space-y-3">
               <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
               <div className="grid gap-3 md:grid-cols-2">
-                
                 <div className="space-y-1">
-                  <Label htmlFor="name" className="text-[11px] md:text-xs">
-                    Nombre completo *
-                  </Label>
+                  <Label htmlFor="name" className="text-[11px] md:text-xs">Nombre completo *</Label>
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     disabled={isViewMode}
-                    placeholder="Lionel Andrés Messi"
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors.name ? "border-red-500" : ""
-                    }`}
+                    className={`h-8 md:h-9 text-xs md:text-sm ${errors.name ? "border-red-500" : ""}`}
                   />
-                  {errors.name && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.name}
-                    </p>
-                  )}
+                  {errors.name && <p className="text-red-500 text-[10px]">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="birthDate" className="text-[11px] md:text-xs">
-                    Fecha de nacimiento *
-                  </Label>
+                  <Label className="text-[11px] md:text-xs">Fecha de nacimiento *</Label>
                   <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.birthDate}
-                      setDate={(date) =>
-                        setFormData({ ...formData, birthDate: date })
-                      }
+                      setDate={(date) => setFormData({ ...formData, birthDate: date })}
                       includeTime={false}
                       showYearNavigation={true}
                       startYear={1900}
                       endYear={new Date().getFullYear()}
-                      label="Seleccionar fecha"
                     />
                   </div>
-                  {errors.birthDate && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.birthDate}
-                    </p>
-                  )}
+                  {errors.birthDate && <p className="text-red-500 text-[10px]">{errors.birthDate}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="nationality" className="text-[11px] md:text-xs">
-                    Nacionalidad *
-                  </Label>
+                  <Label className="text-[11px] md:text-xs">Nacionalidad *</Label>
                   <Select
                     value={formData.nationality}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, nationality: value })
-                    }
+                    onValueChange={(v) => setFormData({ ...formData, nationality: v })}
                     disabled={isViewMode}
                   >
-                    <SelectTrigger
-                      id="nationality"
-                      className={`bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer ${
-                        errors.nationality ? "border-red-500" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="Argentina" />
+                    <SelectTrigger className={`bg-transparent h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}>
+                      <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="text-xs md:text-sm">
-                      {Object.keys(docPlaceholders).map((country) => (
-                        <SelectItem key={country} value={country} className="cursor-pointer">
-                          {country}
-                        </SelectItem>
+                    <SelectContent>
+                      {Object.keys(docPlaceholders).map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs md:text-sm">{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.nationality && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.nationality}
-                    </p>
-                  )}
+                  {errors.nationality && <p className="text-red-500 text-[10px]">{errors.nationality}</p>}
                 </div>
               </div>
             </div>
 
             <Separator />
 
-            {/* DNI */}
             <div className="space-y-3">
-              <h4 className="font-medium text-xs md:text-sm">DNI</h4>
+              <h4 className="font-medium text-xs md:text-sm">Documentación</h4>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor="dniNum" className="text-[11px] md:text-xs">
-                    Número de DNI *
-                  </Label>
+                  <Label htmlFor="dniNum" className="text-[11px] md:text-xs">Número de DNI *</Label>
                   <Input
                     id="dniNum"
                     value={formData.dniNum}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dniNum: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, dniNum: e.target.value })}
                     disabled={isViewMode}
-                    // 👇 PLACEHOLDER DINÁMICO AQUÍ
                     placeholder={currentPlaceholders.dni}
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors.dniNum ? "border-red-500" : ""
-                    }`}
+                    className={`h-8 md:h-9 text-xs md:text-sm placeholder:text-[10px] md:placeholder:text-xs ${errors.dniNum ? "border-red-500" : ""}`}
                   />
-                  {errors.dniNum && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.dniNum}
-                    </p>
-                  )}
+                  {errors.dniNum && <p className="text-red-500 text-[10px]">{errors.dniNum}</p>}
                 </div>
-
                 <div className="space-y-1">
-                  <Label htmlFor="dniExpiration" className="text-[11px] md:text-xs">
-                    Fecha de vencimiento (Opcional)
-                  </Label>
+                  <Label className="text-[11px] md:text-xs">Vencimiento DNI *</Label>
                   <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.dniExpirationDate}
-                      setDate={(date) =>
-                        setFormData({ ...formData, dniExpirationDate: date })
-                      }
+                      setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
                       includeTime={false}
                       showYearNavigation={true}
                       startYear={new Date().getFullYear()}
                       endYear={new Date().getFullYear() + 20}
-                      label="Seleccionar fecha"
                     />
                   </div>
-                  {errors.dniExpirationDate && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.dniExpirationDate}
-                    </p>
-                  )}
+                  {errors.dniExpirationDate && <p className="text-red-500 text-[10px]">{errors.dniExpirationDate}</p>}
                 </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Pasaporte */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-xs md:text-sm">Pasaporte</h4>
-              <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor="passportNum" className="text-[11px] md:text-xs">
-                    Número de pasaporte *
-                  </Label>
+                  <Label htmlFor="passportNum" className="text-[11px] md:text-xs">Número de pasaporte *</Label>
                   <Input
                     id="passportNum"
                     value={formData.passportNum}
-                    onChange={(e) =>
-                      setFormData({ ...formData, passportNum: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, passportNum: e.target.value })}
                     disabled={isViewMode}
-                    // 👇 PLACEHOLDER DINÁMICO AQUÍ
                     placeholder={currentPlaceholders.passport}
-                    className={`h-8 md:h-9 text-xs md:text-sm ${
-                      errors.passportNum ? "border-red-500" : ""
-                    }`}
+                    className={`h-8 md:h-9 text-xs md:text-sm placeholder:text-[10px] md:placeholder:text-xs ${errors.passportNum ? "border-red-500" : ""}`}
                   />
-                  {errors.passportNum && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.passportNum}
-                    </p>
-                  )}
+                  {errors.passportNum && <p className="text-red-500 text-[10px]">{errors.passportNum}</p>}
                 </div>
-
                 <div className="space-y-1">
-                  <Label htmlFor="passportExpiration" className="text-[11px] md:text-xs">
-                    Fecha de vencimiento (Opcional)
-                  </Label>
+                  <Label className="text-[11px] md:text-xs">Vencimiento Pasaporte *</Label>
                   <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.passportExpirationDate}
-                      setDate={(date) =>
-                        setFormData({ ...formData, passportExpirationDate: date })
-                      }
+                      setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
                       includeTime={false}
                       showYearNavigation={true}
                       startYear={new Date().getFullYear()}
                       endYear={new Date().getFullYear() + 20}
-                      label="Seleccionar fecha"
                     />
                   </div>
-                  {errors.passportExpirationDate && (
-                    <p className="text-red-500 text-[10px] md:text-xs">
-                      {errors.passportExpirationDate}
-                    </p>
-                  )}
+                  {errors.passportExpirationDate && <p className="text-red-500 text-[10px]">{errors.passportExpirationDate}</p>}
                 </div>
               </div>
             </div>
 
-            {/* Errores Generales */}
             {(errors.general || deleteError) && (
-              <p className="text-red-500 text-[10px] md:text-xs text-center mt-2">
+              <p className="text-red-500 text-[10px] md:text-xs text-center mt-2 font-medium bg-red-50 p-2 rounded-md border border-red-100">
                 {errors.general || deleteError}
               </p>
             )}
           </div>
 
-          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-            <div className="flex justify-start">
-              {!isCreateMode && !isViewMode && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={isDeleting}
-                  className="text-xs md:text-sm cursor-pointer"
-                >
-                  {isDeleting ? "Eliminando..." : "Eliminar"}
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (isDirty && !isViewMode) setShowDiscardConfirm(true);
-                  else onOpenChange(false);
-                }}
-                className="text-xs md:text-sm cursor-pointer"
+          <DialogFooter className="mt-4 flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+              onClick={() => {
+                if (isDirty && !isViewMode) setShowDiscardConfirm(true);
+                else onOpenChange(false);
+              }}
+            >
+              {isViewMode ? "Cerrar" : "Cancelar"}
+            </Button>
+            {!isViewMode && (
+              <Button 
+                onClick={handleSave} 
+                disabled={isPending || (!isCreateMode && !isDirty)}
+                className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
               >
-                {isViewMode ? "Cerrar" : "Cancelar"}
+                {isPending ? "Guardando..." : isCreateMode ? "Crear" : "Guardar cambios"}
               </Button>
-              {!isViewMode && (
-                <Button
-                  onClick={handleSave}
-                  disabled={isPending || (!isCreateMode && !isDirty)}
-                  className="text-xs md:text-sm cursor-pointer"
-                >
-                  {isPending
-                    ? "Guardando..."
-                    : isCreateMode
-                    ? "Crear"
-                    : "Guardar cambios"}
-                </Button>
-              )}
-            </div>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al pasajero.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => passenger?.id && deletePassenger(passenger.id, passenger.name)}
+            <AlertDialogAction 
+              onClick={() => passenger?.id && deletePassenger(passenger.id, passenger.name)} 
               className="bg-red-600 hover:bg-red-700 cursor-pointer"
+              disabled={isDeleting}
             >
-              Eliminar
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ALERT 2: DESCARTAR CAMBIOS */}
       <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Se perderán los datos ingresados.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer" onClick={() => setShowDiscardConfirm(false)}>Seguir editando</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                setShowDiscardConfirm(false);
-                onOpenChange(false);
-              }} 
+              onClick={() => { setShowDiscardConfirm(false); onOpenChange(false); }} 
               className="cursor-pointer"
             >
               Descartar
