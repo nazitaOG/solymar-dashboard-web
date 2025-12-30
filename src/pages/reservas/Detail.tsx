@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart, CarFront } from "lucide-react";
 import { FullPageLoader } from "@/components/FullPageLoader";
-
 import { fetchAPI } from "@/lib/api/fetchApi";
 import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservation.utils";
 
@@ -468,7 +467,7 @@ export default function ReservationDetailPage() {
           <p className="text-xs md:text-sm text-muted-foreground">
             {error ?? "Reserva no encontrada"}
           </p>
-          <Button onClick={() => navigate("/reservas")} className="text-xs md:text-sm">
+          <Button onClick={() => navigate("/reservas")} className="cursor-pointer text-xs md:text-sm">
             Volver a reservas
           </Button>
         </div>

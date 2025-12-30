@@ -183,7 +183,7 @@ export default function ReservasPage() {
 }
 
 function ReservationsContent({
-  promise,
+  promise,  
   filteredReservations,
   isDataLoaded,
   onDataLoad,
