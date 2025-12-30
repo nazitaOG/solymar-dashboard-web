@@ -36,7 +36,10 @@ import {
   updateTransferSchema,
 } from "@/lib/schemas/transfer/transfer.schema";
 
-import { Transfer, TransportType } from "@/lib/interfaces/transfer/transfer.interface";
+import {
+  Transfer,
+  TransportType,
+} from "@/lib/interfaces/transfer/transfer.interface";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
@@ -47,6 +50,7 @@ interface TransferDialogProps {
   reservationId: string;
   onSave: (transfer: Transfer) => void;
   onDelete?: (id: string) => void;
+  mode?: "create" | "edit" | "view";
 }
 
 type FormData = Omit<
@@ -57,11 +61,10 @@ type FormData = Omit<
   arrivalDate: Date | undefined;
 };
 
-interface FormErrors extends Partial<Record<string, string>> {
+interface FormErrors extends Partial<Record<keyof FormData | "_general", string>> {
   _general?: string;
 }
 
-// 1. Constante para valores por defecto
 const defaultFormData: FormData = {
   origin: "",
   destination: "",
@@ -82,20 +85,19 @@ export function TransferDialog({
   reservationId,
   onSave,
   onDelete,
+  mode = "create",
 }: TransferDialogProps) {
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  
-  // Alertas
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false); // 👈 Nuevo estado
-  
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
   const deleteLock = useRef(false);
 
-  // 🔄 Cargar datos
   useEffect(() => {
-    if (transfer) {
+    if (transfer && open) {
       setFormData({
         origin: transfer.origin ?? "",
         destination: transfer.destination ?? "",
@@ -104,50 +106,43 @@ export function TransferDialog({
         provider: transfer.provider ?? "",
         bookingReference: transfer.bookingReference ?? "",
         transportType: transfer.transportType ?? TransportType.OTHER,
-        totalPrice: transfer.totalPrice,
-        amountPaid: transfer.amountPaid,
+        totalPrice: Number(transfer.totalPrice ?? 0),
+        amountPaid: Number(transfer.amountPaid ?? 0),
         currency: transfer.currency ?? Currency.USD,
       });
-    } else {
+    } else if (open) {
       setFormData(defaultFormData);
     }
     setErrors({});
   }, [transfer, open]);
 
-  // 2. Lógica "Dirty Check"
   const isDirty = useMemo(() => {
-    const initialData = transfer
-      ? {
-          origin: transfer.origin ?? "",
-          destination: transfer.destination ?? "",
-          provider: transfer.provider ?? "",
-          bookingReference: transfer.bookingReference ?? "",
-          transportType: transfer.transportType ?? TransportType.OTHER,
-          // Timestamps para comparar
-          departureDate: transfer.departureDate ? new Date(transfer.departureDate).getTime() : 0,
-          arrivalDate: transfer.arrivalDate ? new Date(transfer.arrivalDate).getTime() : 0,
-          totalPrice: Number(transfer.totalPrice),
-          amountPaid: Number(transfer.amountPaid),
-          currency: transfer.currency ?? Currency.USD,
-        }
-      : {
-          ...defaultFormData,
-          departureDate: 0,
-          arrivalDate: 0,
-        };
+    const normalize = (data: Partial<Transfer> | FormData) => ({
+      origin: data.origin || "",
+      destination: data.destination || "",
+      provider: data.provider || "",
+      bookingReference: data.bookingReference || "",
+      transportType: data.transportType || TransportType.OTHER,
+      departureDate: data.departureDate instanceof Date 
+        ? data.departureDate.getTime() 
+        : data.departureDate ? new Date(data.departureDate).getTime() : 0,
+      arrivalDate: data.arrivalDate instanceof Date 
+        ? data.arrivalDate.getTime() 
+        : data.arrivalDate ? new Date(data.arrivalDate).getTime() : 0,
+      totalPrice: Number(data.totalPrice || 0),
+      amountPaid: Number(data.amountPaid || 0),
+      currency: data.currency || Currency.USD,
+    });
 
-    const currentData = {
-      ...formData,
-      departureDate: formData.departureDate?.getTime() ?? 0,
-      arrivalDate: formData.arrivalDate?.getTime() ?? 0,
-      totalPrice: Number(formData.totalPrice),
-      amountPaid: Number(formData.amountPaid),
-    };
+    const initialNormalized = transfer ? normalize(transfer) : normalize(defaultFormData);
+    const currentNormalized = normalize(formData);
 
-    return JSON.stringify(initialData) !== JSON.stringify(currentData);
+    return JSON.stringify(initialNormalized) !== JSON.stringify(currentNormalized);
   }, [formData, transfer]);
 
-  // 💾 Guardar
+  const isView = mode === "view";
+  const effectiveIsDirty = isView ? false : isDirty;
+
   const handleSave = async () => {
     const isEdit = Boolean(transfer);
     const schema = isEdit ? updateTransferSchema : createTransferSchema;
@@ -169,10 +164,10 @@ export function TransferDialog({
     const result = schema.safeParse(payloadToValidate);
 
     if (!result.success) {
-      for (const err of result.error.issues) {
-        const key = err.path[0] as string;
+      result.error.issues.forEach((err) => {
+        const key = err.path[0] as keyof FormData;
         if (!newErrors[key]) newErrors[key] = err.message;
-      }
+      });
     }
 
     if (Number(formData.totalPrice) < Number(formData.amountPaid)) {
@@ -184,9 +179,8 @@ export function TransferDialog({
       return;
     }
 
-    // Validación de cambios vacíos
     if (isEdit && !isDirty) {
-      setErrors({ _general: "No se detectaron cambios para guardar." });
+      onOpenChange(false);
       return;
     }
 
@@ -223,7 +217,7 @@ export function TransferDialog({
   };
 
   const handleDelete = async () => {
-    setShowDeleteConfirm(false); 
+    setShowDeleteConfirm(false);
     if (!transfer || deleteLock.current) return;
     deleteLock.current = true;
 
@@ -233,9 +227,8 @@ export function TransferDialog({
       onDelete?.(transfer.id);
       setTimeout(() => onOpenChange(false), 150);
     } catch (err) {
-      if (err instanceof Error) {
+      if (err instanceof Error)
         setErrors({ _general: err.message || "Error al eliminar traslado." });
-      }
     } finally {
       deleteLock.current = false;
       setLoading(false);
@@ -244,209 +237,180 @@ export function TransferDialog({
 
   return (
     <>
-      {/* DIÁLOGO PRINCIPAL */}
-      <Dialog 
-        open={open} 
+      <Dialog
+        open={open}
         onOpenChange={(isOpen) => {
-          if (!isOpen && isDirty) {
-            setShowDiscardConfirm(true);
-          } else {
-            onOpenChange(isOpen);
-          }
+          if (!isOpen && effectiveIsDirty) setShowDiscardConfirm(true);
+          else onOpenChange(isOpen);
         }}
       >
-        <DialogContent 
-          className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer"
-          // 3. INTERCEPTOR CLICK AFUERA
+        <DialogContent
+          className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer scrollbar-thin"
+          onWheel={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
-            if (isDirty) {
-              e.preventDefault(); 
+            if (effectiveIsDirty) {
+              e.preventDefault();
               setShowDiscardConfirm(true);
             }
           }}
         >
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
-              {transfer ? "Editar Traslado" : "Crear Traslado"}
+              {isView ? "Ver Traslado" : transfer ? "Editar Traslado" : "Crear Traslado"}
             </DialogTitle>
           </DialogHeader>
 
           {errors._general && (
             <div className="mb-3 rounded-md bg-red-50 border border-red-300 p-3">
-              <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">
-                ⚠️ {errors._general}
-              </p>
+              <p className="text-[11px] md:text-xs text-red-600 font-medium flex items-center gap-2">⚠️ {errors._general}</p>
             </div>
           )}
 
           <div className="grid gap-3 md:grid-cols-2">
-            {[
-              { id: "origin", label: "Origen *", placeholder: "Aeropuerto Ezeiza" },
-              { id: "destination", label: "Destino", placeholder: "Hotel Alvear" },
-              { id: "provider", label: "Proveedor *", placeholder: "Remises del Sol" },
-              { id: "bookingReference", label: "Referencia", placeholder: "TRF-00123" },
-            ].map((f) => (
-              <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
+            {(["origin", "destination", "provider", "bookingReference"] as const).map((id) => (
+              <div key={id} className="space-y-1">
+                <Label htmlFor={id} className="text-[11px] md:text-xs">
+                  {id === "origin" ? "Origen *" : 
+                   id === "destination" ? "Destino" :
+                   id === "provider" ? "Proveedor *" : "Referencia"}
+                </Label>
                 <Input
-                  id={f.id}
-                  value={(formData[f.id as keyof typeof formData] as string) || ""}
-                  onChange={(e) => setFormData({ ...formData, [f.id]: e.target.value })}
-                  placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
+                  id={id}
+                  value={String(formData[id] ?? "")}
+                  onChange={(e) => setFormData({ ...formData, [id]: e.target.value })}
+                  placeholder=""
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
+                  disabled={isView}
                 />
-                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
+                {errors[id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[id]}</p>}
               </div>
             ))}
 
             <div className="space-y-1 [&>button]:cursor-pointer">
               <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
-              <DateTimePicker
-                date={formData.departureDate}
-                setDate={(date) => setFormData({ ...formData, departureDate: date })}
-                includeTime={true}
-              />
+              {isView ? (
+                <div className="h-8 md:h-9 flex items-center text-xs md:text-sm bg-muted/50 rounded px-3 border border-input">
+                  {formData.departureDate ? formData.departureDate.toLocaleString() : "—"}
+                </div>
+              ) : (
+                <DateTimePicker date={formData.departureDate} setDate={(date) => setFormData({ ...formData, departureDate: date })} includeTime={true} />
+              )}
               {errors.departureDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.departureDate}</p>}
             </div>
 
             <div className="space-y-1 [&>button]:cursor-pointer">
               <Label className="text-[11px] md:text-xs">Fecha de llegada *</Label>
-              <DateTimePicker
-                date={formData.arrivalDate}
-                setDate={(date) => setFormData({ ...formData, arrivalDate: date })}
-                includeTime={true}
-              />
+              {isView ? (
+                <div className="h-8 md:h-9 flex items-center text-xs md:text-sm bg-muted/50 rounded px-3 border border-input">
+                  {formData.arrivalDate ? formData.arrivalDate.toLocaleString() : "—"}
+                </div>
+              ) : (
+                <DateTimePicker date={formData.arrivalDate} setDate={(date) => setFormData({ ...formData, arrivalDate: date })} includeTime={true} />
+              )}
               {errors.arrivalDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.arrivalDate}</p>}
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="transportType" className="text-[11px] md:text-xs">Tipo de transporte *</Label>
-              <Select
-                value={formData.transportType}
-                onValueChange={(v: TransportType) => setFormData({ ...formData, transportType: v })}
-              >
-                <SelectTrigger id="transportType" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent className="text-xs md:text-sm">
-                  <SelectItem value={TransportType.TRANSFER} className="cursor-pointer">Transfer</SelectItem>
-                  <SelectItem value={TransportType.BUS} className="cursor-pointer">Bus</SelectItem>
-                  <SelectItem value={TransportType.TRAIN} className="cursor-pointer">Tren</SelectItem>
-                  <SelectItem value={TransportType.FERRY} className="cursor-pointer">Ferry</SelectItem>
-                  <SelectItem value={TransportType.OTHER} className="cursor-pointer">Otro</SelectItem>
-                </SelectContent>
-              </Select>
+              {isView ? (
+                <div className="h-8 md:h-9 flex items-center text-xs md:text-sm bg-muted/50 rounded px-3 border border-input">
+                  {formData.transportType}
+                </div>
+              ) : (
+                <Select value={formData.transportType} onValueChange={(v: TransportType) => setFormData({ ...formData, transportType: v })}>
+                  <SelectTrigger id="transportType" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs md:text-sm">
+                    {Object.values(TransportType).map((type) => (
+                      <SelectItem key={type} value={type} className="cursor-pointer">{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            {!transfer && (
+            {!transfer && !isView && (
               <div className="space-y-1">
                 <Label htmlFor="currency" className="text-[11px] md:text-xs">Moneda *</Label>
-                <Select
-                  value={formData.currency}
-                  onValueChange={(v: Currency) => setFormData({ ...formData, currency: v })}
-                >
+                <Select value={formData.currency} onValueChange={(v: Currency) => setFormData({ ...formData, currency: v })}>
                   <SelectTrigger id="currency" className="bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="text-xs md:text-sm">
-                    <SelectItem value="USD" className="cursor-pointer">USD</SelectItem>
-                    <SelectItem value="ARS" className="cursor-pointer">ARS</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="ARS">ARS</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.currency && <p className="text-red-500 text-[10px] md:text-xs">{errors.currency}</p>}
               </div>
             )}
 
-            {[
-              { id: "totalPrice", label: "Precio total *", placeholder: "2000" },
-              { id: "amountPaid", label: "Monto pagado *", placeholder: "500" },
-            ].map((f) => (
-              <div key={f.id} className="space-y-1">
-                <Label htmlFor={f.id} className="text-[11px] md:text-xs">{f.label}</Label>
+            {(["totalPrice", "amountPaid"] as const).map((id) => (
+              <div key={id} className="space-y-1">
+                <Label htmlFor={id} className="text-[11px] md:text-xs">
+                  {id === "totalPrice" ? "Precio total *" : "Monto pagado *"}
+                </Label>
                 <Input
-                  id={f.id}
+                  id={id}
                   type="number"
                   min={0}
-                  value={(formData[f.id as keyof FormData] as number) || 0}
+                  value={Number(formData[id] ?? 0)}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") { setFormData({ ...formData, [f.id]: 0 }); return; }
-                    const numValue = Number(value);
-                    if (numValue >= 0) { setFormData({ ...formData, [f.id]: numValue }); }
+                    const val = e.target.value === "" ? 0 : Number(e.target.value);
+                    if (val >= 0) setFormData({ ...formData, [id]: val });
                   }}
-                  onKeyDown={(e) => { if (e.key === "-" || e.key === "Minus") e.preventDefault(); }}
-                  placeholder={f.placeholder}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[f.id] ? "border-red-500" : ""}`}
+                  disabled={isView}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
                 />
-                {errors[f.id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[f.id]}</p>}
+                {errors[id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[id]}</p>}
               </div>
             ))}
           </div>
 
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div className="flex justify-start">
-              {transfer && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={loading}
-                  className="text-xs md:text-sm cursor-pointer"
-                >
+              {!isView && transfer && (
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="text-xs md:text-sm cursor-pointer">
                   {loading ? "Eliminando..." : "Eliminar"}
                 </Button>
               )}
             </div>
             <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                // 4. Botón Cancelar verifica suciedad
-                onClick={() => {
-                  if (isDirty) setShowDiscardConfirm(true);
-                  else onOpenChange(false);
-                }}
-                disabled={loading}
-                className="text-xs md:text-sm cursor-pointer"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={loading || (transfer && !isDirty)}
-                className="text-xs md:text-sm cursor-pointer"
-              >
-                {loading ? "Guardando..." : transfer ? "Guardar cambios" : "Crear"}
-              </Button>
+              {isView ? (
+                <Button onClick={() => onOpenChange(false)} className="text-xs md:text-sm cursor-pointer">Cerrar</Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => effectiveIsDirty ? setShowDiscardConfirm(true) : onOpenChange(false)} disabled={loading} className="text-xs md:text-sm cursor-pointer">
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave} disabled={loading} className="text-xs md:text-sm cursor-pointer">
+                    {loading ? "Guardando..." : transfer ? "Guardar cambios" : "Crear"}
+                  </Button>
+                </>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ALERT 1: ELIMINAR */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el traslado.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente el traslado.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 cursor-pointer">
-              Eliminar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 cursor-pointer">Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ALERT 2: DESCARTAR CAMBIOS */}
       <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Tienes cambios sin guardar. Si sales ahora, se perderán los datos ingresados.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>

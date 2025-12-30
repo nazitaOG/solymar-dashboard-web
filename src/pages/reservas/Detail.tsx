@@ -4,7 +4,10 @@ import { useNavigate, useParams } from "react-router";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationDetailHeader } from "@/components/reservations/reservation-detail-header";
 import { AuditPanel } from "@/components/reservations/audit-panel";
-import { EntityTable, type Column } from "@/components/entities/table/entity-table";
+import {
+  EntityTable,
+  type Column,
+} from "@/components/entities/table/entity-table";
 import { HotelDialog } from "@/components/entities/hotel-dialog";
 import { PlaneDialog } from "@/components/entities/plane-dialog";
 import { CruiseDialog } from "@/components/entities/cruise-dialog";
@@ -16,7 +19,16 @@ import { ReservationNotes } from "@/components/ui/custom/reservation-notes";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Hotel, Plane, Ship, Car, Compass, Heart, CarFront } from "lucide-react";
+import {
+  ArrowLeft,
+  Hotel,
+  Plane,
+  Ship,
+  Car,
+  Compass,
+  Heart,
+  CarFront,
+} from "lucide-react";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { fetchAPI } from "@/lib/api/fetchApi";
 import { normalizeReservation } from "@/lib/utils/reservation/normalize_reservation.utils";
@@ -37,14 +49,17 @@ import type { Pax as PaxType } from "@/lib/interfaces/pax/pax.interface";
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Currency, CurrencyTotal } from "@/lib/interfaces/currency/currency.interface";
+import {
+  Currency,
+  CurrencyTotal,
+} from "@/lib/interfaces/currency/currency.interface";
 import { Head } from "@/components/seo/Head";
 
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // Eliminamos dependencia de location.state para datos críticos para evitar inconsistencias al recargar
-  // const location = useLocation(); 
+  // const location = useLocation();
   // const passedReservation = location.state as Reservation | undefined;
 
   const initialReservation: ReservationDetail = {
@@ -69,7 +84,8 @@ export default function ReservationDetailPage() {
     notes: "",
   };
 
-  const [reservation, setReservation] = useState<ReservationDetail>(initialReservation);
+  const [reservation, setReservation] =
+    useState<ReservationDetail>(initialReservation);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,13 +98,46 @@ export default function ReservationDetailPage() {
   const [medicalAssistDialogOpen, setMedicalAssistDialogOpen] = useState(false);
   const [carRentalDialogOpen, setCarRentalDialogOpen] = useState(false);
 
+  // Dialog modes: 'create' | 'edit' | 'view'
+  const [hotelDialogMode, setHotelDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [planeDialogMode, setPlaneDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [cruiseDialogMode, setCruiseDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [transferDialogMode, setTransferDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [excursionDialogMode, setExcursionDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [medicalAssistDialogMode, setMedicalAssistDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+  const [carRentalDialogMode, setCarRentalDialogMode] = useState<
+    "create" | "edit" | "view"
+  >("create");
+
   const [selectedHotel, setSelectedHotel] = useState<HotelType | undefined>();
   const [selectedPlane, setSelectedPlane] = useState<PlaneType | undefined>();
-  const [selectedCruise, setSelectedCruise] = useState<CruiseType | undefined>();
-  const [selectedTransfer, setSelectedTransfer] = useState<TransferType | undefined>();
-  const [selectedExcursion, setSelectedExcursion] = useState<ExcursionType | undefined>();
-  const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<MedicalAssistType | undefined>();
-  const [selectedCarRental, setSelectedCarRental] = useState<CarRental | undefined>();
+  const [selectedCruise, setSelectedCruise] = useState<
+    CruiseType | undefined
+  >();
+  const [selectedTransfer, setSelectedTransfer] = useState<
+    TransferType | undefined
+  >();
+  const [selectedExcursion, setSelectedExcursion] = useState<
+    ExcursionType | undefined
+  >();
+  const [selectedMedicalAssist, setSelectedMedicalAssist] = useState<
+    MedicalAssistType | undefined
+  >();
+  const [selectedCarRental, setSelectedCarRental] = useState<
+    CarRental | undefined
+  >();
 
   const fmt = (iso: string | null | undefined): string => {
     if (!iso) return "—";
@@ -102,7 +151,9 @@ export default function ReservationDetailPage() {
     try {
       // 👇 Cache Busting: agregamos timestamp para forzar lectura fresca
       const t = new Date().getTime();
-      const freshData = await fetchAPI<ReservationDetail>(`/reservations/${id}?_t=${t}`);
+      const freshData = await fetchAPI<ReservationDetail>(
+        `/reservations/${id}?_t=${t}`,
+      );
 
       setReservation((prev) => ({
         ...prev,
@@ -248,7 +299,9 @@ export default function ReservationDetailPage() {
   const handleDeleteExcursionServer = useCallback(
     async (excursionId: string) => {
       try {
-        await fetchAPI<void>(`/excursions/${excursionId}`, { method: "DELETE" });
+        await fetchAPI<void>(`/excursions/${excursionId}`, {
+          method: "DELETE",
+        });
         setReservation((prev) => ({
           ...prev,
           excursions: prev.excursions.filter((e) => e.id !== excursionId),
@@ -276,7 +329,9 @@ export default function ReservationDetailPage() {
   const handleDeleteMedicalAssistServer = useCallback(
     async (assistId: string) => {
       try {
-        await fetchAPI<void>(`/medical-assists/${assistId}`, { method: "DELETE" });
+        await fetchAPI<void>(`/medical-assists/${assistId}`, {
+          method: "DELETE",
+        });
         setReservation((prev) => ({
           ...prev,
           medicalAssists: prev.medicalAssists.filter((a) => a.id !== assistId),
@@ -348,16 +403,23 @@ export default function ReservationDetailPage() {
           `/reservations/${id}?include=paxReservations,currencyTotals&_t=${t}`,
         );
 
-        const [hotels, planes, cruises, transfers, excursions, medicalAssists, carRentals] =
-          await Promise.all([
-            fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
-            fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
-            fetchAPI<CruiseType[]>(`/cruises/reservation/${id}`),
-            fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
-            fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
-            fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
-            fetchAPI<CarRental[]>(`/car-rentals/reservation/${id}`),
-          ]);
+        const [
+          hotels,
+          planes,
+          cruises,
+          transfers,
+          excursions,
+          medicalAssists,
+          carRentals,
+        ] = await Promise.all([
+          fetchAPI<HotelType[]>(`/hotels/reservation/${id}`),
+          fetchAPI<PlaneType[]>(`/planes/reservation/${id}`),
+          fetchAPI<CruiseType[]>(`/cruises/reservation/${id}`),
+          fetchAPI<TransferType[]>(`/transfers/reservation/${id}`),
+          fetchAPI<ExcursionType[]>(`/excursions/reservation/${id}`),
+          fetchAPI<MedicalAssistType[]>(`/medical-assists/reservation/${id}`),
+          fetchAPI<CarRental[]>(`/car-rentals/reservation/${id}`),
+        ]);
 
         const normalized = normalizeReservation({
           ...baseReservation,
@@ -373,9 +435,8 @@ export default function ReservationDetailPage() {
         setReservation({
           ...normalized,
           carRentals,
-          notes: baseReservation.notes ?? "" // Asegura que usamos la nota fresca
+          notes: baseReservation.notes ?? "", // Asegura que usamos la nota fresca
         });
-
       } catch (err) {
         console.error("Error al cargar reserva:", err);
         setError("No se pudo cargar la reserva");
@@ -391,20 +452,28 @@ export default function ReservationDetailPage() {
   useEffect(() => {
     if (!reservation) return;
 
-    const totalsMap = new Map<string, { totalPrice: number; amountPaid: number }>();
+    const totalsMap = new Map<
+      string,
+      { totalPrice: number; amountPaid: number }
+    >();
 
-    const addTotals = (items: {
-      currency?: string;
-      totalPrice?: number | string | null;
-      amountPaid?: number | string | null;
-    }[]) => {
+    const addTotals = (
+      items: {
+        currency?: string;
+        totalPrice?: number | string | null;
+        amountPaid?: number | string | null;
+      }[],
+    ) => {
       if (!items) return;
 
       for (const item of items) {
         const currency = item.currency ?? "USD";
         const totalPrice = Number(item.totalPrice ?? 0);
         const amountPaid = Number(item.amountPaid ?? 0);
-        const existing = totalsMap.get(currency) ?? { totalPrice: 0, amountPaid: 0 };
+        const existing = totalsMap.get(currency) ?? {
+          totalPrice: 0,
+          amountPaid: 0,
+        };
         totalsMap.set(currency, {
           totalPrice: existing.totalPrice + totalPrice,
           amountPaid: existing.amountPaid + amountPaid,
@@ -420,30 +489,30 @@ export default function ReservationDetailPage() {
     addTotals(reservation.medicalAssists);
     addTotals(reservation.carRentals);
 
-    const recalculatedTotals: ReservationCurrencyTotal[] = Array.from(totalsMap.entries()).map(
-      ([currencyCode, totals]) => ({
-        id: `local-${currencyCode}`,
-        reservationId: reservation.id,
-        currency:
-          currencyCode === "USD"
-            ? Currency.USD
-            : currencyCode === "ARS"
-              ? Currency.ARS
-              : (currencyCode as Currency),
-        totalPrice: totals.totalPrice,
-        amountPaid: totals.amountPaid,
-        createdAt: reservation.createdAt,
-        updatedAt: new Date().toISOString(),
-      }),
-    );
+    const recalculatedTotals: ReservationCurrencyTotal[] = Array.from(
+      totalsMap.entries(),
+    ).map(([currencyCode, totals]) => ({
+      id: `local-${currencyCode}`,
+      reservationId: reservation.id,
+      currency:
+        currencyCode === "USD"
+          ? Currency.USD
+          : currencyCode === "ARS"
+            ? Currency.ARS
+            : (currencyCode as Currency),
+      totalPrice: totals.totalPrice,
+      amountPaid: totals.amountPaid,
+      createdAt: reservation.createdAt,
+      updatedAt: new Date().toISOString(),
+    }));
 
     // Mantenemos las notas existentes al recalcular totales
     setReservation((prev) =>
       prev
         ? {
-          ...prev,
-          currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
-        }
+            ...prev,
+            currencyTotals: recalculatedTotals as unknown as CurrencyTotal[],
+          }
         : prev,
     );
   }, [
@@ -467,7 +536,10 @@ export default function ReservationDetailPage() {
           <p className="text-xs md:text-sm text-muted-foreground">
             {error ?? "Reserva no encontrada"}
           </p>
-          <Button onClick={() => navigate("/reservas")} className="cursor-pointer text-xs md:text-sm">
+          <Button
+            onClick={() => navigate("/reservas")}
+            className="cursor-pointer text-xs md:text-sm"
+          >
             Volver a reservas
           </Button>
         </div>
@@ -496,7 +568,8 @@ export default function ReservationDetailPage() {
 
       setReservation((prev) => ({
         ...prev,
-        paxReservations: updated.paxReservations ?? passengers.map((p) => ({ pax: p })),
+        paxReservations:
+          updated.paxReservations ?? passengers.map((p) => ({ pax: p })),
         updatedAt: updated.updatedAt,
         updatedBy: updated.updatedBy,
       }));
@@ -509,11 +582,19 @@ export default function ReservationDetailPage() {
   // Hotels
   const handleCreateHotel = () => {
     setSelectedHotel(undefined);
+    setHotelDialogMode("create");
     setHotelDialogOpen(true);
   };
 
   const handleEditHotel = (hotel: Record<string, unknown>) => {
     setSelectedHotel(hotel as unknown as HotelType);
+    setHotelDialogMode("edit");
+    setHotelDialogOpen(true);
+  };
+
+  const handleViewHotel = (hotel: Record<string, unknown>) => {
+    setSelectedHotel(hotel as unknown as HotelType);
+    setHotelDialogMode("view");
     setHotelDialogOpen(true);
   };
 
@@ -531,11 +612,19 @@ export default function ReservationDetailPage() {
   // Planes
   const handleCreatePlane = () => {
     setSelectedPlane(undefined);
+    setPlaneDialogMode("create");
     setPlaneDialogOpen(true);
   };
 
   const handleEditPlane = (plane: Record<string, unknown>) => {
     setSelectedPlane(plane as unknown as PlaneType);
+    setPlaneDialogMode("edit");
+    setPlaneDialogOpen(true);
+  };
+
+  const handleViewPlane = (plane: Record<string, unknown>) => {
+    setSelectedPlane(plane as unknown as PlaneType);
+    setPlaneDialogMode("view");
     setPlaneDialogOpen(true);
   };
 
@@ -555,11 +644,13 @@ export default function ReservationDetailPage() {
   // Cruises
   const handleCreateCruise = () => {
     setSelectedCruise(undefined);
+    setCruiseDialogMode("create");
     setCruiseDialogOpen(true);
   };
 
   const handleEditCruise = (cruise: Record<string, unknown>) => {
     setSelectedCruise(cruise as unknown as CruiseType);
+    setCruiseDialogMode("edit");
     setCruiseDialogOpen(true);
   };
 
@@ -577,11 +668,13 @@ export default function ReservationDetailPage() {
   // Transfers
   const handleCreateTransfer = () => {
     setSelectedTransfer(undefined);
+    setTransferDialogMode("create");
     setTransferDialogOpen(true);
   };
 
   const handleEditTransfer = (transfer: Record<string, unknown>) => {
     setSelectedTransfer(transfer as unknown as TransferType);
+    setTransferDialogMode("edit");
     setTransferDialogOpen(true);
   };
 
@@ -589,7 +682,9 @@ export default function ReservationDetailPage() {
     setReservation((prev) => {
       const exists = prev.transfers.some((t) => t.id === savedTransfer.id);
       const updatedTransfers = exists
-        ? prev.transfers.map((t) => (t.id === savedTransfer.id ? savedTransfer : t))
+        ? prev.transfers.map((t) =>
+            t.id === savedTransfer.id ? savedTransfer : t,
+          )
         : [...prev.transfers, savedTransfer];
       return { ...prev, transfers: updatedTransfers };
     });
@@ -599,11 +694,13 @@ export default function ReservationDetailPage() {
   // Excursions
   const handleCreateExcursion = () => {
     setSelectedExcursion(undefined);
+    setExcursionDialogMode("create");
     setExcursionDialogOpen(true);
   };
 
   const handleEditExcursion = (excursion: Record<string, unknown>) => {
     setSelectedExcursion(excursion as unknown as ExcursionType);
+    setExcursionDialogMode("edit");
     setExcursionDialogOpen(true);
   };
 
@@ -611,7 +708,9 @@ export default function ReservationDetailPage() {
     setReservation((prev) => {
       const exists = prev.excursions.some((e) => e.id === savedExcursion.id);
       const updatedExcursions = exists
-        ? prev.excursions.map((e) => (e.id === savedExcursion.id ? savedExcursion : e))
+        ? prev.excursions.map((e) =>
+            e.id === savedExcursion.id ? savedExcursion : e,
+          )
         : [...prev.excursions, savedExcursion];
       return { ...prev, excursions: updatedExcursions };
     });
@@ -621,11 +720,13 @@ export default function ReservationDetailPage() {
   // Medical Assists
   const handleCreateMedicalAssist = () => {
     setSelectedMedicalAssist(undefined);
+    setMedicalAssistDialogMode("create");
     setMedicalAssistDialogOpen(true);
   };
 
   const handleEditMedicalAssist = (assist: Record<string, unknown>) => {
     setSelectedMedicalAssist(assist as unknown as MedicalAssistType);
+    setMedicalAssistDialogMode("edit");
     setMedicalAssistDialogOpen(true);
   };
 
@@ -633,7 +734,9 @@ export default function ReservationDetailPage() {
     setReservation((prev) => {
       const exists = prev.medicalAssists.some((a) => a.id === savedAssist.id);
       const updatedAssists = exists
-        ? prev.medicalAssists.map((a) => (a.id === savedAssist.id ? savedAssist : a))
+        ? prev.medicalAssists.map((a) =>
+            a.id === savedAssist.id ? savedAssist : a,
+          )
         : [...prev.medicalAssists, savedAssist];
       return { ...prev, medicalAssists: updatedAssists };
     });
@@ -643,11 +746,13 @@ export default function ReservationDetailPage() {
   // Car Rentals
   const handleCreateCarRental = () => {
     setSelectedCarRental(undefined);
+    setCarRentalDialogMode("create");
     setCarRentalDialogOpen(true);
   };
 
   const handleEditCarRental = (item: Record<string, unknown>) => {
     setSelectedCarRental(item as unknown as CarRental);
+    setCarRentalDialogMode("edit");
     setCarRentalDialogOpen(true);
   };
 
@@ -662,11 +767,15 @@ export default function ReservationDetailPage() {
     updateReservationMetadata();
   };
 
+
+
   // ---------------- Formatters ----------------
   function formatCurrency(value?: number | null, currency?: string): string {
     const safeValue = typeof value === "number" ? value : 0;
     const safeCurrency =
-      currency && typeof currency === "string" && currency.length === 3 ? currency : "USD";
+      currency && typeof currency === "string" && currency.length === 3
+        ? currency
+        : "USD";
 
     if (safeCurrency === "ARS") {
       const number = new Intl.NumberFormat("es-AR", {
@@ -701,14 +810,18 @@ export default function ReservationDetailPage() {
       key: "hotelName",
       label: "Hotel",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "city",
       label: "Ciudad",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -727,14 +840,18 @@ export default function ReservationDetailPage() {
       key: "roomType",
       label: "Habitación",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value || "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value || "—")}
+        </span>
       ),
     },
     {
       key: "provider",
       label: "Proveedor",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -762,7 +879,9 @@ export default function ReservationDetailPage() {
         const segs = plane.segments ?? [];
         if (segs.length === 0) {
           return (
-            <span className="text-[10px] md:text-xs text-muted-foreground">— Sin tramos —</span>
+            <span className="text-[10px] md:text-xs text-muted-foreground">
+              — Sin tramos —
+            </span>
           );
         }
         return (
@@ -785,7 +904,11 @@ export default function ReservationDetailPage() {
         const plane = row as unknown as PlaneType;
         const segs = plane.segments ?? [];
         if (segs.length === 0)
-          return <span className="text-[10px] md:text-xs text-muted-foreground">—</span>;
+          return (
+            <span className="text-[10px] md:text-xs text-muted-foreground">
+              —
+            </span>
+          );
 
         return (
           <div className="text-xs md:text-sm space-y-1">
@@ -806,14 +929,18 @@ export default function ReservationDetailPage() {
       key: "provider",
       label: "Aerolínea",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "bookingReference",
       label: "Referencia",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -822,10 +949,17 @@ export default function ReservationDetailPage() {
       render: (_v, row) => (
         <div className="text-xs md:text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
+            {formatCurrency(
+              Number(row.amountPaid ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
           <div className="text-[10px] md:text-xs text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
+            de{" "}
+            {formatCurrency(
+              Number(row.totalPrice ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
         </div>
       ),
@@ -837,7 +971,9 @@ export default function ReservationDetailPage() {
       key: "provider",
       label: "Naviera",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -846,8 +982,11 @@ export default function ReservationDetailPage() {
       render: (_v, row) => {
         const embark = row.embarkationPort as string | undefined;
         const arrival = row.arrivalPort as string | undefined;
-        const text = embark || arrival ? `${embark ?? "?"} → ${arrival ?? "?"}` : "—";
-        return <span className="whitespace-nowrap text-xs md:text-sm">{text}</span>;
+        const text =
+          embark || arrival ? `${embark ?? "?"} → ${arrival ?? "?"}` : "—";
+        return (
+          <span className="whitespace-nowrap text-xs md:text-sm">{text}</span>
+        );
       },
     },
     {
@@ -866,7 +1005,9 @@ export default function ReservationDetailPage() {
       key: "bookingReference",
       label: "Referencia",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -875,10 +1016,17 @@ export default function ReservationDetailPage() {
       render: (_v, row) => (
         <div className="text-xs md:text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
+            {formatCurrency(
+              Number(row.amountPaid ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
           <div className="text-[10px] md:text-xs text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
+            de{" "}
+            {formatCurrency(
+              Number(row.totalPrice ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
         </div>
       ),
@@ -890,14 +1038,18 @@ export default function ReservationDetailPage() {
       key: "origin",
       label: "Origen",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "destination",
       label: "Destino",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -916,14 +1068,18 @@ export default function ReservationDetailPage() {
       key: "provider",
       label: "Proveedor",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "transportType",
       label: "Tipo",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -947,28 +1103,36 @@ export default function ReservationDetailPage() {
       key: "excursionName",
       label: "Excursión",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "origin",
       label: "Lugar / Origen",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "excursionDate",
       label: "Fecha",
       render: (_value, row) => (
-        <div className="text-xs md:text-sm">{fmt(String(row.excursionDate))}</div>
+        <div className="text-xs md:text-sm">
+          {fmt(String(row.excursionDate))}
+        </div>
       ),
     },
     {
       key: "provider",
       label: "Proveedor",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -977,10 +1141,17 @@ export default function ReservationDetailPage() {
       render: (_value, row) => (
         <div className="text-xs md:text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
+            {formatCurrency(
+              Number(row.amountPaid ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
           <div className="text-[10px] md:text-xs text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
+            de{" "}
+            {formatCurrency(
+              Number(row.totalPrice ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
         </div>
       ),
@@ -992,21 +1163,27 @@ export default function ReservationDetailPage() {
       key: "provider",
       label: "Proveedor",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
       key: "assistType",
       label: "Tipo de asistencia",
       render: (_value, row) => (
-        <div className="text-xs md:text-sm">{String(row.assistType) || "—"}</div>
+        <div className="text-xs md:text-sm">
+          {String(row.assistType) || "—"}
+        </div>
       ),
     },
     {
       key: "bookingReference",
       label: "Referencia",
       render: (_value, row) => (
-        <div className="text-xs md:text-sm">{String(row.bookingReference) || "—"}</div>
+        <div className="text-xs md:text-sm">
+          {String(row.bookingReference) || "—"}
+        </div>
       ),
     },
     {
@@ -1015,10 +1192,17 @@ export default function ReservationDetailPage() {
       render: (_value, row) => (
         <div className="text-xs md:text-sm">
           <div className="font-medium">
-            {formatCurrency(Number(row.amountPaid ?? 0), String(row.currency ?? "USD"))}
+            {formatCurrency(
+              Number(row.amountPaid ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
           <div className="text-[10px] md:text-xs text-muted-foreground">
-            de {formatCurrency(Number(row.totalPrice ?? 0), String(row.currency ?? "USD"))}
+            de{" "}
+            {formatCurrency(
+              Number(row.totalPrice ?? 0),
+              String(row.currency ?? "USD"),
+            )}
           </div>
         </div>
       ),
@@ -1030,7 +1214,9 @@ export default function ReservationDetailPage() {
       key: "provider",
       label: "Proveedor",
       render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">{String(value ?? "—")}</span>
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
       ),
     },
     {
@@ -1042,7 +1228,9 @@ export default function ReservationDetailPage() {
           <div className="text-xs md:text-sm">
             <div className="font-medium">{item.carCategory}</div>
             {item.carModel && (
-              <div className="text-[10px] md:text-xs text-muted-foreground">{item.carModel}</div>
+              <div className="text-[10px] md:text-xs text-muted-foreground">
+                {item.carModel}
+              </div>
             )}
           </div>
         );
@@ -1086,10 +1274,17 @@ export default function ReservationDetailPage() {
         return (
           <div className="text-xs md:text-sm">
             <div className="font-medium">
-              {formatCurrency(Number(item.amountPaid ?? 0), String(item.currency ?? "USD"))}
+              {formatCurrency(
+                Number(item.amountPaid ?? 0),
+                String(item.currency ?? "USD"),
+              )}
             </div>
             <div className="text-[10px] md:text-xs text-muted-foreground">
-              de {formatCurrency(Number(item.totalPrice ?? 0), String(item.currency ?? "USD"))}
+              de{" "}
+              {formatCurrency(
+                Number(item.totalPrice ?? 0),
+                String(item.currency ?? "USD"),
+              )}
             </div>
           </div>
         );
@@ -1159,9 +1354,9 @@ export default function ReservationDetailPage() {
   // ---------------- Render ----------------
   return (
     <>
-      <Head 
-        title={`Reserva #${reservation.code} - ${reservation.name || 'Sin nombre'}`} 
-        description={`Gestión de reserva #${reservation.code}. Estado: ${reservation.state}.`} 
+      <Head
+        title={`Reserva #${reservation.code} - ${reservation.name || "Sin nombre"}`}
+        description={`Gestión de reserva #${reservation.code}. Estado: ${reservation.state}.`}
       />
       <DashboardLayout>
         <div className="space-y-6">
@@ -1245,7 +1440,10 @@ export default function ReservationDetailPage() {
                 {/* HOTELS */}
                 <TabsContent value="hotels" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateHotel}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateHotel}
+                    >
                       Crear Hotel
                     </Button>
                   </div>
@@ -1254,8 +1452,14 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.hotels as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.hotels as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={hotelColumns}
+                          onView={handleViewHotel}
                           onEdit={handleEditHotel}
                           onDelete={handleDeleteHotelServer}
                           emptyMessage="No hay hoteles agregados aún"
@@ -1268,7 +1472,10 @@ export default function ReservationDetailPage() {
                 {/* PLANES */}
                 <TabsContent value="planes" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreatePlane}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreatePlane}
+                    >
                       Crear Vuelo
                     </Button>
                   </div>
@@ -1276,8 +1483,14 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.planes as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.planes as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={planeColumns}
+                          onView={handleViewPlane}
                           onEdit={handleEditPlane}
                           onDelete={handleDeletePlaneServer}
                           emptyMessage="No hay vuelos agregados aún"
@@ -1290,7 +1503,10 @@ export default function ReservationDetailPage() {
                 {/* CRUISES */}
                 <TabsContent value="cruises" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCruise}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateCruise}
+                    >
                       Crear Crucero
                     </Button>
                   </div>
@@ -1298,7 +1514,12 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.cruises as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.cruises as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={cruiseColumns}
                           onEdit={handleEditCruise}
                           onDelete={handleDeleteCruiseServer}
@@ -1312,7 +1533,10 @@ export default function ReservationDetailPage() {
                 {/* TRANSFERS */}
                 <TabsContent value="transfers" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateTransfer}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateTransfer}
+                    >
                       Crear Traslado
                     </Button>
                   </div>
@@ -1320,7 +1544,12 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.transfers as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.transfers as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={transferColumns}
                           onEdit={handleEditTransfer}
                           onDelete={handleDeleteTransferServer}
@@ -1334,7 +1563,10 @@ export default function ReservationDetailPage() {
                 {/* CAR RENTALS */}
                 <TabsContent value="carRentals" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateCarRental}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateCarRental}
+                    >
                       Crear Auto
                     </Button>
                   </div>
@@ -1342,7 +1574,12 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={(reservation.carRentals ?? []) as unknown as Record<string, unknown>[]}
+                          data={
+                            (reservation.carRentals ?? []) as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={carRentalColumns}
                           onEdit={handleEditCarRental}
                           onDelete={handleDeleteCarRentalServer}
@@ -1356,7 +1593,10 @@ export default function ReservationDetailPage() {
                 {/* EXCURSIONS */}
                 <TabsContent value="excursions" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateExcursion}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateExcursion}
+                    >
                       Crear Excursión
                     </Button>
                   </div>
@@ -1364,7 +1604,12 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.excursions as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.excursions as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={excursionColumns}
                           onEdit={handleEditExcursion}
                           onDelete={handleDeleteExcursionServer}
@@ -1378,7 +1623,10 @@ export default function ReservationDetailPage() {
                 {/* MEDICAL */}
                 <TabsContent value="medical" className="space-y-4">
                   <div className="flex mt-2 justify-start">
-                    <Button className="text-xs cursor-pointer md:text-sm" onClick={handleCreateMedicalAssist}>
+                    <Button
+                      className="text-xs cursor-pointer md:text-sm"
+                      onClick={handleCreateMedicalAssist}
+                    >
                       Crear Asistencia
                     </Button>
                   </div>
@@ -1386,7 +1634,12 @@ export default function ReservationDetailPage() {
                     <div className="rounded-lg border border-border bg-card overflow-x-auto w-full">
                       <div className="min-w-[600px] md:min-w-[1000px]">
                         <EntityTable
-                          data={reservation.medicalAssists as unknown as Record<string, unknown>[]}
+                          data={
+                            reservation.medicalAssists as unknown as Record<
+                              string,
+                              unknown
+                            >[]
+                          }
                           columns={medicalAssistColumns}
                           onEdit={handleEditMedicalAssist}
                           onDelete={handleDeleteMedicalAssistServer}
@@ -1407,7 +1660,9 @@ export default function ReservationDetailPage() {
 
             {/* --- BLOQUE INFERIOR: Audit Panel --- */}
             <div className="w-full mt-4 border-t pt-8">
-              <h3 className="mb-4 text-lg font-semibold">Historial de Cambios</h3>
+              <h3 className="mb-4 text-lg font-semibold">
+                Historial de Cambios
+              </h3>
               <AuditPanel reservation={reservation} />
             </div>
           </div>
@@ -1422,17 +1677,23 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveHotel}
             onDelete={handleDeleteHotelLocal}
+            mode={hotelDialogMode}
           />
         )}
         {planeDialogOpen && (
           <PlaneDialog
-            key={selectedPlane?.id ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}` : "new-plane"}
+            key={
+              selectedPlane?.id
+                ? `edit-${selectedPlane.id}-${selectedPlane.updatedAt}`
+                : "new-plane"
+            }
             open={planeDialogOpen}
             onOpenChange={setPlaneDialogOpen}
             plane={selectedPlane}
             reservationId={id}
             onSave={handleSavePlane}
             onDelete={handleDeletePlaneLocal}
+            mode={planeDialogMode}
           />
         )}
 
@@ -1445,6 +1706,7 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveCruise}
             onDelete={handleDeleteCruiseLocal}
+            mode={cruiseDialogMode}
           />
         )}
 
@@ -1457,6 +1719,7 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveTransfer}
             onDelete={handleDeleteTransferLocal}
+            mode={transferDialogMode}
           />
         )}
 
@@ -1469,6 +1732,7 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveCarRental}
             onDelete={handleDeleteCarRentalLocal}
+            mode={carRentalDialogMode}
           />
         )}
 
@@ -1481,6 +1745,7 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveExcursion}
             onDelete={handleDeleteExcursionLocal}
+            mode={excursionDialogMode}
           />
         )}
 
@@ -1493,10 +1758,10 @@ export default function ReservationDetailPage() {
             reservationId={id}
             onSave={handleSaveMedicalAssist}
             onDelete={handleDeleteMedicalAssistLocal}
+            mode={medicalAssistDialogMode}
           />
         )}
       </DashboardLayout>
     </>
-
   );
 }

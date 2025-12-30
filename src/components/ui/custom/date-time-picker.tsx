@@ -320,7 +320,8 @@ export function DateTimePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="z-50 w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto"
+        onWheel={(e) => e.stopPropagation()}
+        className="z-[100] w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto shadow-xl"
         align="start"
         side="bottom"
         sideOffset={4}
