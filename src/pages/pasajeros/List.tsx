@@ -1,24 +1,39 @@
-import { useState, useTransition, useEffect, Suspense } from "react";
+import { useState, useTransition, useEffect, Suspense, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PassengerFilters } from "@/components/passengers/passenger-filters";
 import { PassengersTable } from "@/components/passengers/passengers-table";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { usePassengersStore } from "@/stores/usePassengerStore";
 import { Head } from "@/components/seo/Head";
 import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger";
 
+// Definimos el tipo de los filtros para evitar el 'any'
+interface FilterCriteria {
+  search: string;
+  nationality?: string;
+  documentFilter?: string;
+}
+
 export default function PasajerosPage() {
-  const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>([]);
+  // 1️⃣ Estados para el control del Diálogo
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
   const [selectedPassenger, setSelectedPassenger] = useState<Pax | undefined>();
   
+  // 2️⃣ Estado para los Filtros
+  const [filters, setFilters] = useState<FilterCriteria>({
+    search: "",
+    nationality: undefined,
+    documentFilter: undefined,
+  });
+  
   const [isPending, startTransition] = useTransition();
 
+  // 3️⃣ Hooks del Store global
   const {
     passengers,
     fetchPassengers,
@@ -28,44 +43,53 @@ export default function PasajerosPage() {
     removePassenger,
   } = usePassengersStore();
 
+  // 4️⃣ Hook de eliminación
   const { deletePassenger, error: deleteError } = useDeletePassenger({
     onDeleteSuccess: (id) => {
       removePassenger(id);
     }
   });
 
+  // 🧭 Sincronización Inicial con el Servidor
   useEffect(() => {
     startTransition(() => {
       fetchPassengers();
     });
   }, [fetchPassengers]);
 
-  useEffect(() => {
-    setFilteredPassengers(passengers);
-  }, [passengers]);
+  // 🚀 Lógica de Filtrado DERIVADA
+  const filteredPassengers = useMemo(() => {
+    let result = [...passengers];
 
-  const handleFilterChange = (filters: {
-    search: string;
-    nationality?: string;
-    documentFilter?: string;
-  }) => {
-    let filtered = [...passengers];
     if (filters.search) {
-      filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(filters.search.toLowerCase())
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter((p) =>
+        p.name.toLowerCase().includes(searchLower) ||
+        p.dni?.dniNum.toLowerCase().includes(searchLower) ||
+        p.passport?.passportNum.toLowerCase().includes(searchLower)
       );
     }
+    
     if (filters.nationality) {
-      filtered = filtered.filter((p) => p.nationality === filters.nationality);
+      result = result.filter((p) => p.nationality === filters.nationality);
     }
+    
     if (filters.documentFilter === "with-dni") {
-      filtered = filtered.filter((p) => !!p.dni);
+      result = result.filter((p) => !!p.dni);
     } else if (filters.documentFilter === "with-passport") {
-      filtered = filtered.filter((p) => !!p.passport);
+      result = result.filter((p) => !!p.passport);
     } else if (filters.documentFilter === "with-any-document") {
-      filtered = filtered.filter((p) => !!p.dni || !!p.passport);
+      result = result.filter((p) => !!p.dni || !!p.passport);
     }
-    setFilteredPassengers(filtered);
+
+    return result;
+  }, [passengers, filters]);
+
+  /**
+   * Manejadores de Interfaz
+   */
+  const handleFilterChange = (newFilters: FilterCriteria) => {
+    setFilters(newFilters);
   };
 
   const handleView = (passenger: Pax) => {
@@ -124,24 +148,18 @@ export default function PasajerosPage() {
               </Button>
             </div>
 
-            <PassengerFilters onFilterChange={handleFilterChange} />
+            {/* Tipamos la función de cambio de filtros correctamente */}
+            <PassengerFilters 
+              onFilterChange={(f) => handleFilterChange(f as FilterCriteria)} 
+            />
 
             <PassengersTable
               passengers={filteredPassengers}
               onView={handleView}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              externalError={deleteError}
             />
-
-            {/* Banner de Error estático con animación de entrada */}
-            {deleteError && (
-              <div className="mt-4 p-4 rounded-lg border border-destructive bg-destructive/10 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-                <p className="text-sm font-bold text-destructive">
-                  {deleteError}
-                </p>
-              </div>
-            )}
           </div>
 
           <PassengerDialog
