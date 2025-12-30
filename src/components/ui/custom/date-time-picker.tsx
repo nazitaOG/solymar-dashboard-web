@@ -1,8 +1,14 @@
 import * as React from "react";
-import { format } from "date-fns";
+import { 
+  format, 
+  getDaysInMonth, 
+  setDate as setDateDay, 
+  setMonth as setDateMonth, 
+  setYear as setDateYear 
+} from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
-import { DateRange } from "react-day-picker";
+import { DateRange, SelectSingleEventHandler, SelectRangeEventHandler } from "react-day-picker";
 
 import { cn } from "@/lib/utils/utils";
 import { Button } from "@/components/ui/button";
@@ -21,13 +27,11 @@ interface DateTimePickerProps {
 
   label?: string;
   
-  // 👇 Props de Hora
   includeTime?: boolean;
 
-  // 👇 NUEVAS PROPS PARA AÑO/MES
-  showYearNavigation?: boolean; // Habilita los dropdowns de año/mes
-  startYear?: number;           // Año de inicio (ej: 1900)
-  endYear?: number;             // Año fin (ej: 2100)
+  showYearNavigation?: boolean;
+  startYear?: number;
+  endYear?: number;
 }
 
 interface TimePickerInputProps
@@ -185,7 +189,6 @@ export function DateTimePicker({
   withRange = false,
   label,
   includeTime = true,
-  // 👇 Valores por defecto
   showYearNavigation = false,
   startYear = 1930,
   endYear = 2060,
@@ -193,22 +196,63 @@ export function DateTimePicker({
   const hourRef = React.useRef<HTMLInputElement>(null);
   const minuteRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSelectSingle = (day: Date | undefined) => {
+  // Control manual de la vista del calendario
+  const [month, setMonth] = React.useState<Date>(date || dateRange?.from || new Date());
+  
+  // Memoria del día seleccionado para evitar que se resetee al cambiar mes/año
+  const [lastSelectedDay, setLastSelectedDay] = React.useState<number | undefined>(date?.getDate());
+
+  React.useEffect(() => {
+    if (date) {
+      setMonth(date);
+      setLastSelectedDay(date.getDate());
+    } else if (dateRange?.from) {
+      setMonth(dateRange.from);
+    }
+  }, [date, dateRange]);
+
+  const handleSelectSingle: SelectSingleEventHandler = (day) => {
     if (!setDate) return;
     if (!day) {
       setDate(undefined);
+      setLastSelectedDay(undefined);
       return;
     }
     const newDate = new Date(day);
     if (includeTime && date) {
-      newDate.setHours(date.getHours());
-      newDate.setMinutes(date.getMinutes());
+      newDate.setHours(date.getHours(), date.getMinutes(), 0, 0);
     } else if (includeTime) {
       newDate.setHours(12, 0, 0, 0);
     } else {
       newDate.setHours(0, 0, 0, 0);
     }
+    setLastSelectedDay(newDate.getDate());
     setDate(newDate);
+    setMonth(newDate);
+  };
+
+  const handleSelectRange: SelectRangeEventHandler = (range) => {
+    if (setDateRange) {
+      setDateRange(range);
+      if (range?.from) setMonth(range.from);
+    }
+  };
+
+  const handleMonthChange = (newMonth: Date) => {
+    setMonth(newMonth);
+    
+    // Si no estamos en rango y hay una fecha base, actualizamos la fecha al cambiar el dropdown
+    if (!withRange && date && setDate && lastSelectedDay) {
+      const daysInNewMonth = getDaysInMonth(newMonth);
+      // Evita el error del 30 de febrero: si el día no existe, usa el último día del mes
+      const safeDay = Math.min(lastSelectedDay, daysInNewMonth);
+      
+      let updatedDate = setDateYear(date, newMonth.getFullYear());
+      updatedDate = setDateMonth(updatedDate, newMonth.getMonth());
+      updatedDate = setDateDay(updatedDate, safeDay);
+      
+      setDate(updatedDate);
+    }
   };
 
   const adjustTime = (type: "hours" | "minutes" | "ampm", step: number) => {
@@ -237,16 +281,27 @@ export function DateTimePicker({
         { locale: es },
       )}`;
     }
-
-    if (!date)
-      return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
-
-    return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", {
-      locale: es,
-    });
+    if (!date) return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
+    return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es });
   };
 
-  const showTimePicker = includeTime && !withRange;
+  const sharedCalendarProps = {
+    month,
+    onMonthChange: handleMonthChange,
+    initialFocus: true,
+    locale: es,
+    numberOfMonths: 1,
+    fromYear: startYear,
+    toYear: endYear,
+    captionLayout: (showYearNavigation ? "dropdown" : "label") as "dropdown" | "label",
+    classNames: {
+      caption_label: showYearNavigation ? "hidden" : "text-sm font-medium",
+      dropdown_month: "flex items-center",
+      dropdown_year: "flex items-center",
+      dropdown: "bg-transparent focus-visible:ring-0 cursor-pointer p-1 text-xs md:text-sm font-medium",
+      caption_dropdowns: "flex justify-center gap-1",
+    },
+  };
 
   return (
     <Popover modal={false}>
@@ -265,95 +320,58 @@ export function DateTimePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className=" z-50 w-[250px] md:w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto"
+        className="z-50 w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto"
         align="start"
         side="bottom"
         sideOffset={4}
-        avoidCollisions={false}
-        onWheel={(e) => e.stopPropagation()} 
-        onTouchMove={(e) => e.stopPropagation()}
       >
         {withRange ? (
           <Calendar
             mode="range"
             selected={dateRange}
-            onSelect={setDateRange}
-            initialFocus
-            locale={es}
-            numberOfMonths={1}
-            // 👇 PROPS CONDICIONALES PARA NAVEGACIÓN
-            captionLayout={showYearNavigation ? "dropdown" : undefined}
-            fromYear={showYearNavigation ? startYear : undefined}
-            toYear={showYearNavigation ? endYear : undefined}
+            onSelect={handleSelectRange}
+            {...sharedCalendarProps}
           />
         ) : (
           <Calendar
             mode="single"
             selected={date}
             onSelect={handleSelectSingle}
-            initialFocus
-            locale={es}
-            numberOfMonths={1}
-            // 👇 PROPS CONDICIONALES PARA NAVEGACIÓN
-            captionLayout={showYearNavigation ? "dropdown" : undefined}
-            fromYear={showYearNavigation ? startYear : undefined}
-            toYear={showYearNavigation ? endYear : undefined}
+            {...sharedCalendarProps}
           />
         )}
 
-        {showTimePicker && (
+        {includeTime && !withRange && (
           <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
             <Label className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Hora
             </Label>
             <div className="flex items-center gap-3">
-              <TimePeriod
-                onUp={() => adjustTime("hours", 1)}
-                onDown={() => adjustTime("hours", -1)}
-                disabled={!date}
-              >
+              <TimePeriod onUp={() => adjustTime("hours", 1)} onDown={() => adjustTime("hours", -1)} disabled={!date}>
                 <TimePickerInput
                   picker="hours"
                   date={date}
                   onDateChange={setDate!}
                   ref={hourRef}
                   onRightFocus={() => minuteRef.current?.focus()}
-                  disabled={!date}
                 />
               </TimePeriod>
-
-              <span className="text-lg md:text-xl font-bold text-muted-foreground pb-2">
-                :
-              </span>
-
-              <TimePeriod
-                onUp={() => adjustTime("minutes", 1)}
-                onDown={() => adjustTime("minutes", -1)}
-                disabled={!date}
-              >
+              <span className="text-lg md:text-xl font-bold text-muted-foreground pb-2">:</span>
+              <TimePeriod onUp={() => adjustTime("minutes", 1)} onDown={() => adjustTime("minutes", -1)} disabled={!date}>
                 <TimePickerInput
                   picker="minutes"
                   date={date}
                   onDateChange={setDate!}
                   ref={minuteRef}
                   onLeftFocus={() => hourRef.current?.focus()}
-                  disabled={!date}
                 />
               </TimePeriod>
-
               <div className="w-3 md:w-4" />
-
-              <TimePeriod
-                onUp={() => adjustTime("ampm", 1)}
-                onDown={() => adjustTime("ampm", -1)}
-                disabled={!date}
-              >
-                <div
-                  className={cn(
-                    "flex items-center justify-center h-7 md:h-8 w-[40px] md:w-[52px] rounded-md border border-input bg-background font-mono text-[11px] md:text-sm font-medium",
-                    !date && "opacity-50",
-                  )}
-                >
+              <TimePeriod onUp={() => adjustTime("ampm", 1)} onDown={() => adjustTime("ampm", -1)} disabled={!date}>
+                <div className={cn(
+                  "flex items-center justify-center h-7 md:h-8 w-[40px] md:w-[52px] rounded-md border border-input bg-background font-mono text-[11px] md:text-sm font-medium",
+                  !date && "opacity-50"
+                )}>
                   {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}
                 </div>
               </TimePeriod>
