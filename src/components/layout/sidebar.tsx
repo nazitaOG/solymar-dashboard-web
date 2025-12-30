@@ -51,7 +51,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
@@ -64,7 +63,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && (
         <div
           aria-hidden="true"
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden cursor-pointer"
+          className="fixed inset-0 z-[50] bg-background/80 backdrop-blur-sm lg:hidden cursor-pointer"
           onClick={onClose}
         />
       )}
@@ -78,16 +77,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="flex h-full flex-col overflow-hidden">
           
-          {/* Header del Sidebar - UX Refinado */}
+          {/* Header del Sidebar */}
           <div className="flex h-16 md:h-20 items-center justify-between lg:justify-start gap-2 border-b border-border px-5 shrink-0">
-            {/* Logo: Solo Desktop */}
+            {/* Logo Desktop */}
             <img 
               src="/logo.png" 
               alt="Sol y Mar" 
               className="hidden lg:block h-12 w-full object-contain" 
             />
             
-            {/* Cabecera Móvil: Texto de contexto + Botón Pro */}
+            {/* Cabecera Móvil Pro */}
             <div className="flex lg:hidden w-full items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                 Menú Principal
@@ -103,7 +102,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1 p-4 overflow-y-auto custom-scrollbar">
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const starts = pathname.startsWith(item.href);
@@ -142,11 +141,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             })}
           </nav>
 
+          {/* Footer del Sidebar */}
           <div className="shrink-0 border-t border-border p-4 bg-card/50 backdrop-blur-lg">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <p className="text-[10px] font-bold text-primary tracking-tighter uppercase">Solymar Viajes</p>
-                <p className="text-[9px] text-muted-foreground">Dashboard v1.0</p>
+                <p className="text-[10px] font-bold text-primary tracking-tighter uppercase leading-none">Solymar Viajes</p>
+                <p className="text-[9px] text-muted-foreground mt-1">Dashboard v1.0</p>
               </div>
               <div className="flex items-center gap-1">
                 <Button
