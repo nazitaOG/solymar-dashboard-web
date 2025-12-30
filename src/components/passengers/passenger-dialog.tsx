@@ -447,7 +447,7 @@ export function PassengerDialog({
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => passenger?.id && deletePassenger(passenger.id, passenger.name)} 
+              onClick={() => passenger?.id && deletePassenger(passenger.id)} 
               className="bg-red-600 hover:bg-red-700 cursor-pointer"
               disabled={isDeleting}
             >

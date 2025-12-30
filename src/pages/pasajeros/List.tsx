@@ -4,50 +4,52 @@ import { PassengerFilters } from "@/components/passengers/passenger-filters";
 import { PassengersTable } from "@/components/passengers/passengers-table";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { FullPageLoader } from "@/components/FullPageLoader";
 import { usePassengersStore } from "@/stores/usePassengerStore";
 import { Head } from "@/components/seo/Head";
+import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger";
 
 export default function PasajerosPage() {
   const [filteredPassengers, setFilteredPassengers] = useState<Pax[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
   const [selectedPassenger, setSelectedPassenger] = useState<Pax | undefined>();
+  
   const [isPending, startTransition] = useTransition();
 
-  // ✅ Estado global del store
   const {
     passengers,
-    fetched,
     fetchPassengers,
+    refreshPassengers,
     addPassenger,
+    updatePassenger,
     removePassenger,
   } = usePassengersStore();
 
-  // 🧭 Fetch inicial — solo si aún no se hizo
-  useEffect(() => {
-    if (!fetched) {
-      startTransition(() => {
-        fetchPassengers();
-      });
+  const { deletePassenger, error: deleteError } = useDeletePassenger({
+    onDeleteSuccess: (id) => {
+      removePassenger(id);
     }
-  }, [fetched, fetchPassengers]);
+  });
 
-  // 🔁 Mantener la lista filtrada sincronizada
+  useEffect(() => {
+    startTransition(() => {
+      fetchPassengers();
+    });
+  }, [fetchPassengers]);
+
   useEffect(() => {
     setFilteredPassengers(passengers);
   }, [passengers]);
 
-  // 🔍 Filtros
   const handleFilterChange = (filters: {
     search: string;
     nationality?: string;
     documentFilter?: string;
   }) => {
     let filtered = [...passengers];
-
     if (filters.search) {
       filtered = filtered.filter((p) =>
         p.name.toLowerCase().includes(filters.search.toLowerCase())
@@ -57,17 +59,15 @@ export default function PasajerosPage() {
       filtered = filtered.filter((p) => p.nationality === filters.nationality);
     }
     if (filters.documentFilter === "with-dni") {
-      filtered = filtered.filter((p) => p.dni);
+      filtered = filtered.filter((p) => !!p.dni);
     } else if (filters.documentFilter === "with-passport") {
-      filtered = filtered.filter((p) => p.passport);
+      filtered = filtered.filter((p) => !!p.passport);
     } else if (filters.documentFilter === "with-any-document") {
       filtered = filtered.filter((p) => !!p.dni || !!p.passport);
     }
-
     setFilteredPassengers(filtered);
   };
 
-  // 🧩 Crear / Editar / Ver
   const handleView = (passenger: Pax) => {
     setDialogMode("view");
     setSelectedPassenger(passenger);
@@ -80,42 +80,33 @@ export default function PasajerosPage() {
     setDialogOpen(true);
   };
 
-  // 💾 Guardar pasajero (crear o editar)
-  const handleSave = (newPassenger: Pax) => {
-    if (dialogMode === "create") {
-      addPassenger(newPassenger);
-    } else if (dialogMode === "edit") {
-      // si querés, podés agregar un updatePassenger al store más adelante
-      removePassenger(newPassenger.id);
-      addPassenger(newPassenger);
-    }
-  };
-
-  // 🗑️ Eliminar pasajero
   const handleDelete = (id: string) => {
-    removePassenger(id);
+    deletePassenger(id);
   };
 
-
+  const handleSave = (savedPassenger: Pax) => {
+    if (dialogMode === "create") {
+      addPassenger(savedPassenger);
+    } else if (dialogMode === "edit") {
+      updatePassenger(savedPassenger);
+    }
+    refreshPassengers();
+  };
 
   return (
     <>
       <Head
         title="Pasajeros"
-        description="Administra la información de todos los pasajeros."
+        description="Administra la información de todos los pasajeros registrados en el sistema."
       />
       <DashboardLayout>
         <Suspense fallback={<FullPageLoader />}>
           <div className="space-y-6">
-            {/* Header Responsivo */}
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                {/* Título: 2xl en móvil, 3xl en desktop */}
                 <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Pasajeros</h1>
-
-                {/* Subtítulo: xs en móvil, sm en desktop */}
                 <p className="text-xs text-muted-foreground md:text-sm">
-                  Administra la información de todos los pasajeros
+                  Lista de pasajeros registrados y gestión de documentos.
                 </p>
               </div>
 
@@ -125,37 +116,39 @@ export default function PasajerosPage() {
                   setDialogMode("create");
                   setDialogOpen(true);
                 }}
-                // Botón: h-8/text-xs en móvil | h-10/text-sm en desktop
                 className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
                 disabled={isPending}
               >
-                {/* Icono ajustado */}
                 <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                {isPending ? "Cargando..." : "Crear Pasajero"}
+                {isPending ? "Sincronizando..." : "Crear Pasajero"}
               </Button>
             </div>
 
-            {/* Filtros */}
             <PassengerFilters onFilterChange={handleFilterChange} />
 
-            {/* Tabla */}
             <PassengersTable
               passengers={filteredPassengers}
               onView={handleView}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
+
+            {/* Banner de Error estático con animación de entrada */}
+            {deleteError && (
+              <div className="mt-4 p-4 rounded-lg border border-destructive bg-destructive/10 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+                <p className="text-sm font-bold text-destructive">
+                  {deleteError}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Diálogo */}
           <PassengerDialog
-            key={`${dialogMode}-${selectedPassenger?.id ?? "new"}`}
+            key={`${dialogMode}-${selectedPassenger?.id ?? "new"}-${dialogOpen}`}
             open={dialogOpen}
             onOpenChange={(open) => {
-              if (!open) {
-                setSelectedPassenger(undefined);
-                setDialogMode("create");
-              }
+              if (!open) setSelectedPassenger(undefined);
               setDialogOpen(open);
             }}
             passenger={selectedPassenger}
@@ -166,6 +159,5 @@ export default function PasajerosPage() {
         </Suspense>
       </DashboardLayout>
     </>
-
   );
 }

@@ -5,17 +5,15 @@ import { fetchAPI } from "@/lib/api/fetchApi";
 
 interface PassengersState {
   passengers: Pax[];
-  fetched: boolean; // indica si ya se hizo el fetch inicial
+  fetched: boolean;
+  loading: boolean; // 👈 Agregado para control de flujo
   setPassengers: (list: Pax[]) => void;
   addPassenger: (pax: Pax) => void;
+  updatePassenger: (pax: Pax) => void;
   removePassenger: (id: string) => void;
   clearPassengers: () => void;
   setFetched: (value: boolean) => void;
-
-  /** 🔁 Fetch centralizado (con opción de forzar) */
   fetchPassengers: (force?: boolean) => Promise<void>;
-
-  /** 🔄 Refresca desde backend y reemplaza todo */
   refreshPassengers: () => Promise<void>;
 }
 
@@ -24,78 +22,86 @@ export const usePassengersStore = create<PassengersState>()(
     (set, get) => ({
       passengers: [],
       fetched: false,
+      loading: false,
 
-      /**
-       * 🔁 Obtiene pasajeros desde el backend.
-       * Por defecto evita refetch si ya están cargados.
-       * Pasar `force = true` para forzar actualización.
-       */
+      /** 🔁 Fetch inteligente con Sincronización Background */
       fetchPassengers: async (force = false) => {
-        const { fetched, passengers } = get();
-        if (!force && fetched && passengers.length > 0) return;
+        const { fetched, passengers, loading } = get();
+        
+        // Si ya está cargando, no hacer nada
+        if (loading) return;
+
+        // Si ya hay datos y no es forzado, actualizamos en background
+        if (!force && fetched && passengers.length > 0) {
+          get().refreshPassengers();
+          return;
+        }
 
         try {
+          set({ loading: true });
           const data = await fetchAPI<Pax[]>("/pax");
           set({ passengers: data, fetched: true });
         } catch (error) {
           console.error("❌ Error al obtener pasajeros:", error);
-          set({ fetched: true }); // evita loop infinito
+          set({ fetched: true });
+        } finally {
+          set({ loading: false });
         }
       },
 
-      /**
-       * 🔄 Refresca siempre (equivale a fetchPassengers(true))
-       */
+      /** 🔄 Sincronización silenciosa (Stale-While-Revalidate) */
       refreshPassengers: async () => {
+        // No refrescar si ya hay una petición en curso
+        if (get().loading) return;
+
         try {
           const data = await fetchAPI<Pax[]>("/pax");
-          set({ passengers: data, fetched: true });
+          const currentDataStr = JSON.stringify(get().passengers);
+          const newDataStr = JSON.stringify(data);
+          
+          if (currentDataStr !== newDataStr) {
+            set({ passengers: data, fetched: true });
+          }
         } catch (error) {
           console.error("❌ Error al refrescar pasajeros:", error);
         }
       },
 
-      /**
-       * ✅ Setea lista completa manualmente
-       */
-      setPassengers: (list) => set({ passengers: list }),
-
-      /**
-       * ➕ Agrega pasajero si no existe
-       */
       addPassenger: (pax) =>
         set((state) => {
           const exists = state.passengers.some((p) => p.id === pax.id);
           if (exists) return state;
-          return { passengers: [...state.passengers, pax] };
+          return { passengers: [pax, ...state.passengers] };
         }),
 
-      /**
-       * ❌ Elimina pasajero por id
-       */
+      updatePassenger: (updatedPax) =>
+        set((state) => ({
+          passengers: state.passengers.map((p) =>
+            p.id === updatedPax.id ? updatedPax : p
+          ),
+        })),
+
       removePassenger: (id) =>
         set((state) => ({
           passengers: state.passengers.filter((p) => p.id !== id),
         })),
 
-      /**
-       * 🧹 Limpia todo el estado local
-       */
-      clearPassengers: () => set({ passengers: [], fetched: false }),
-
-      /**
-       * ⚙️ Marca manualmente el flag de fetch
-       */
+      clearPassengers: () => set({ passengers: [], fetched: false, loading: false }),
       setFetched: (value) => set({ fetched: value }),
+      setPassengers: (list) => set({ passengers: list }),
     }),
     {
       name: "solymar-passengers",
       storage: createJSONStorage(() => sessionStorage),
       version: 2,
+      // 🛡️ Parte de lo que faltaba: No persistir el estado 'loading' ni 'fetched'
+      // Queremos que al abrir una pestaña nueva, siempre intente validar.
+      partialize: (state) => ({
+        passengers: state.passengers,
+      }),
       migrate: (persistedState, version) => {
-        // 🔸 Limpia la cache vieja si cambia la estructura
         if (version < 2) {
-          return { passengers: [], fetched: false };
+          return { passengers: [], fetched: false, loading: false };
         }
         return persistedState as PassengersState;
       },

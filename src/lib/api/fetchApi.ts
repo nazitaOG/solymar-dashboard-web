@@ -1,17 +1,16 @@
-// src/lib/api/fetchAPI.ts
 import { useAuthStore } from "@/stores/useAuthStore"
 
 /**
  * ✅ Fetch universal con manejo avanzado de errores
  * - Inyecta token JWT fresco (si no es endpoint público)
- * - Traduce códigos HTTP a mensajes amigables
- * - Loguea el error en consola solo en desarrollo
+ * - Prioriza mensajes del backend para lógica de negocio
+ * - Traduce códigos HTTP a mensajes amigables si el backend calla
  * - Devuelve JSON tipado <T>
  */
 
 const PUBLIC_ENDPOINTS = ["/auth/login", "/auth/register", "/auth/forgot-password"]
 
-// 💡 Tabla de mensajes para errores comunes
+// 💡 Tabla de mensajes para errores comunes (fallback)
 const FRIENDLY_MESSAGES: Record<number, string> = {
   400: "Solicitud inválida.",
   401: "Email o contraseña incorrectos.",
@@ -39,44 +38,40 @@ export async function fetchAPI<T>(
     ...options,
   })
 
-  // ⚠️ Manejo avanzado de errores HTTP
   if (!res.ok) {
-    // Caso especial: token expirado
     if (res.status === 401 && !isPublic) {
       logout()
       throw new Error("Sesión expirada. Volvé a iniciar sesión.")
     }
 
-    // 1️⃣ Intentar obtener mensaje del backend
     let backendMessage = ""
     try {
       const data = await res.json()
-      backendMessage =
-        (Array.isArray(data.message)
-          ? data.message.join(", ")
-          : data.message) ||
-        data.error ||
+      // 🛡️ Blindaje total: buscamos el mensaje en cualquier propiedad común de Nest/Prisma
+      backendMessage = 
+        (Array.isArray(data.message) ? data.message.join(", ") : data.message) || 
+        data.error?.message || 
+        data.error || 
         ""
     } catch {
-      backendMessage = await res.text()
+      try { backendMessage = await res.text() } catch { backendMessage = "" }
     }
 
-    // 2️⃣ Buscar mensaje amigable según código
     const friendly = FRIENDLY_MESSAGES[res.status]
-    const message =
-      backendMessage && import.meta.env.DEV
-      ? `${friendly ?? backendMessage} (${backendMessage})`
-      : (friendly ?? (backendMessage || `Error ${res.status}`))
+    
+    // 🚀 PRIORIDAD: Si el backend habló (P0001 de Postgres), usamos eso. 
+    // Solo si backendMessage está vacío usamos el friendly.
+    const message = (backendMessage && backendMessage.trim().length > 0) 
+      ? backendMessage 
+      : (friendly || `Error ${res.status}`);
 
-
-    // 3️⃣ Log de diagnóstico en modo dev
     if (import.meta.env.DEV) {
-      console.warn(`❌ API Error (${res.status}) → ${endpoint}`, message)
+      console.warn(`❌ API Error (${res.status}) → ${endpoint}`, message);
     }
 
-    throw new Error(message)
+    throw new Error(message);
   }
 
-  // ✅ Si todo salió bien, devolvemos JSON tipado
-  return res.json() as Promise<T>
+  // ✅ Fix para evitar doble llamado a .json()
+  return res.json() as Promise<T>;
 }
