@@ -1,10 +1,25 @@
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,20 +29,21 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
-import type { Pax } from "@/lib/interfaces/pax/pax.interface"
+import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 
 interface PassengersTableProps {
-  passengers: Pax[]
-  onView: (passenger: Pax) => void
-  onEdit: (passenger: Pax) => void
-  onDelete: (id: string) => void
-  isDeletingId?: string | null
-  externalError?: string | null // 👈 Agregamos esta prop para recibir el error del padre
+  passengers: Pax[];
+  onView: (passenger: Pax) => void;
+  onEdit: (passenger: Pax) => void;
+  onDelete: (id: string) => void;
+  isDeletingId?: string | null;
+  isLoading?: boolean;
+  externalError?: string | null; // 👈 Agregamos esta prop para recibir el error del padre
 }
 
-const ITEMS_PER_PAGE = 10
+const ITEMS_PER_PAGE = 10;
 
 export function PassengersTable({
   passengers,
@@ -35,59 +51,75 @@ export function PassengersTable({
   onEdit,
   onDelete,
   isDeletingId,
-  externalError // 👈 La desestructuramos acá
+  isLoading = false,
+  externalError, // 👈 La desestructuramos acá
 }: PassengersTableProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Paginación
-  const totalPages = Math.ceil(passengers.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const endIndex = startIndex + ITEMS_PER_PAGE
-  const currentPassengers = passengers.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(passengers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentPassengers = passengers.slice(startIndex, endIndex);
 
   const getDocumentInfo = (passenger: Pax) => {
     if (passenger.dni && passenger.passport) {
       return (
         <div className="space-y-1">
-          <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+          <Badge
+            variant="outline"
+            className="text-[10px] md:text-xs whitespace-nowrap"
+          >
             DNI: {passenger.dni.dniNum}
           </Badge>
           <div className="pt-1">
-            <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+            <Badge
+              variant="outline"
+              className="text-[10px] md:text-xs whitespace-nowrap"
+            >
               Pasaporte: {passenger.passport.passportNum}
             </Badge>
           </div>
         </div>
-      )
+      );
     }
     if (passenger.dni) {
       return (
-        <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className="text-[10px] md:text-xs whitespace-nowrap"
+        >
           DNI: {passenger.dni.dniNum}
         </Badge>
-      )
+      );
     }
     if (passenger.passport) {
       return (
-        <Badge variant="outline" className="text-[10px] md:text-xs whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className="text-[10px] md:text-xs whitespace-nowrap"
+        >
           Pasaporte: {passenger.passport.passportNum}
         </Badge>
-      )
+      );
     }
     return (
       <span className="text-[10px] md:text-sm text-muted-foreground whitespace-nowrap">
         Sin documento
       </span>
-    )
-  }
+    );
+  };
 
   const confirmDelete = () => {
     if (deleteTarget) {
-      onDelete(deleteTarget.id)
-      setDeleteTarget(null)
+      onDelete(deleteTarget.id);
+      setDeleteTarget(null);
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -96,29 +128,61 @@ export function PassengersTable({
           <Table className="min-w-[600px] md:min-w-[1000px] w-full">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Nombre</TableHead>
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Fecha de nacimiento</TableHead>
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Nacionalidad</TableHead>
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Documento</TableHead>
-                <TableHead className="px-2 md:px-4 text-right text-xs md:text-sm">Acciones</TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Nombre
+                </TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Fecha de nacimiento
+                </TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Nacionalidad
+                </TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Documento
+                </TableHead>
+                <TableHead className="px-2 md:px-4 text-right text-xs md:text-sm">
+                  Acciones
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentPassengers.length === 0 ? (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground text-xs md:text-sm">
+                  <TableCell colSpan={5} className="h-24">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : currentPassengers.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="h-24 text-center text-muted-foreground text-xs md:text-sm"
+                  >
                     No se encontraron pasajeros
                   </TableCell>
                 </TableRow>
               ) : (
                 currentPassengers.map((passenger) => (
-                  <TableRow key={passenger.id} className="hover:bg-accent/50 transition-colors">
-                    <TableCell className="px-2 md:px-4 font-medium text-xs md:text-sm">{passenger.name}</TableCell>
-                    <TableCell className="px-2 md:px-4 text-muted-foreground text-xs md:text-sm">
-                      {format(new Date(passenger.birthDate), "dd MMM yyyy", { locale: es })}
+                  <TableRow
+                    key={passenger.id}
+                    className="hover:bg-accent/50 transition-colors"
+                  >
+                    <TableCell className="px-2 md:px-4 font-medium text-xs md:text-sm">
+                      {passenger.name}
                     </TableCell>
-                    <TableCell className="px-2 md:px-4 text-xs md:text-sm">{passenger.nationality}</TableCell>
-                    <TableCell className="px-2 md:px-4">{getDocumentInfo(passenger)}</TableCell>
+                    <TableCell className="px-2 md:px-4 text-muted-foreground text-xs md:text-sm">
+                      {format(new Date(passenger.birthDate), "dd MMM yyyy", {
+                        locale: es,
+                      })}
+                    </TableCell>
+                    <TableCell className="px-2 md:px-4 text-xs md:text-sm">
+                      {passenger.nationality}
+                    </TableCell>
+                    <TableCell className="px-2 md:px-4">
+                      {getDocumentInfo(passenger)}
+                    </TableCell>
                     <TableCell className="px-2 md:px-4 text-right">
                       <div className="flex justify-end gap-1 md:gap-2">
                         <Button
@@ -144,7 +208,10 @@ export function PassengersTable({
                           className="h-7 w-7 md:h-9 md:w-9 cursor-pointer text-destructive hover:bg-destructive/10"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDeleteTarget({ id: passenger.id, name: passenger.name })
+                            setDeleteTarget({
+                              id: passenger.id,
+                              name: passenger.name,
+                            });
                           }}
                         >
                           {isDeletingId === passenger.id ? (
@@ -174,11 +241,11 @@ export function PassengersTable({
       )}
 
       {/* Paginación */}
-      {totalPages > 1 && (
+      {!isLoading && totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-muted-foreground text-center sm:text-left text-xs md:text-sm">
-            Mostrando {startIndex + 1} a {Math.min(endIndex, passengers.length)} de{" "}
-            {passengers.length} pasajeros
+            Mostrando {startIndex + 1} a {Math.min(endIndex, passengers.length)}{" "}
+            de {passengers.length} pasajeros
           </p>
           <div className="flex justify-center gap-2">
             <Button
@@ -204,17 +271,25 @@ export function PassengersTable({
       )}
 
       {/* MODAL DE CONFIRMACIÓN */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción eliminará permanentemente al pasajero{" "}
-              <span className="font-semibold text-foreground">{deleteTarget?.name}</span>.
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              .
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
@@ -225,5 +300,5 @@ export function PassengersTable({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

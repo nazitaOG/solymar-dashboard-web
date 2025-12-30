@@ -21,16 +21,18 @@ interface FilterCriteria {
 export default function PasajerosPage() {
   // 1️⃣ Estados para el control del Diálogo
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">(
+    "create",
+  );
   const [selectedPassenger, setSelectedPassenger] = useState<Pax | undefined>();
-  
+
   // 2️⃣ Estado para los Filtros
   const [filters, setFilters] = useState<FilterCriteria>({
     search: "",
     nationality: undefined,
     documentFilter: undefined,
   });
-  
+
   const [isPending, startTransition] = useTransition();
 
   // 3️⃣ Hooks del Store global
@@ -41,13 +43,14 @@ export default function PasajerosPage() {
     addPassenger,
     updatePassenger,
     removePassenger,
+    loading,
   } = usePassengersStore();
 
   // 4️⃣ Hook de eliminación
   const { deletePassenger, error: deleteError } = useDeletePassenger({
     onDeleteSuccess: (id) => {
       removePassenger(id);
-    }
+    },
   });
 
   // 🧭 Sincronización Inicial con el Servidor
@@ -63,17 +66,18 @@ export default function PasajerosPage() {
 
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      result = result.filter((p) =>
-        p.name.toLowerCase().includes(searchLower) ||
-        p.dni?.dniNum.toLowerCase().includes(searchLower) ||
-        p.passport?.passportNum.toLowerCase().includes(searchLower)
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.dni?.dniNum.toLowerCase().includes(searchLower) ||
+          p.passport?.passportNum.toLowerCase().includes(searchLower),
       );
     }
-    
+
     if (filters.nationality) {
       result = result.filter((p) => p.nationality === filters.nationality);
     }
-    
+
     if (filters.documentFilter === "with-dni") {
       result = result.filter((p) => !!p.dni);
     } else if (filters.documentFilter === "with-passport") {
@@ -128,7 +132,9 @@ export default function PasajerosPage() {
           <div className="space-y-6">
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Pasajeros</h1>
+                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                  Pasajeros
+                </h1>
                 <p className="text-xs text-muted-foreground md:text-sm">
                   Lista de pasajeros registrados y gestión de documentos.
                 </p>
@@ -149,8 +155,8 @@ export default function PasajerosPage() {
             </div>
 
             {/* Tipamos la función de cambio de filtros correctamente */}
-            <PassengerFilters 
-              onFilterChange={(f) => handleFilterChange(f as FilterCriteria)} 
+            <PassengerFilters
+              onFilterChange={(f) => handleFilterChange(f as FilterCriteria)}
             />
 
             <PassengersTable
@@ -158,6 +164,7 @@ export default function PasajerosPage() {
               onView={handleView}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              isLoading={loading}
               externalError={deleteError}
             />
           </div>
