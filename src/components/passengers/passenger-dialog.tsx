@@ -263,7 +263,7 @@ export function PassengerDialog({
         }}
       >
         <DialogContent 
-          className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer"
+          className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer"
           onInteractOutside={(e) => {
             if (isDirty && !isViewMode) {
               e.preventDefault();
