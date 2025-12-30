@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useTransition } from "react"
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { X, Plus, UserPlus } from "lucide-react"
+import { X, Plus, UserPlus, Loader2 } from "lucide-react"
 
 import { PassengerDialog } from "@/components/passengers/passenger-dialog"
 import type { Pax } from "@/lib/interfaces/pax/pax.interface"
@@ -47,7 +47,7 @@ interface ReservationDialogProps {
   mode: "create" | "edit"
   onOpenChange: (open: boolean) => void
   availablePassengers: Pax[]
-  onConfirm: (data: { id?: string; state: ReservationState; passengers: Pax[] }) => void
+  onConfirm: (data: { id?: string; state: ReservationState; passengers: Pax[] }) => Promise<void> | void
   reservation?: Reservation | null
   onPassengerCreated?: (newPassenger: Pax) => void
 }
@@ -65,6 +65,9 @@ export function ReservationDialog({
   
   // 🔑 Key para forzar el remonte del PassengerDialog y limpiar su estado interno
   const [paxDialogKey, setPaxDialogKey] = useState(0)
+
+  // 🚀 React 19: useTransition para manejar el estado de carga asíncrono
+  const [isPending, startTransition] = useTransition()
 
   // Estado del formulario
   const [state, setState] = useState<ReservationState>(ReservationState.PENDING)
@@ -146,13 +149,21 @@ export function ReservationDialog({
     }
   }
 
+  // 🚀 Manejo de confirmación con startTransition de React 19
   const handleConfirm = () => {
-    onConfirm({
-      id: reservation?.id,
-      state,
-      passengers: selectedPassengers,
+    startTransition(async () => {
+      try {
+        await onConfirm({
+          id: reservation?.id,
+          state,
+          passengers: selectedPassengers,
+        })
+        // Si la promesa se resuelve con éxito, cerramos el diálogo
+        onOpenChange(false)
+      } catch (error) {
+        console.error("Error al confirmar la reserva:", error)
+      }
     })
-    onOpenChange(false)
   }
 
   return (
@@ -160,7 +171,9 @@ export function ReservationDialog({
       <Dialog
         open={open}
         onOpenChange={(isOpen) => {
-          // Bloqueo de cierre si hay cambios sin guardar
+          // Si está cargando, bloqueamos el cierre manual (Escape / Click fuera)
+          if (isPending) return
+          
           if (!isOpen && isDirty) {
             setShowDiscardConfirm(true)
           } else {
@@ -171,9 +184,9 @@ export function ReservationDialog({
         <DialogContent
           className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer"
           onInteractOutside={(e) => {
-            // 🛡️ FIX CRÍTICO: Si el diálogo de pasajeros está abierto, 
+            // 🛡️ Si el diálogo de pasajeros está abierto o la reserva se está guardando,
             // ignoramos cualquier interacción fuera de este diálogo padre.
-            if (passengerDialogOpen) {
+            if (passengerDialogOpen || isPending) {
               e.preventDefault();
               return;
             }
@@ -195,6 +208,7 @@ export function ReservationDialog({
             <div className="space-y-2">
               <Label className="text-[11px] md:text-xs">Estado</Label>
               <Select
+                disabled={isPending}
                 value={state}
                 onValueChange={(v) => setState(v as ReservationState)}
               >
@@ -226,12 +240,13 @@ export function ReservationDialog({
                       <span>{passenger.name}</span>
                       <button
                         type="button"
+                        disabled={isPending}
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
                           removePassenger(passenger.id)
                         }}
-                        className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
+                        className="ml-1 rounded-sm hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -248,6 +263,7 @@ export function ReservationDialog({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    disabled={isPending}
                     className="w-full justify-start bg-transparent h-8 md:h-9 text-xs md:text-sm cursor-pointer"
                   >
                     <UserPlus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -289,6 +305,7 @@ export function ReservationDialog({
             {/* Botón para crear pasajero nuevo */}
             <Button
               variant="outline"
+              disabled={isPending}
               onClick={() => setPassengerDialogOpen(true)}
               className="w-full h-8 md:h-9 text-xs md:text-sm cursor-pointer"
             >
@@ -308,6 +325,7 @@ export function ReservationDialog({
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               variant="outline"
+              disabled={isPending}
               onClick={() => {
                 if (isDirty) setShowDiscardConfirm(true)
                 else onOpenChange(false)
@@ -318,10 +336,17 @@ export function ReservationDialog({
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={!isEdit && selectedPassengers.length === 0}
-              className="text-xs md:text-sm cursor-pointer"
+              disabled={isPending || (!isEdit && selectedPassengers.length === 0)}
+              className="text-xs md:text-sm cursor-pointer min-w-[120px]"
             >
-              {isEdit ? "Guardar Cambios" : "Crear Reserva"}
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEdit ? "Guardando..." : "Creando..."}
+                </>
+              ) : (
+                isEdit ? "Guardar Cambios" : "Crear Reserva"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
