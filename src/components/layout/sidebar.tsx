@@ -5,7 +5,6 @@ import {
   Users, 
   BarChart3, 
   Settings, 
-  Plane, 
   // X,  <-- Ya no necesitamos importar X aquí
   Sun, 
   Moon, 
@@ -81,7 +80,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex h-full flex-col">
           {/* Header del Sidebar */}
           {/* Eliminamos el botón de cerrar interno para usar el del Layout */}
-          <div className="flex  h-20 items-center gap-2 border-b border-border px-5">
+          <div className="hidden lg:flex h-20 items-center gap-2 border-b border-border px-5">
             <img src="/logo.png" alt="Sol y Mar Viajes y Turismo" className="w-full h-12" />
           </div>
 

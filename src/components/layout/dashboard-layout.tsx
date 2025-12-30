@@ -36,7 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
           </Button>
           
-          <div className="font-semibold text-sm md:text-lg">Solymar Travel</div>
+          <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain" />
         </header>
 
         {/* Contenido Principal */}

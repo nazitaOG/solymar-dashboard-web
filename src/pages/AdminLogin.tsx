@@ -162,7 +162,7 @@ export default function AdminLogin() {
         <div className="w-full md:pb-6 max-w-5xl bg-[#17151f] text-white rounded-none md:rounded-md overflow-hidden shadow-xl border border-white/5 flex flex-col md:grid md:grid-cols-2">
           {/* Slideshow (Igual que antes) */}
           <div className="relative w-full h-48 sm:h-64 md:h-full md:m-3 md:rounded-md overflow-hidden">
-            <div className="absolute top-3 left-3 flex items-center gap-2 text-white/90 z-10">
+            <div className="hidden md:flex absolute top-3 left-3 items-center gap-2 text-white/90 z-10">
               <img src="/logo.png" alt="Sol y Mar Viajes y Turismo" className="w-44 h-10" />
             </div>
 
@@ -195,6 +195,9 @@ export default function AdminLogin() {
             {/* VISTA 1: LOGIN */}
             {view === "login" && (
               <div className="w-full max-w-md mx-auto space-y-6">
+                <div className="flex md:hidden justify-center mb-6">
+                  <img src="/logo.png" alt="Sol y Mar Logo" className="w-48 h-auto" />
+                </div>
                 <form onSubmit={handleLogin} className="w-full max-w-md mx-auto space-y-6">
                   <div>
                     <h1 className="text-3xl font-semibold mb-1">Inicia sesión</h1>
@@ -309,6 +312,9 @@ export default function AdminLogin() {
             {/* VISTA 2: FORGOT PASSWORD */}
             {view === "forgot-password" && (
               <form onSubmit={handleForgotPassword} className="w-full max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex md:hidden justify-center mb-6">
+                  <img src="/logo.png" alt="Sol y Mar Logo" className="w-48 h-auto" />
+                </div>
                 <div>
                   <button
                     type="button"
