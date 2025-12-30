@@ -70,7 +70,7 @@ export function EditPassengersDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         {/* 👇 AQUÍ ESTÁ EL CAMBIO: [&>button]:cursor-pointer */}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs md:text-sm [&>button]:cursor-pointer">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
               Editar Pasajeros

@@ -365,7 +365,7 @@ export function ReservationDetailHeader({
       {/* Dialog de Detalles de Pago */}
       <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
         {/* 👇 Se agregó [&>button]:cursor-pointer al final */}
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-[500px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden w-[95vw] sm:w-full [&>button]:cursor-pointer">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -455,7 +455,7 @@ export function ReservationDetailHeader({
 
       {/* Dialog para Editar Nombre */}
       <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
-        <DialogContent className="sm:max-w-[425px] w-[95vw]">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle>Editar nombre de la reserva</DialogTitle>
             <DialogDescription>
