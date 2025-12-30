@@ -264,11 +264,17 @@ export default function AdminLogin() {
 
                     <div className="flex items-center gap-2 text-sm">
                       <Checkbox
+                        id="remember" // 1. Agregamos un ID único
                         className="rounded-sm border-none bg-white/30 cursor-pointer"
                         checked={rememberMe}
                         onCheckedChange={(v) => setRememberMe(!!v)}
                       />
-                      <span>Recordarme en este dispositivo</span>
+                      <Label
+                        htmlFor="remember" // 2. Vinculamos el label al ID del checkbox
+                        className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Recordarme en este dispositivo
+                      </Label>
                     </div>
 
                     {error && <p className="text-red-400 text-sm">{error}</p>}
