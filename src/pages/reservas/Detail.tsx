@@ -1363,7 +1363,7 @@ export default function ReservationDetailPage() {
           <Button
             variant="ghost"
             onClick={() => navigate("/reservas")}
-            className="gap-2 text-xs md:text-sm"
+            className="gap-2 text-xs md:text-sm cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
             Volver a reservas
