@@ -92,16 +92,5 @@ export const planeSegmentListSchema = z
           path: [i, "arrivalDate"], // Marcamos el error en el tramo conflictivo
         });
       }
-
-      // B) Continuidad Geográfica: Destino A debe ser Origen B
-      // (Opcional: A veces hay "open jaw" o cambio de aeropuerto en la misma ciudad, 
-      // pero si tu regla es estricta, déjalo así)
-      if (current.arrival !== next.departure) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Ruta cortada: El tramo termina en ${current.arrival} pero el siguiente empieza en ${next.departure}`,
-          path: [i + 1, "departure"], // Marcamos el error en el siguiente tramo
-        });
-      }
     }
   });

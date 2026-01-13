@@ -224,17 +224,6 @@ export function PlaneDialog({
         allErrors[`segments.${index}.arrivalDate`] =
           "La fecha de llegada es obligatoria";
       }
-
-      if (index > 0) {
-        const prev = formData.segments[index - 1];
-        const prevArrival = prev.arrival?.trim().toUpperCase();
-        const currDeparture = s.departure?.trim().toUpperCase();
-
-        if (prevArrival && currDeparture && prevArrival !== currDeparture) {
-          allErrors[`segments.${index}.departure`] =
-            `Ruta cortada: El tramo anterior termina en ${prev.arrival} pero este empieza en ${s.departure}`;
-        }
-      }
     });
 
     const isEdit = Boolean(plane);
