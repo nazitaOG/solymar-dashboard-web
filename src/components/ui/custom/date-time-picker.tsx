@@ -62,8 +62,8 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
 
     const getDateValue = React.useCallback(() => {
       if (!date) return "00";
-      const val =
-        picker === "hours" ? date.getHours() % 12 || 12 : date.getMinutes();
+      // Formato 24h: obtenemos la hora tal cual (0-23)
+      const val = picker === "hours" ? date.getHours() : date.getMinutes();
       return val.toString().padStart(2, "0");
     }, [date, picker]);
 
@@ -82,7 +82,9 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
       if (!/^\d+$/.test(v)) return;
 
       const intVal = parseInt(v, 10);
-      if (picker === "hours" && intVal > 12) return;
+      
+      // Validación 24h (0-23)
+      if (picker === "hours" && intVal > 23) return;
       if (picker === "minutes" && intVal > 59) return;
 
       setLocalValue(v);
@@ -90,11 +92,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
       if (date) {
         const newDate = new Date(date);
         if (picker === "hours") {
-          const isPm = newDate.getHours() >= 12;
-          let hours = intVal;
-          if (hours === 12) hours = 0;
-          if (isPm) hours += 12;
-          newDate.setHours(hours % 24);
+          newDate.setHours(intVal % 24);
         } else {
           newDate.setMinutes(intVal % 60);
         }
@@ -196,10 +194,7 @@ export function DateTimePicker({
   const hourRef = React.useRef<HTMLInputElement>(null);
   const minuteRef = React.useRef<HTMLInputElement>(null);
 
-  // Control manual de la vista del calendario
   const [month, setMonth] = React.useState<Date>(date || dateRange?.from || new Date());
-  
-  // Memoria del día seleccionado para evitar que se resetee al cambiar mes/año
   const [lastSelectedDay, setLastSelectedDay] = React.useState<number | undefined>(date?.getDate());
 
   React.useEffect(() => {
@@ -241,10 +236,8 @@ export function DateTimePicker({
   const handleMonthChange = (newMonth: Date) => {
     setMonth(newMonth);
     
-    // Si no estamos en rango y hay una fecha base, actualizamos la fecha al cambiar el dropdown
     if (!withRange && date && setDate && lastSelectedDay) {
       const daysInNewMonth = getDaysInMonth(newMonth);
-      // Evita el error del 30 de febrero: si el día no existe, usa el último día del mes
       const safeDay = Math.min(lastSelectedDay, daysInNewMonth);
       
       let updatedDate = setDateYear(date, newMonth.getFullYear());
@@ -255,7 +248,7 @@ export function DateTimePicker({
     }
   };
 
-  const adjustTime = (type: "hours" | "minutes" | "ampm", step: number) => {
+  const adjustTime = (type: "hours" | "minutes", step: number) => {
     if (!date || !setDate) return;
     const newDate = new Date(date);
 
@@ -263,9 +256,6 @@ export function DateTimePicker({
       newDate.setHours((newDate.getHours() + step + 24) % 24);
     } else if (type === "minutes") {
       newDate.setMinutes((newDate.getMinutes() + step + 60) % 60);
-    } else {
-      const current = newDate.getHours();
-      newDate.setHours(current >= 12 ? current - 12 : current + 12);
     }
     setDate(newDate);
   };
@@ -282,6 +272,7 @@ export function DateTimePicker({
       )}`;
     }
     if (!date) return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
+    // HH mayúscula fuerza formato 24hs
     return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es });
   };
 
@@ -365,15 +356,6 @@ export function DateTimePicker({
                   ref={minuteRef}
                   onLeftFocus={() => hourRef.current?.focus()}
                 />
-              </TimePeriod>
-              <div className="w-3 md:w-4" />
-              <TimePeriod onUp={() => adjustTime("ampm", 1)} onDown={() => adjustTime("ampm", -1)} disabled={!date}>
-                <div className={cn(
-                  "flex items-center justify-center h-7 md:h-8 w-[40px] md:w-[52px] rounded-md border border-input bg-background font-mono text-[11px] md:text-sm font-medium",
-                  !date && "opacity-50"
-                )}>
-                  {date ? (date.getHours() >= 12 ? "PM" : "AM") : "AM"}
-                </div>
               </TimePeriod>
             </div>
           </div>
