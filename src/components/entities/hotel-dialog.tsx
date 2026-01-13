@@ -148,7 +148,8 @@ export function HotelDialog({
     if (!formData.startDate) newErrors.startDate = "Requerido";
     if (!formData.endDate) newErrors.endDate = "Requerido";
 
-    const result = schema.safeParse({
+    // Validamos primero contra Zod para errores de formulario
+    const validationResult = schema.safeParse({
       ...formData,
       startDate: formData.startDate?.toISOString() ?? "",
       endDate: formData.endDate?.toISOString() ?? "",
@@ -157,8 +158,8 @@ export function HotelDialog({
       ...(isEdit ? {} : { reservationId }),
     });
 
-    if (!result.success) {
-      result.error.issues.forEach((err) => {
+    if (!validationResult.success) {
+      validationResult.error.issues.forEach((err) => {
         const key = err.path[0] as keyof FormData;
         if (!newErrors[key]) newErrors[key] = err.message;
       });
@@ -180,13 +181,23 @@ export function HotelDialog({
 
     try {
       setLoading(true);
+
+      // 🛠️ FIX: Separamos currency del resto de la data
+      const { currency, ...restFormData } = formData;
+
       const payload = {
-        ...formData,
+        ...restFormData, // Mantiene totalPrice y amountPaid para que se actualicen
         startDate: formData.startDate!.toISOString(),
         endDate: formData.endDate!.toISOString(),
         totalPrice: Number(formData.totalPrice),
         amountPaid: Number(formData.amountPaid),
-        ...(isEdit ? {} : { reservationId, currency: formData.currency || "USD" }),
+        
+        // Solo enviamos currency y reservationId si estamos creando (POST)
+        // Si estamos editando (PATCH), currency se omite para evitar el error 400
+        ...(isEdit 
+          ? {} 
+          : { reservationId, currency: currency || Currency.USD }
+        ),
       };
 
       const endpoint = isEdit ? `/hotels/${hotel!.id}` : "/hotels";
@@ -233,10 +244,6 @@ export function HotelDialog({
         }}
       >
         <DialogContent
-          /* CAMBIO PARA SCROLL CON RUEDA: 
-             Aseguramos overflow-y-auto en el contenedor del diálogo 
-             y max-h para que no exceda la pantalla. 
-          */
           className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer scrollbar-thin"
           onWheel={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
@@ -349,20 +356,20 @@ export function HotelDialog({
           <DialogFooter className="mt-4 flex gap-2 justify-end">
             <div className="flex-1">
               {!isView && hotel && (
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="text-xs md:text-sm">Eliminar</Button>
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="cursor-pointer text-xs md:text-sm">Eliminar</Button>
               )}
             </div>
             <div className="flex gap-2">
               {isView ? (
-                <Button onClick={() => onOpenChange(false)} className="text-xs md:text-sm">Cerrar</Button>
+                <Button onClick={() => onOpenChange(false)} className="text-xs cursor-pointer md:text-sm">Cerrar</Button>
               ) : (
                 <>
                   <Button
                     variant="outline"
                     onClick={() => effectiveIsDirty ? setShowDiscardConfirm(true) : onOpenChange(false)}
-                    className="text-xs md:text-sm"
+                    className="text-xs md:text-sm cursor-pointer"
                   >Cancelar</Button>
-                  <Button onClick={handleSave} className="text-xs md:text-sm">Guardar</Button>
+                  <Button onClick={handleSave} className="text-xs md:text-sm cursor-pointer">Guardar</Button>
                 </>
               )}
             </div>
