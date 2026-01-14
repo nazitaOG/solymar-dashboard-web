@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { AlertCircle, CheckCircle2, Pencil, Users } from "lucide-react";
 import { EditPassengersDialog } from "./edit-passengers-dialog";
+import { PassengerDialog } from "../passengers/passenger-dialog";
 import { fetchAPI } from "@/lib/api/fetchApi";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,10 @@ export function ReservationDetailHeader({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false);
 
+  // 🟢 ESTADOS PARA EL DIALOGO DE PASAJERO INDIVIDUAL (VER)
+  const [viewPaxOpen, setViewPaxOpen] = useState(false);
+  const [selectedPax, setSelectedPax] = useState<Pax | undefined>();
+
   // Estados manuales para el formulario de nombre
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [tempName, setTempName] = useState("");
@@ -76,7 +81,6 @@ export function ReservationDetailHeader({
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  // Efecto: Prellenar datos al abrir el modal y limpiar errores
   useEffect(() => {
     if (editNameOpen) {
       setTempName(reservation.name || "");
@@ -84,7 +88,6 @@ export function ReservationDetailHeader({
     }
   }, [editNameOpen, reservation.name]);
 
-  // Handler de Guardado Manual con Zod
   const handleSaveName = async () => {
     const result = updateReservationNameSchema.safeParse({ name: tempName });
 
@@ -200,6 +203,12 @@ export function ReservationDetailHeader({
     }
   };
 
+  // 🟢 HANDLER PARA VER PASAJERO
+  const handleViewPassenger = (pax: Pax) => {
+    setSelectedPax(pax);
+    setViewPaxOpen(true);
+  };
+
   return (
     <>
       <div className="pl-4 pr-3 md:pl-0 w-full">
@@ -285,7 +294,6 @@ export function ReservationDetailHeader({
                 e.preventDefault();
                 setPaymentDetailsOpen(true);
               }}
-              // 👇 CAMBIO: text-red-500 en lugar de 600 (y hover a 600)
               className="text-sm self-start pb-3 pl-1 font-medium text-red-500 hover:text-red-600 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
             >
               <AlertCircle className="h-4 w-4" />
@@ -294,20 +302,16 @@ export function ReservationDetailHeader({
           )}
         </div>
 
-        {/* --- Sección de Pasajeros (CORREGIDA) --- */}
-        {/* Agregamos gap-4 al padre */}
+        {/* --- Sección de Pasajeros (ACTUALIZADA) --- */}
         <div className="flex flex-col h-fit justify-between sm:flex-row items-start sm:items-center w-full gap-4">
-
-          {/* CAMBIO IMPORTANTE: 
-    1. w-full: Para que ocupe todo en móvil.
-    2. sm:w-auto sm:flex-1: En escritorio, dejamos que ocupe el espacio sobrante pero sin forzar el 100% para no aplastar al botón.
-*/}
           <div className="flex gap-2 flex-wrap w-full sm:w-auto sm:flex-1">
             {currentPassengers.map((passenger) => (
               <Badge
                 key={passenger.id}
                 variant="outline"
-                className="gap-2 py-1.5 px-3 max-w-full"
+                // 🟢 AHORA SON CLICKEABLES
+                className="gap-2 py-1.5 px-3 max-w-full cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => handleViewPassenger(passenger)}
               >
                 <Users className="md:!h-4 md:!w-4 text-muted-foreground shrink-0" />
                 <span className="truncate text-xs md:text-sm">{passenger.name}</span>
@@ -315,22 +319,27 @@ export function ReservationDetailHeader({
             ))}
           </div>
 
-          {/* Botón */}
           <Button
             variant="outline"
             onClick={() => setEditPassengersOpen(true)}
-            // En escritorio (sm), el botón toma su tamaño natural (w-auto) y no se encoge (shrink-0)
             className="cursor-pointer w-full sm:w-auto h-8 px-3 md:text-sm text-xs shrink-0"
           >
             Editar pasajeros
           </Button>
         </div>
-
-
-
-
-
       </div>
+
+      {/* --- DIALOGOS --- */}
+
+      {/* 🟢 NUEVO DIALOGO PARA VER PASAJERO */}
+      {viewPaxOpen && (
+        <PassengerDialog
+          open={viewPaxOpen}
+          onOpenChange={setViewPaxOpen}
+          passenger={selectedPax}
+          mode="view" // Solo lectura
+        />
+      )}
 
       <EditPassengersDialog
         open={editPassengersOpen}
@@ -362,9 +371,7 @@ export function ReservationDetailHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Detalles de Pago */}
       <Dialog open={paymentDetailsOpen} onOpenChange={setPaymentDetailsOpen}>
-        {/* 👇 Se agregó [&>button]:cursor-pointer al final */}
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
@@ -453,7 +460,6 @@ export function ReservationDetailHeader({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Editar Nombre */}
       <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
