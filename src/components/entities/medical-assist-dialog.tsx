@@ -38,6 +38,8 @@ import type { MedicalAssist } from "@/lib/interfaces/medical_assist/medical_assi
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
+import { MoneyInput } from "../ui/custom/price-input";
+
 interface MedicalAssistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -257,9 +259,9 @@ export function MedicalAssistDialog({
             {(["provider", "bookingReference", "assistType"] as const).map((id) => (
               <div key={id} className="space-y-1">
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
-                  {id === "provider" ? "Proveedor *" : 
-                   id === "bookingReference" ? "Referencia de reserva *" : 
-                   "Tipo de asistencia"}
+                  {id === "provider" ? "Proveedor *" :
+                    id === "bookingReference" ? "Referencia de reserva *" :
+                      "Tipo de asistencia"}
                 </Label>
                 <Input
                   id={id}
@@ -269,8 +271,8 @@ export function MedicalAssistDialog({
                   }
                   placeholder={
                     id === "provider" ? "Assist Card" :
-                    id === "bookingReference" ? "ASST-00123" :
-                    "Emergencia médica internacional"
+                      id === "bookingReference" ? "ASST-00123" :
+                        "Emergencia médica internacional"
                   }
                   className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
                   disabled={isView}
@@ -322,24 +324,13 @@ export function MedicalAssistDialog({
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
                   {id === "totalPrice" ? "Precio total *" : "Monto pagado *"}
                 </Label>
-                <Input
-                  id={id}
-                  type="number"
-                  min={0}
-                  value={Number(formData[id] ?? 0)}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const numValue = value === "" ? 0 : Number(value);
-                    if (numValue >= 0) {
-                      setFormData({ ...formData, [id]: numValue });
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "Minus") e.preventDefault();
-                  }}
-                  placeholder={id === "totalPrice" ? "500" : "300"}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
+                <MoneyInput
+                  value={Number(formData[id])} // Pasamos el valor numérico del estado
+                  onChange={(val) => setFormData({ ...formData, [id]: val })} // Actualizamos estado
+                  placeholder={id === "totalPrice" ? "Ej: 1500.00" : "Ej: 0"}
                   disabled={isView}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""
+                    } ${errors[id] ? "border-red-500" : ""}`}
                 />
                 {errors[id] && (
                   <p className="text-red-500 text-[10px] md:text-xs">

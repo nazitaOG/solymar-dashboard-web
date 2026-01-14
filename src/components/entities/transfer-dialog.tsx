@@ -43,6 +43,8 @@ import {
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
+import { MoneyInput } from "../ui/custom/price-input";
+
 interface TransferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -123,11 +125,11 @@ export function TransferDialog({
       provider: data.provider || "",
       bookingReference: data.bookingReference || "",
       transportType: data.transportType || TransportType.OTHER,
-      departureDate: data.departureDate instanceof Date 
-        ? data.departureDate.getTime() 
+      departureDate: data.departureDate instanceof Date
+        ? data.departureDate.getTime()
         : data.departureDate ? new Date(data.departureDate).getTime() : 0,
-      arrivalDate: data.arrivalDate instanceof Date 
-        ? data.arrivalDate.getTime() 
+      arrivalDate: data.arrivalDate instanceof Date
+        ? data.arrivalDate.getTime()
         : data.arrivalDate ? new Date(data.arrivalDate).getTime() : 0,
       totalPrice: Number(data.totalPrice || 0),
       amountPaid: Number(data.amountPaid || 0),
@@ -270,9 +272,9 @@ export function TransferDialog({
             {(["origin", "destination", "provider", "bookingReference"] as const).map((id) => (
               <div key={id} className="space-y-1">
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
-                  {id === "origin" ? "Origen *" : 
-                   id === "destination" ? "Destino" :
-                   id === "provider" ? "Proveedor *" : "Referencia"}
+                  {id === "origin" ? "Origen *" :
+                    id === "destination" ? "Destino" :
+                      id === "provider" ? "Proveedor *" : "Referencia"}
                 </Label>
                 <Input
                   id={id}
@@ -350,17 +352,13 @@ export function TransferDialog({
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
                   {id === "totalPrice" ? "Precio total *" : "Monto pagado *"}
                 </Label>
-                <Input
-                  id={id}
-                  type="number"
-                  min={0}
-                  value={Number(formData[id] ?? 0)}
-                  onChange={(e) => {
-                    const val = e.target.value === "" ? 0 : Number(e.target.value);
-                    if (val >= 0) setFormData({ ...formData, [id]: val });
-                  }}
+                <MoneyInput
+                  value={Number(formData[id])} // Pasamos el valor numérico del estado
+                  onChange={(val) => setFormData({ ...formData, [id]: val })} // Actualizamos estado
+                  placeholder={id === "totalPrice" ? "Ej: 1500.00" : "Ej: 0"}
                   disabled={isView}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""
+                    } ${errors[id] ? "border-red-500" : ""}`}
                 />
                 {errors[id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[id]}</p>}
               </div>
@@ -414,11 +412,11 @@ export function TransferDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Seguir editando</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 setShowDiscardConfirm(false);
                 onOpenChange(false);
-              }} 
+              }}
               className="cursor-pointer"
             >
               Descartar

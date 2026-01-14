@@ -39,6 +39,7 @@ import {
 import type { Excursion } from "@/lib/interfaces/excursion/excursion.interface";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
+import { MoneyInput } from "../ui/custom/price-input";
 
 interface ExcursionDialogProps {
   open: boolean;
@@ -324,17 +325,14 @@ export function ExcursionDialog({
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
                   {id === "totalPrice" ? "Precio total *" : "Monto pagado *"}
                 </Label>
-                <Input
-                  id={id}
-                  type="number"
-                  min={0}
-                  value={Number(formData[id] ?? 0)}
-                  onChange={(e) => {
-                    const val = e.target.value === "" ? 0 : Number(e.target.value);
-                    if (val >= 0) setFormData({ ...formData, [id]: val });
-                  }}
+                <MoneyInput
+                  value={Number(formData[id])} // Pasamos el valor numérico del estado
+                  onChange={(val) => setFormData({ ...formData, [id]: val })} // Actualizamos estado
+                  placeholder={id === "totalPrice" ? "Ej: 1500.00" : "Ej: 0"}
                   disabled={isView}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""} ${errors[id] ? "border-red-500" : ""}`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${
+                    isView ? "bg-muted/50 cursor-default" : ""
+                  } ${errors[id] ? "border-red-500" : ""}`}
                 />
                 {errors[id] && (
                   <p className="text-red-500 text-[10px] md:text-xs">{errors[id]}</p>

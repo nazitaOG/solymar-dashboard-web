@@ -41,6 +41,8 @@ import type { Plane } from "@/lib/interfaces/plane/plane.interface";
 import { Currency } from "@/lib/interfaces/currency/currency.interface";
 import type { z } from "zod";
 
+import { MoneyInput } from "../ui/custom/price-input";
+
 interface PlaneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -153,24 +155,24 @@ export function PlaneDialog({
 
     const initialData = plane
       ? normalize({
-          bookingReference: plane.bookingReference ?? "",
-          provider: plane.provider ?? "",
-          totalPrice: plane.totalPrice,
-          amountPaid: plane.amountPaid,
-          notes: plane.notes ?? "",
-          currency: plane.currency,
-          segments: plane.segments.map((s) => ({
-            segmentOrder: s.segmentOrder,
-            departure: s.departure,
-            arrival: s.arrival,
-            departureDate: s.departureDate
-              ? new Date(s.departureDate)
-              : undefined,
-            arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
-            airline: s.airline ?? "",
-            flightNumber: s.flightNumber ?? "",
-          })),
-        } as FormData)
+        bookingReference: plane.bookingReference ?? "",
+        provider: plane.provider ?? "",
+        totalPrice: plane.totalPrice,
+        amountPaid: plane.amountPaid,
+        notes: plane.notes ?? "",
+        currency: plane.currency,
+        segments: plane.segments.map((s) => ({
+          segmentOrder: s.segmentOrder,
+          departure: s.departure,
+          arrival: s.arrival,
+          departureDate: s.departureDate
+            ? new Date(s.departureDate)
+            : undefined,
+          arrivalDate: s.arrivalDate ? new Date(s.arrivalDate) : undefined,
+          airline: s.airline ?? "",
+          flightNumber: s.flightNumber ?? "",
+        })),
+      } as FormData)
       : normalize(defaultFormData);
 
     const currentData = normalize(formData);
@@ -387,31 +389,16 @@ export function PlaneDialog({
                 <Label htmlFor={key} className="text-[11px] md:text-xs">
                   {key === "totalPrice" ? "Precio total *" : "Monto pagado *"}
                 </Label>
-                <Input
-                  id={key}
-                  type="number"
-                  min={0}
-                  value={formData[key as keyof FormData] as string | number}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") {
-                      setFormData({ ...formData, [key]: 0 });
-                      return;
-                    }
-                    const numValue = Number(value);
-                    if (numValue >= 0) {
-                      setFormData({ ...formData, [key]: numValue });
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "Minus") {
-                      e.preventDefault();
-                    }
-                  }}
-                  placeholder={key === "totalPrice" ? "Ej: 1500" : "Ej: 500"}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${errors[key] ? "border-red-500" : ""}`}
+
+                <MoneyInput
+                  value={formData[key] as number}
+                  onChange={(val) => setFormData({ ...formData, [key]: val })}
+                  placeholder={key === "totalPrice" ? "Ej: 1500.00" : "Ej: 500.00"}
                   disabled={isView}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""
+                    } ${errors[key] ? "border-red-500" : ""}`}
                 />
+
                 {errors[key] && (
                   <p className="text-red-500 text-[10px] md:text-xs">
                     {errors[key]}
