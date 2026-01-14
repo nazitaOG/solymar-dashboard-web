@@ -17,6 +17,7 @@ interface InternalCalendarProps {
   showTime?: boolean
   showMonthYearPicker?: boolean
   className?: string
+  // Range selection props
   rangeMode?: boolean
   startDate?: Date
   endDate?: Date
@@ -204,18 +205,10 @@ function InternalCalendar({
 
   const renderDays = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear)
-    const firstDayIndex = getFirstDayOfMonth(currentMonth, currentYear) // 0 (Dom) a 6 (Sab)
-    
-    // 🟢 LÓGICA DE BALANCEO VERTICAL
-    // 1. Calculamos cuántas celdas ocupa el mes "naturalmente"
+    const firstDayIndex = getFirstDayOfMonth(currentMonth, currentYear)
     const naturalCells = firstDayIndex + daysInMonth;
     const naturalRows = Math.ceil(naturalCells / 7);
-
-    // 2. Si el mes ocupa solo 4 filas (ej: Feb no bisiesto empezando en Domingo),
-    //    quedan 2 filas vacías al final. En ese caso, agregamos 1 fila extra arriba.
     const addTopRow = naturalRows === 4;
-    
-    // Si agregamos fila arriba, "empujamos" el inicio 7 días más atrás
     const daysFromPrevMonthToRender = firstDayIndex + (addTopRow ? 7 : 0);
 
     const days = []
@@ -224,21 +217,33 @@ function InternalCalendar({
     const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
     const daysInPrevMonth = getDaysInMonth(prevMonth, prevYear)
 
-    // Renderizar días del mes anterior
+    // Helper para detectar "HOY"
+    const today = new Date();
+    const checkIsToday = (d: number, m: number, y: number) => {
+        return d === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+    }
+
+    // Días del mes anterior
     for (let i = daysFromPrevMonthToRender - 1; i >= 0; i--) {
       const day = daysInPrevMonth - i
+      // 🟢 Verificamos si algún día del mes anterior (relleno) es hoy
+      const isToday = checkIsToday(day, prevMonth, prevYear);
+
       days.push(
         <button
           key={`prev-${day}`}
           onClick={() => handleDateSelect(day, prevMonth, prevYear)}
-          className="p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer"
+          className={cn(
+            "p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer",
+            isToday && "bg-accent/30 font-semibold text-accent-foreground" // Estilo sutil si es hoy
+          )}
         >
           {day}
         </button>,
       )
     }
 
-    // Renderizar días del mes actual
+    // Días del mes actual
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentYear, currentMonth, day)
       
@@ -249,6 +254,9 @@ function InternalCalendar({
 
       const inRange = rangeMode && isInRange(date)
       const isBoundary = rangeMode && isRangeBoundary(date)
+      
+      // 🟢 Verificamos si es hoy
+      const isToday = checkIsToday(day, currentMonth, currentYear);
 
       days.push(
         <button
@@ -259,6 +267,12 @@ function InternalCalendar({
           className={cn(
             "h-8 w-8 p-0 text-sm flex items-center justify-center rounded-md transition-all cursor-pointer",
             "hover:bg-accent hover:text-accent-foreground",
+            
+            // Estilos para "Hoy" (Si NO está seleccionado)
+            isToday && !isSelected && !isBoundary && "bg-accent/50 text-accent-foreground font-semibold border border-primary/20",
+            // Estilos para "Hoy" (Si SÍ está seleccionado - negrita extra)
+            isToday && (isSelected || isBoundary) && "font-extrabold ring-1 ring-background",
+
             inRange && !isBoundary && "bg-accent text-accent-foreground rounded-none",
             (isSelected || isBoundary) && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-sm",
             isBoundary && rangeStart && date.getTime() === new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).getTime() && "rounded-l-md rounded-r-none",
@@ -271,7 +285,7 @@ function InternalCalendar({
       )
     }
 
-    // Relleno final para llegar siempre a 42 celdas
+    // Relleno final
     const totalCellsRendered = days.length;
     const remainingCells = 42 - totalCellsRendered;
 
@@ -279,11 +293,17 @@ function InternalCalendar({
     const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
 
     for (let day = 1; day <= remainingCells; day++) {
+      // 🟢 Verificamos si algún día del mes siguiente (relleno) es hoy
+      const isToday = checkIsToday(day, nextMonth, nextYear);
+
       days.push(
         <button
           key={`next-${day}`}
           onClick={() => handleDateSelect(day, nextMonth, nextYear)}
-          className="p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer"
+          className={cn(
+            "p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer",
+            isToday && "bg-accent/30 font-semibold text-accent-foreground"
+          )}
         >
           {day}
         </button>,
