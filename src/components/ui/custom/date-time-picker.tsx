@@ -1,21 +1,468 @@
-import * as React from "react";
-import { 
-  format, 
-  getDaysInMonth, 
-  setDate as setDateDay, 
-  setMonth as setDateMonth, 
-  setYear as setDateYear 
-} from "date-fns";
-import { es } from "date-fns/locale";
-import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
-import { DateRange, SelectSingleEventHandler, SelectRangeEventHandler } from "react-day-picker";
+import * as React from "react"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
 
-import { cn } from "@/lib/utils/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils/utils"
+import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+// ----------------------------------------------------------------------
+// 1. LÓGICA DEL CALENDARIO INTERNO
+// ----------------------------------------------------------------------
+
+interface InternalCalendarProps {
+  value?: Date
+  onChange?: (date: Date) => void
+  showTime?: boolean
+  showMonthYearPicker?: boolean
+  className?: string
+  rangeMode?: boolean
+  startDate?: Date
+  endDate?: Date
+  onRangeChange?: (startDate: Date | undefined, endDate: Date | undefined) => void
+  startYear?: number
+  endYear?: number
+}
+
+type View = "days" | "months" | "years"
+
+function InternalCalendar({
+  value,
+  onChange,
+  showTime = false,
+  showMonthYearPicker = false,
+  className,
+  rangeMode = false,
+  startDate,
+  endDate,
+  onRangeChange,
+  startYear = 1900,
+  endYear = 2100,
+}: InternalCalendarProps) {
+  const initialDate = value || startDate || new Date()
+  
+  const [selectedDate, setSelectedDate] = React.useState<Date>(initialDate)
+  const [currentMonth, setCurrentMonth] = React.useState(initialDate.getMonth())
+  const [currentYear, setCurrentYear] = React.useState(initialDate.getFullYear())
+  
+  const [yearPageStart, setYearPageStart] = React.useState(Math.floor(initialDate.getFullYear() / 12) * 12)
+
+  const [view, setView] = React.useState<View>("days")
+  
+  const [hours, setHours] = React.useState(initialDate.getHours())
+  const [minutes, setMinutes] = React.useState(initialDate.getMinutes())
+
+  const [selectedDay, setSelectedDay] = React.useState<number | null>(value?.getDate() || null)
+
+  const [rangeStart, setRangeStart] = React.useState<Date | undefined>(startDate)
+  const [rangeEnd, setRangeEnd] = React.useState<Date | undefined>(endDate)
+  const [hoverDate, setHoverDate] = React.useState<Date | undefined>()
+
+  React.useEffect(() => {
+    if (value) {
+      setSelectedDate(value)
+      setHours(value.getHours())
+      setMinutes(value.getMinutes())
+      setSelectedDay(value.getDate())
+      if (!rangeMode) {
+        setCurrentMonth(value.getMonth())
+        setCurrentYear(value.getFullYear())
+        setYearPageStart(Math.floor(value.getFullYear() / 12) * 12)
+      }
+    }
+  }, [value, rangeMode])
+
+  React.useEffect(() => {
+    if (rangeMode) {
+      setRangeStart(startDate)
+      setRangeEnd(endDate)
+    }
+  }, [startDate, endDate, rangeMode])
+
+  React.useEffect(() => {
+    if (view === "years") {
+      setYearPageStart(Math.floor(currentYear / 12) * 12)
+    }
+  }, [view, currentYear])
+
+
+  const months = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  ]
+
+  const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"]
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay()
+  }
+
+  const handleDateSelect = (day: number, month: number, year: number) => {
+    const newDate = new Date(year, month, day, hours, minutes)
+
+    if (rangeMode) {
+      if (!rangeStart || (rangeStart && rangeEnd)) {
+        setRangeStart(newDate)
+        setRangeEnd(undefined)
+        onRangeChange?.(newDate, undefined)
+      } else {
+        if (newDate < rangeStart) {
+          setRangeStart(newDate)
+          setRangeEnd(rangeStart)
+          onRangeChange?.(newDate, rangeStart)
+        } else {
+          setRangeEnd(newDate)
+          onRangeChange?.(rangeStart, newDate)
+        }
+      }
+    } else {
+      setSelectedDay(day)
+      setSelectedDate(newDate)
+      onChange?.(newDate)
+    }
+  }
+
+  const isInRange = (date: Date) => {
+    if (!rangeStart) return false
+    const compareEnd = rangeEnd || hoverDate
+    if (!compareEnd) return false
+
+    const start = rangeStart < compareEnd ? rangeStart : compareEnd
+    const end = rangeStart < compareEnd ? compareEnd : rangeStart
+    
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()
+    const e = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime()
+
+    return d >= s && d <= e
+  }
+
+  const isRangeBoundary = (date: Date) => {
+    if (!rangeStart) return false
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    const s = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).getTime()
+    
+    if (d === s) return true
+    
+    if (rangeEnd) {
+      const e = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate()).getTime()
+      if (d === e) return true
+    }
+    return false
+  }
+
+  const handleMonthSelect = (monthIndex: number) => {
+    setCurrentMonth(monthIndex)
+    if (!rangeMode && selectedDay !== null) {
+      const daysInNewMonth = getDaysInMonth(monthIndex, currentYear)
+      const validDay = Math.min(selectedDay, daysInNewMonth)
+      setSelectedDay(validDay)
+      const newDate = new Date(currentYear, monthIndex, validDay, hours, minutes)
+      setSelectedDate(newDate)
+      onChange?.(newDate)
+    }
+    setView("days")
+  }
+
+  const handleYearSelect = (year: number) => {
+    setCurrentYear(year)
+    if (!rangeMode && selectedDay !== null) {
+      const daysInNewMonth = getDaysInMonth(currentMonth, year)
+      const validDay = Math.min(selectedDay, daysInNewMonth)
+      setSelectedDay(validDay)
+      const newDate = new Date(year, currentMonth, validDay, hours, minutes)
+      setSelectedDate(newDate)
+      onChange?.(newDate)
+    }
+    setView("days")
+  }
+
+  const handleTimeChange = (type: "hours" | "minutes", val: number) => {
+    if (type === "hours") {
+      setHours(val)
+      if (!rangeMode) {
+        const newDate = new Date(selectedDate)
+        newDate.setHours(val)
+        setSelectedDate(newDate)
+        onChange?.(newDate)
+      }
+    } else {
+      setMinutes(val)
+      if (!rangeMode) {
+        const newDate = new Date(selectedDate)
+        newDate.setMinutes(val)
+        setSelectedDate(newDate)
+        onChange?.(newDate)
+      }
+    }
+  }
+
+  const renderDays = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear)
+    const firstDayIndex = getFirstDayOfMonth(currentMonth, currentYear) // 0 (Dom) a 6 (Sab)
+    
+    // 🟢 LÓGICA DE BALANCEO VERTICAL
+    // 1. Calculamos cuántas celdas ocupa el mes "naturalmente"
+    const naturalCells = firstDayIndex + daysInMonth;
+    const naturalRows = Math.ceil(naturalCells / 7);
+
+    // 2. Si el mes ocupa solo 4 filas (ej: Feb no bisiesto empezando en Domingo),
+    //    quedan 2 filas vacías al final. En ese caso, agregamos 1 fila extra arriba.
+    const addTopRow = naturalRows === 4;
+    
+    // Si agregamos fila arriba, "empujamos" el inicio 7 días más atrás
+    const daysFromPrevMonthToRender = firstDayIndex + (addTopRow ? 7 : 0);
+
+    const days = []
+
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+    const daysInPrevMonth = getDaysInMonth(prevMonth, prevYear)
+
+    // Renderizar días del mes anterior
+    for (let i = daysFromPrevMonthToRender - 1; i >= 0; i--) {
+      const day = daysInPrevMonth - i
+      days.push(
+        <button
+          key={`prev-${day}`}
+          onClick={() => handleDateSelect(day, prevMonth, prevYear)}
+          className="p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer"
+        >
+          {day}
+        </button>,
+      )
+    }
+
+    // Renderizar días del mes actual
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day)
+      
+      const isSelected = !rangeMode && 
+        selectedDay === day &&
+        currentMonth === selectedDate.getMonth() &&
+        currentYear === selectedDate.getFullYear()
+
+      const inRange = rangeMode && isInRange(date)
+      const isBoundary = rangeMode && isRangeBoundary(date)
+
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleDateSelect(day, currentMonth, currentYear)}
+          onMouseEnter={() => rangeMode && setHoverDate(date)}
+          onMouseLeave={() => rangeMode && setHoverDate(undefined)}
+          className={cn(
+            "h-8 w-8 p-0 text-sm flex items-center justify-center rounded-md transition-all cursor-pointer",
+            "hover:bg-accent hover:text-accent-foreground",
+            inRange && !isBoundary && "bg-accent text-accent-foreground rounded-none",
+            (isSelected || isBoundary) && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-sm",
+            isBoundary && rangeStart && date.getTime() === new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).getTime() && "rounded-l-md rounded-r-none",
+            isBoundary && rangeEnd && date.getTime() === new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate()).getTime() && "rounded-r-md rounded-l-none",
+            isBoundary && rangeStart && !rangeEnd && "rounded-md"
+          )}
+        >
+          {day}
+        </button>,
+      )
+    }
+
+    // Relleno final para llegar siempre a 42 celdas
+    const totalCellsRendered = days.length;
+    const remainingCells = 42 - totalCellsRendered;
+
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
+
+    for (let day = 1; day <= remainingCells; day++) {
+      days.push(
+        <button
+          key={`next-${day}`}
+          onClick={() => handleDateSelect(day, nextMonth, nextYear)}
+          className="p-2 text-muted-foreground/30 text-xs flex items-center justify-center rounded-md hover:bg-accent/50 cursor-pointer"
+        >
+          {day}
+        </button>,
+      )
+    }
+
+    return days
+  }
+
+  const handlePrevious = () => {
+    if (view === "days") {
+      if (currentMonth === 0) {
+        setCurrentMonth(11)
+        setCurrentYear(currentYear - 1)
+      } else {
+        setCurrentMonth(currentMonth - 1)
+      }
+    } else if (view === "months") {
+      setCurrentYear(currentYear - 1)
+    } else if (view === "years") {
+      setYearPageStart(yearPageStart - 12)
+    }
+  }
+
+  const handleNext = () => {
+    if (view === "days") {
+      if (currentMonth === 11) {
+        setCurrentMonth(0)
+        setCurrentYear(currentYear + 1)
+      } else {
+        setCurrentMonth(currentMonth + 1)
+      }
+    } else if (view === "months") {
+      setCurrentYear(currentYear + 1)
+    } else if (view === "years") {
+      setYearPageStart(yearPageStart + 12)
+    }
+  }
+
+  const renderYears = () => {
+    const years = Array.from({ length: 12 }, (_, i) => yearPageStart + i);
+
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {years.map((year) => {
+          const isDisabled = year < startYear || year > endYear;
+          return (
+            <Button
+              key={year}
+              variant={currentYear === year ? "default" : "ghost"}
+              onClick={() => !isDisabled && handleYearSelect(year)}
+              disabled={isDisabled}
+              className={cn(
+                "h-9 text-xs",
+                isDisabled ? "opacity-20 cursor-not-allowed hover:bg-transparent" : "cursor-pointer"
+              )}
+            >
+              {year}
+            </Button>
+          )
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div className={cn("p-3 w-auto", className)}>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="outline" size="icon" onClick={handlePrevious} className="h-7 w-7 bg-transparent border-none hover:bg-accent cursor-pointer">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {view === "days" && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => showMonthYearPicker && setView("months")}
+                className={cn("h-7 px-2 font-semibold text-sm", !showMonthYearPicker ? "cursor-default hover:bg-transparent" : "cursor-pointer")}
+              >
+                {months[currentMonth]}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => showMonthYearPicker && setView("years")}
+                className={cn("h-7 px-2 font-semibold text-sm", !showMonthYearPicker ? "cursor-default hover:bg-transparent" : "cursor-pointer")}
+              >
+                {currentYear}
+              </Button>
+            </>
+          )}
+          {view === "months" && <span className="font-semibold text-sm">{currentYear}</span>}
+          {view === "years" && (
+            <span className="font-semibold text-sm">
+              {yearPageStart} - {yearPageStart + 11}
+            </span>
+          )}
+        </div>
+
+        <Button variant="outline" size="icon" onClick={handleNext} className="h-7 w-7 bg-transparent border-none hover:bg-accent cursor-pointer">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {view === "days" && (
+        <>
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {weekDays.map((day) => (
+              <div key={day} className="text-center text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1 w-full">{renderDays()}</div>
+        </>
+      )}
+
+      {view === "months" && (
+        <div className="grid grid-cols-3 gap-2">
+          {months.map((month, index) => (
+            <Button
+              key={month}
+              variant={currentMonth === index ? "default" : "ghost"}
+              onClick={() => handleMonthSelect(index)}
+              className="h-9 text-xs cursor-pointer"
+            >
+              {month.substring(0, 3)}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {view === "years" && renderYears()}
+
+      {showTime && view === "days" && !rangeMode && (
+        <div className="mt-4 pt-3 border-t border-border">
+          <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="flex flex-col items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-5 w-5 cursor-pointer" onClick={() => handleTimeChange("hours", (hours + 1) % 24)}>
+                  <ChevronLeft className="h-3 w-3 rotate-90" />
+                </Button>
+                <div className="bg-muted rounded px-2 py-1 text-sm font-mono font-medium min-w-[32px] text-center">
+                  {hours.toString().padStart(2, "0")}
+                </div>
+                <Button variant="ghost" size="icon" className="h-5 w-5 cursor-pointer" onClick={() => handleTimeChange("hours", hours === 0 ? 23 : hours - 1)}>
+                  <ChevronRight className="h-3 w-3 rotate-90" />
+                </Button>
+              </div>
+              
+              <span className="text-muted-foreground font-bold pb-1">:</span>
+
+              <div className="flex flex-col items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-5 w-5 cursor-pointer" onClick={() => handleTimeChange("minutes", (minutes + 1) % 60)}>
+                  <ChevronLeft className="h-3 w-3 rotate-90" />
+                </Button>
+                <div className="bg-muted rounded px-2 py-1 text-sm font-mono font-medium min-w-[32px] text-center">
+                  {minutes.toString().padStart(2, "0")}
+                </div>
+                <Button variant="ghost" size="icon" className="h-5 w-5 cursor-pointer" onClick={() => handleTimeChange("minutes", minutes === 0 ? 59 : minutes - 1)}>
+                  <ChevronRight className="h-3 w-3 rotate-90" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ----------------------------------------------------------------------
+// 2. EXPORT PRINCIPAL
+// ----------------------------------------------------------------------
+
+import { DateRange } from "react-day-picker"
 
 interface DateTimePickerProps {
   date?: Date;
@@ -26,158 +473,12 @@ interface DateTimePickerProps {
   withRange?: boolean;
 
   label?: string;
-  
   includeTime?: boolean;
-
+  
   showYearNavigation?: boolean;
   startYear?: number;
   endYear?: number;
 }
-
-interface TimePickerInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  picker: "hours" | "minutes";
-  date: Date | undefined;
-  onDateChange: (date: Date) => void;
-  onRightFocus?: () => void;
-  onLeftFocus?: () => void;
-}
-
-const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>(
-  (
-    {
-      className,
-      picker,
-      date,
-      onDateChange,
-      onRightFocus,
-      onLeftFocus,
-      onFocus,
-      onBlur,
-      ...props
-    },
-    ref,
-  ) => {
-    const [hasFocus, setHasFocus] = React.useState(false);
-
-    const getDateValue = React.useCallback(() => {
-      if (!date) return "00";
-      // Formato 24h: obtenemos la hora tal cual (0-23)
-      const val = picker === "hours" ? date.getHours() : date.getMinutes();
-      return val.toString().padStart(2, "0");
-    }, [date, picker]);
-
-    const [localValue, setLocalValue] = React.useState(getDateValue);
-
-    React.useEffect(() => {
-      if (!hasFocus) setLocalValue(getDateValue());
-    }, [date, getDateValue, hasFocus]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const v = e.target.value;
-      if (v === "") {
-        setLocalValue("");
-        return;
-      }
-      if (!/^\d+$/.test(v)) return;
-
-      const intVal = parseInt(v, 10);
-      
-      // Validación 24h (0-23)
-      if (picker === "hours" && intVal > 23) return;
-      if (picker === "minutes" && intVal > 59) return;
-
-      setLocalValue(v);
-
-      if (date) {
-        const newDate = new Date(date);
-        if (picker === "hours") {
-          newDate.setHours(intVal % 24);
-        } else {
-          newDate.setMinutes(intVal % 60);
-        }
-        onDateChange(newDate);
-      }
-
-      if (picker === "hours" && v.length === 2) onRightFocus?.();
-    };
-
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      setHasFocus(true);
-      onFocus?.(e);
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      setHasFocus(false);
-      setLocalValue(getDateValue());
-      onBlur?.(e);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "ArrowRight") onRightFocus?.();
-      if (e.key === "ArrowLeft") onLeftFocus?.();
-      if (
-        ["Tab", "Backspace", "Delete", "ArrowUp", "ArrowDown"].includes(e.key)
-      )
-        return;
-      if (!/[0-9]/.test(e.key)) e.preventDefault();
-    };
-
-    return (
-      <Input
-        ref={ref}
-        type="text"
-        inputMode="numeric"
-        className={cn(
-          "w-[38px] md:w-[52px] text-center font-mono text-[11px] md:text-sm p-0 h-7 md:h-9 focus:ring-0 focus-visible:ring-1",
-          className,
-        )}
-        value={localValue}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        disabled={!date}
-        {...props}
-      />
-    );
-  },
-);
-TimePickerInput.displayName = "TimePickerInput";
-
-const TimePeriod = ({
-  onUp,
-  onDown,
-  disabled,
-  children,
-}: {
-  onUp: () => void;
-  onDown: () => void;
-  disabled: boolean;
-  children: React.ReactNode;
-}) => (
-  <div className="flex flex-col items-center gap-1">
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-5 w-5 md:h-7 md:w-7"
-      onClick={onUp}
-      disabled={disabled}
-    >
-      <ChevronUp className="h-3 w-3 md:h-4 md:w-4" />
-    </Button>
-    {children}
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-5 w-5 md:h-7 md:w-7"
-      onClick={onDown}
-      disabled={disabled}
-    >
-      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
-    </Button>
-  </div>
-);
 
 export function DateTimePicker({
   date,
@@ -187,78 +488,9 @@ export function DateTimePicker({
   withRange = false,
   label,
   includeTime = true,
-  showYearNavigation = false,
-  startYear = 1930,
-  endYear = 2060,
+  startYear,
+  endYear,
 }: DateTimePickerProps) {
-  const hourRef = React.useRef<HTMLInputElement>(null);
-  const minuteRef = React.useRef<HTMLInputElement>(null);
-
-  const [month, setMonth] = React.useState<Date>(date || dateRange?.from || new Date());
-  const [lastSelectedDay, setLastSelectedDay] = React.useState<number | undefined>(date?.getDate());
-
-  React.useEffect(() => {
-    if (date) {
-      setMonth(date);
-      setLastSelectedDay(date.getDate());
-    } else if (dateRange?.from) {
-      setMonth(dateRange.from);
-    }
-  }, [date, dateRange]);
-
-  const handleSelectSingle: SelectSingleEventHandler = (day) => {
-    if (!setDate) return;
-    if (!day) {
-      setDate(undefined);
-      setLastSelectedDay(undefined);
-      return;
-    }
-    const newDate = new Date(day);
-    if (includeTime && date) {
-      newDate.setHours(date.getHours(), date.getMinutes(), 0, 0);
-    } else if (includeTime) {
-      newDate.setHours(12, 0, 0, 0);
-    } else {
-      newDate.setHours(0, 0, 0, 0);
-    }
-    setLastSelectedDay(newDate.getDate());
-    setDate(newDate);
-    setMonth(newDate);
-  };
-
-  const handleSelectRange: SelectRangeEventHandler = (range) => {
-    if (setDateRange) {
-      setDateRange(range);
-      if (range?.from) setMonth(range.from);
-    }
-  };
-
-  const handleMonthChange = (newMonth: Date) => {
-    setMonth(newMonth);
-    
-    if (!withRange && date && setDate && lastSelectedDay) {
-      const daysInNewMonth = getDaysInMonth(newMonth);
-      const safeDay = Math.min(lastSelectedDay, daysInNewMonth);
-      
-      let updatedDate = setDateYear(date, newMonth.getFullYear());
-      updatedDate = setDateMonth(updatedDate, newMonth.getMonth());
-      updatedDate = setDateDay(updatedDate, safeDay);
-      
-      setDate(updatedDate);
-    }
-  };
-
-  const adjustTime = (type: "hours" | "minutes", step: number) => {
-    if (!date || !setDate) return;
-    const newDate = new Date(date);
-
-    if (type === "hours") {
-      newDate.setHours((newDate.getHours() + step + 24) % 24);
-    } else if (type === "minutes") {
-      newDate.setMinutes((newDate.getMinutes() + step + 60) % 60);
-    }
-    setDate(newDate);
-  };
 
   const renderButtonText = () => {
     if (withRange) {
@@ -272,35 +504,16 @@ export function DateTimePicker({
       )}`;
     }
     if (!date) return label || (includeTime ? "Seleccionar fecha y hora" : "Seleccionar fecha");
-    // HH mayúscula fuerza formato 24hs
     return format(date, includeTime ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: es });
   };
 
-  const sharedCalendarProps = {
-    month,
-    onMonthChange: handleMonthChange,
-    initialFocus: true,
-    locale: es,
-    numberOfMonths: 1,
-    fromYear: startYear,
-    toYear: endYear,
-    captionLayout: (showYearNavigation ? "dropdown" : "label") as "dropdown" | "label",
-    classNames: {
-      caption_label: showYearNavigation ? "hidden" : "text-sm font-medium",
-      dropdown_month: "flex items-center",
-      dropdown_year: "flex items-center",
-      dropdown: "bg-transparent focus-visible:ring-0 cursor-pointer p-1 text-xs md:text-sm font-medium",
-      caption_dropdowns: "flex justify-center gap-1",
-    },
-  };
-
   return (
-    <Popover modal={false}>
+    <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal h-7 md:h-9 text-[10px] md:text-sm",
+            "w-full justify-start text-left font-normal h-7 md:h-9 text-[10px] md:text-sm cursor-pointer",
             ((!withRange && !date) || (withRange && !dateRange?.from)) &&
               "text-muted-foreground",
           )}
@@ -310,56 +523,24 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        className="z-50 w-auto p-0 text-[10px] md:text-sm max-h-[var(--radix-popover-content-available-height)] overflow-y-auto"
-        align="start"
-        side="bottom"
-        sideOffset={4}
-      >
-        {withRange ? (
-          <Calendar
-            mode="range"
-            selected={dateRange}
-            onSelect={handleSelectRange}
-            {...sharedCalendarProps}
-          />
-        ) : (
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleSelectSingle}
-            {...sharedCalendarProps}
-          />
-        )}
+      <PopoverContent className="w-auto p-0" align="start">
+        <InternalCalendar
+          value={date}
+          onChange={setDate}
+          
+          rangeMode={withRange}
+          startDate={dateRange?.from}
+          endDate={dateRange?.to}
+          onRangeChange={(start, end) => setDateRange?.({ from: start, to: end })}
 
-        {includeTime && !withRange && (
-          <div className="p-3 border-t border-border flex flex-col items-center gap-2 bg-muted/5">
-            <Label className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Hora
-            </Label>
-            <div className="flex items-center gap-3">
-              <TimePeriod onUp={() => adjustTime("hours", 1)} onDown={() => adjustTime("hours", -1)} disabled={!date}>
-                <TimePickerInput
-                  picker="hours"
-                  date={date}
-                  onDateChange={setDate!}
-                  ref={hourRef}
-                  onRightFocus={() => minuteRef.current?.focus()}
-                />
-              </TimePeriod>
-              <span className="text-lg md:text-xl font-bold text-muted-foreground pb-2">:</span>
-              <TimePeriod onUp={() => adjustTime("minutes", 1)} onDown={() => adjustTime("minutes", -1)} disabled={!date}>
-                <TimePickerInput
-                  picker="minutes"
-                  date={date}
-                  onDateChange={setDate!}
-                  ref={minuteRef}
-                  onLeftFocus={() => hourRef.current?.focus()}
-                />
-              </TimePeriod>
-            </div>
-          </div>
-        )}
+          showTime={includeTime}
+          showMonthYearPicker={true}
+          
+          startYear={startYear}
+          endYear={endYear}
+          
+          className="border-none shadow-none"
+        />
       </PopoverContent>
     </Popover>
   );

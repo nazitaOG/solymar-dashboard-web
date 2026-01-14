@@ -307,6 +307,7 @@ export function PassengerDialog({
                   <Input
                     id="name"
                     value={formData.name}
+                    placeholder="Lionel Andres Messi"
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     disabled={isViewMode}
                     className={`h-8 md:h-9 text-xs md:text-sm ${errors.name ? "border-red-500" : ""}`}
