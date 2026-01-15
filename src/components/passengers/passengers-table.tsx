@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -40,7 +42,7 @@ interface PassengersTableProps {
   onDelete: (id: string) => void;
   isDeletingId?: string | null;
   isLoading?: boolean;
-  externalError?: string | null; // 👈 Agregamos esta prop para recibir el error del padre
+  externalError?: string | null;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -52,7 +54,7 @@ export function PassengersTable({
   onDelete,
   isDeletingId,
   isLoading = false,
-  externalError, // 👈 La desestructuramos acá
+  externalError,
 }: PassengersTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -125,7 +127,7 @@ export function PassengersTable({
     <div className="space-y-4">
       <div className="grid grid-cols-1 w-full">
         <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
-          <Table className="min-w-[600px] md:min-w-[1000px] w-full">
+          <Table className="min-w-[800px] md:min-w-[1200px] w-full"> {/* Aumenté un poco el min-w para que entren las columnas */}
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="px-2 md:px-4 text-xs md:text-sm">
@@ -140,6 +142,12 @@ export function PassengersTable({
                 <TableHead className="px-2 md:px-4 text-xs md:text-sm">
                   Documento
                 </TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Email
+                </TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">
+                  Teléfono
+                </TableHead>
                 <TableHead className="px-2 md:px-4 text-right text-xs md:text-sm">
                   Acciones
                 </TableHead>
@@ -148,7 +156,7 @@ export function PassengersTable({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24">
+                  <TableCell colSpan={7} className="h-24"> {/* Actualizado colSpan a 7 */}
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
                     </div>
@@ -157,7 +165,7 @@ export function PassengersTable({
               ) : currentPassengers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={7} /* Actualizado colSpan a 7 */
                     className="h-24 text-center text-muted-foreground text-xs md:text-sm"
                   >
                     No se encontraron pasajeros
@@ -182,6 +190,26 @@ export function PassengersTable({
                     </TableCell>
                     <TableCell className="px-2 md:px-4">
                       {getDocumentInfo(passenger)}
+                    </TableCell>
+                    <TableCell className="px-2 md:px-4 text-xs md:text-sm whitespace-nowrap">
+                      {passenger.email ? (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Mail className="h-3 w-3" />
+                          <span>{passenger.email}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-2 md:px-4 text-xs md:text-sm whitespace-nowrap">
+                      {passenger.phoneNumber ? (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          <span>{passenger.phoneNumber}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="px-2 md:px-4 text-right">
                       <div className="flex justify-end gap-1 md:gap-2">
@@ -230,7 +258,6 @@ export function PassengersTable({
         </div>
       </div>
 
-      {/* ✅ SECCIÓN DE ERROR: Se muestra acá abajo sin el recuadro redondeado */}
       {externalError && (
         <div className="flex items-center justify-center gap-2 py-2 animate-in fade-in zoom-in-95 duration-300">
           <AlertCircle className="h-4 w-4 text-destructive" />
@@ -240,7 +267,6 @@ export function PassengersTable({
         </div>
       )}
 
-      {/* Paginación */}
       {!isLoading && totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-muted-foreground text-center sm:text-left text-xs md:text-sm">
@@ -270,7 +296,6 @@ export function PassengersTable({
         </div>
       )}
 
-      {/* MODAL DE CONFIRMACIÓN */}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

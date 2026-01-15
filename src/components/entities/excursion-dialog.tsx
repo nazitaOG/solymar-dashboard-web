@@ -319,8 +319,7 @@ export function ExcursionDialog({
                 </Select>
               </div>
             )}
-
-            {(["totalPrice", "amountPaid"] as const).map((id) => (
+              {(["totalPrice", "amountPaid"] as const).map((id) => (
               <div key={id} className="space-y-1">
                 <Label htmlFor={id} className="text-[11px] md:text-xs">
                   {id === "totalPrice" ? "Precio total *" : "Monto pagado *"}

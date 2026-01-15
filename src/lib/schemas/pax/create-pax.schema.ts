@@ -44,6 +44,21 @@ export const CreatePaxSchema = z
         message: "La fecha de nacimiento no puede ser posterior a 9 meses desde hoy.",
       }),
 
+    phoneNumber: z
+      .string()
+      .trim()
+      .optional()
+      .transform((val) => (val === "" ? undefined : val)) // 1. Si es vacío, lo vuelve undefined
+      .pipe(z.string().min(8, "El teléfono debe tener al menos 8 dígitos").optional()),
+
+    email: z
+      .string()
+      .trim()
+      .toLowerCase() // Buena práctica: normalizar emails a minúsculas
+      .optional()
+      .transform((val) => (val === "" ? undefined : val)) // 1. Si es vacío, lo vuelve undefined
+      .pipe(z.string().email("El formato del email no es correcto").optional()), // 2. Valida
+
     nationality: z
       .string()
       .trim()
@@ -103,12 +118,12 @@ export const CreatePaxSchema = z
     // Normalizamos booleans (data.dniNum y passportNum ya vienen limpios o undefined)
     const hasPassportNum = !!data.passportNum;
     const hasPassportDate = !!data.passportExpirationDate;
-    
+
     const hasDniNum = !!data.dniNum;
     const hasDniDate = !!data.dniExpirationDate;
 
     // 1️⃣ REGLA DE INTEGRIDAD: Si pones Número, necesitas Fecha (y viceversa)
-    
+
     // --- Validación DNI ---
     if (hasDniNum && !hasDniDate) {
       ctx.addIssue({
@@ -161,10 +176,10 @@ export const CreatePaxSchema = z
       const nationalityKey = Object.keys(dniPatterns).find(
         (k) => k.toUpperCase() === data.nationality.toUpperCase()
       ) as keyof typeof dniPatterns;
-    
+
       // Si no encuentra la nacionalidad, usa 'Otro'
       const regex = nationalityKey ? dniPatterns[nationalityKey] : dniPatterns.Otro;
-    
+
       // data.dniNum ya no tiene puntos ni guiones
       if (!regex.test(data.dniNum!)) {
         ctx.addIssue({

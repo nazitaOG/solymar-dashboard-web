@@ -10,5 +10,7 @@ export function paxToRequest(pax: Partial<Pax>): CreatePaxRequest {
     passportExpirationDate: pax.passport?.expirationDate,
     dniNum: pax.dni?.dniNum,
     dniExpirationDate: pax.dni?.expirationDate,
+    email: pax.email ?? "",
+    phoneNumber: pax.phoneNumber ?? "",
   };
 }

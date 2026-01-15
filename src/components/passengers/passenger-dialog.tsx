@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
+// Asegúrate de que tus interfaces y schemas estén actualizados (ver abajo)
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema";
 import { fetchAPI } from "@/lib/api/fetchApi";
@@ -53,6 +54,10 @@ interface FormDataState {
   name: string;
   birthDate: Date | undefined;
   nationality: string;
+  // ✅ Nuevos campos de contacto
+  email: string;
+  phoneNumber: string; 
+  // -------------------------
   dniNum: string;
   dniExpirationDate: Date | undefined;
   passportNum: string;
@@ -63,6 +68,10 @@ const defaultFormData: FormDataState = {
   name: "",
   birthDate: undefined,
   nationality: "Argentina",
+  // ✅ Default vacíos
+  email: "",
+  phoneNumber: "",
+  // ----------------
   dniNum: "",
   dniExpirationDate: undefined,
   passportNum: "",
@@ -81,20 +90,28 @@ const getInitialData = (pax?: Pax): FormDataState => {
   const normalizeNationality = (n?: string) => {
     if (!n) return "Argentina";
     const upper = n.toUpperCase();
-    if (upper === "ARGENTINA") return "Argentina";
-    if (upper === "URUGUAY") return "Uruguay";
-    if (upper === "CHILE") return "Chile";
-    if (upper === "BRASIL") return "Brasil";
-    if (upper === "PARAGUAY") return "Paraguay";
-    if (upper === "PERU" || upper === "PERÚ") return "Perú";
-    if (upper === "BOLIVIA") return "Bolivia";
-    return "Otro";
+    // Mapeo simple de nacionalidades comunes
+    const map: Record<string, string> = {
+      ARGENTINA: "Argentina",
+      URUGUAY: "Uruguay",
+      CHILE: "Chile",
+      BRASIL: "Brasil",
+      PARAGUAY: "Paraguay",
+      PERU: "Perú",
+      PERÚ: "Perú",
+      BOLIVIA: "Bolivia",
+    };
+    return map[upper] || "Otro";
   };
 
   return {
     name: pax.name ?? "",
     birthDate: toDate(pax.birthDate),
     nationality: normalizeNationality(pax.nationality),
+    // ✅ Carga de datos existentes
+    email: pax.email ?? "",
+    phoneNumber: pax.phoneNumber ?? "",
+    // ---------------------------
     dniNum: pax.dni?.dniNum || "",
     dniExpirationDate: toDate(pax.dni?.expirationDate),
     passportNum: pax.passport?.passportNum || "",
@@ -139,7 +156,6 @@ export function PassengerDialog({
       },
     });
 
-  // 🔄 EFECTO CRÍTICO: Sincronización al abrir/cerrar
   useEffect(() => {
     if (open) {
       const data = getInitialData(passenger);
@@ -147,7 +163,6 @@ export function PassengerDialog({
       initialDataRef.current = data;
       setErrors({});
     } else {
-      // Limpieza total para prevenir leaks de estado en la segunda apertura
       setFormData(defaultFormData);
       initialDataRef.current = defaultFormData;
       setErrors({});
@@ -155,15 +170,17 @@ export function PassengerDialog({
     }
   }, [passenger, open]);
 
-  // 🔎 Dirty Check con normalización estricta de fechas
   const isDirty = useMemo(() => {
-    // Si el diálogo está cerrándose o cerrado, forzamos dirty a false
     if (!open) return false;
 
     const normalize = (data: FormDataState) => ({
       name: data.name?.trim() || "",
       birthDate: data.birthDate?.getTime() ?? 0,
       nationality: data.nationality || "Argentina",
+      // ✅ Dirty check para contacto
+      email: data.email?.trim() || "",
+      phoneNumber: data.phoneNumber?.trim() || "",
+      // --------------------------
       dniNum: data.dniNum?.trim() || "",
       dniExpirationDate: data.dniExpirationDate?.getTime() ?? 0,
       passportNum: data.passportNum?.trim() || "",
@@ -184,6 +201,10 @@ export function PassengerDialog({
       name: formData.name,
       birthDate: formData.birthDate ? formData.birthDate.toISOString() : "",
       nationality: formData.nationality,
+      // ✅ Payload para validar
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      // ----------------------
       passportNum: formData.passportNum,
       passportExpirationDate: formData.passportExpirationDate || "",
       dniNum: formData.dniNum,
@@ -215,6 +236,10 @@ export function PassengerDialog({
           name: result.data.name,
           birthDate: result.data.birthDate.toISOString(),
           nationality: result.data.nationality,
+          // ✅ Datos listos para la API
+          email: result.data.email || undefined, // null si viene vacío
+          phoneNumber: result.data.phoneNumber || undefined,
+          // --------------------------
           dni: result.data.dniNum
             ? {
                 dniNum: result.data.dniNum,
@@ -228,7 +253,6 @@ export function PassengerDialog({
               }
             : undefined,
         };
-
         const requestBody: CreatePaxRequest = paxToRequest(normalized);
 
         let saved: Pax;
@@ -270,7 +294,6 @@ export function PassengerDialog({
       <Dialog 
         open={open} 
         onOpenChange={(isOpen) => {
-          // Si el usuario intenta cerrar manualmente (isOpen=false) y está sucio
           if (!isOpen && isDirty && !isViewMode) {
             setShowDiscardConfirm(true);
           } else if (!isOpen) {
@@ -282,7 +305,6 @@ export function PassengerDialog({
           className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer scrollbar-thin"
           onWheel={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
-            // Evitar cierres accidentales por clics fuera si hay cambios
             if (isDirty && !isViewMode) {
               e.preventDefault();
               setShowDiscardConfirm(true);
@@ -299,6 +321,7 @@ export function PassengerDialog({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* SECCIÓN DATOS BÁSICOS */}
             <div className="space-y-3">
               <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
               <div className="grid gap-3 md:grid-cols-2">
@@ -337,12 +360,12 @@ export function PassengerDialog({
                     onValueChange={(v) => setFormData({ ...formData, nationality: v })}
                     disabled={isViewMode}
                   >
-                    <SelectTrigger className={`bg-transparent h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}>
+                    <SelectTrigger className={`bg-transparent cursor-pointer h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.keys(docPlaceholders).map((c) => (
-                        <SelectItem key={c} value={c} className="text-xs md:text-sm">{c}</SelectItem>
+                        <SelectItem key={c} value={c} className="text-xs cursor-pointer md:text-sm">{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -351,8 +374,43 @@ export function PassengerDialog({
               </div>
             </div>
 
+            {/* SECCIÓN CONTACTO */}
+            <div className="pt-2">
+               <h4 className="font-medium text-xs md:text-sm">Contacto</h4>
+               <div className="grid gap-3 pt-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="email" className="text-[11px] md:text-xs">Email <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      placeholder="ejemplo@correo.com"
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isViewMode}
+                      className={`h-8 md:h-9 text-xs md:text-sm ${errors.email ? "border-red-500" : ""}`}
+                    />
+                    {errors.email && <p className="text-red-500 text-[10px]">{errors.email}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="phoneNumber" className="text-[11px] md:text-xs">Teléfono <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      value={formData.phoneNumber}
+                      placeholder="+54 9 11 1234 5678"
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      disabled={isViewMode}
+                      className={`h-8 md:h-9 text-xs md:text-sm ${errors.phoneNumber ? "border-red-500" : ""}`}
+                    />
+                    {errors.phoneNumber && <p className="text-red-500 text-[10px]">{errors.phoneNumber}</p>}
+                  </div>
+               </div>
+            </div>
+
             <Separator />
 
+            {/* SECCIÓN DOCUMENTACIÓN */}
             <div className="space-y-3">
               <h4 className="font-medium text-xs md:text-sm">Documentación</h4>
               <div className="grid gap-3 md:grid-cols-2">

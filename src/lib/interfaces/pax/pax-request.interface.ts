@@ -6,4 +6,6 @@ export interface CreatePaxRequest {
   passportExpirationDate?: string;
   dniNum?: string;
   dniExpirationDate?: string;
+  email?: string;
+  phoneNumber?: string;
 }

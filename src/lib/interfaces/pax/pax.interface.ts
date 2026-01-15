@@ -3,6 +3,8 @@ export interface Pax {
   name: string;
   birthDate: string;
   nationality: string;
+  email?: string;
+  phoneNumber?: string;
   passport?: {
     passportNum: string;
     expirationDate?: string ;
