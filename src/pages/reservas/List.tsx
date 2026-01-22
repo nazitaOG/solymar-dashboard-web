@@ -1,5 +1,5 @@
 import { useState, useEffect, useTransition, Suspense, useMemo, use } from "react";
-import { useNavigate, Outlet } from "react-router";
+import { useNavigate, Outlet, useSearchParams } from "react-router-dom";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ReservationFilters } from "@/components/reservations/reservation-filters";
@@ -19,19 +19,31 @@ import type {
 
 import { usePassengersStore } from "@/stores/usePassengerStore";
 import { Head } from "@/components/seo/Head";
+import { cn } from "@/lib/utils/class_value.utils";
 
-const getReservations = () =>
-  fetchAPI<PaginatedResponse<Reservation>>(
-    "/reservations?include=paxReservations,currencyTotals"
-  );
+const getReservations = (params: { page: number; name?: string; state?: string; dateFrom?: string; dateTo?: string }) => {
+  const query = new URLSearchParams();
+  query.append("include", "paxReservations,currencyTotals");
+  query.append("limit", "20");
+  query.append("offset", ((params.page - 1) * 20).toString());
+
+  if (params.name) query.append("passengerName", params.name);
+  if (params.state) query.append("state", params.state);
+  if (params.dateFrom) query.append("dateFrom", params.dateFrom);
+  if (params.dateTo) query.append("dateTo", params.dateTo);
+
+  return fetchAPI<PaginatedResponse<Reservation>>(`/reservations?${query.toString()}`);
+};
 
 export default function ReservasPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { passengers, setPassengers, addPassenger, fetched, setFetched } = usePassengersStore();
 
+  // Mantenemos tus estados originales para compatibilidad con tus funciones
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false); // ✅ Flag para control de carga
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
@@ -39,7 +51,17 @@ export default function ReservasPage() {
 
   const [isPending, startTransition] = useTransition();
 
-  const reservationsPromise = useMemo(() => getReservations(), []);
+  // 1. LEER VALORES DE LA URL
+  const page = Number(searchParams.get("page")) || 1;
+  const name = searchParams.get("name") || undefined;
+  const state = searchParams.get("state") || undefined;
+  const dateFrom = searchParams.get("dateFrom") || undefined;
+  const dateTo = searchParams.get("dateTo") || undefined;
+
+  // 2. PROMESA REACTIVA
+  const reservationsPromise = useMemo(() =>
+    getReservations({ page, name, state, dateFrom, dateTo }),
+    [page, name, state, dateFrom, dateTo]);
 
   useEffect(() => {
     if (!fetched) {
@@ -53,58 +75,52 @@ export default function ReservasPage() {
     }
   }, [fetched, setFetched, setPassengers]);
 
+  // 3. HANDLERS DE URL
   const handleFilterChange = (filters: Filters): void => {
-    let filtered = [...reservations];
-    if (filters.passengerNames?.length) {
-      filtered = filtered.filter((r) =>
-        r.paxReservations.some((pr) =>
-          filters.passengerNames!.some((name) =>
-            pr.pax.name.toLowerCase().includes(name.toLowerCase())
-          )
-        )
-      );
-    }
-    if (filters.states?.length) filtered = filtered.filter((r) => filters.states!.includes(r.state));
-    if (filters.dateFrom) filtered = filtered.filter((r) => new Date(r.createdAt) >= filters.dateFrom!);
-    if (filters.dateTo) filtered = filtered.filter((r) => new Date(r.createdAt) <= filters.dateTo!);
-    if (filters.currency) {
-      filtered = filtered.filter((r) => r.currencyTotals.some((ct) => ct.currency === filters.currency));
-    }
-    if (filters.sortBy === "newest") {
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else if (filters.sortBy === "oldest") {
-      filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    }
-    setFilteredReservations(filtered);
+    startTransition(() => {
+      const newParams = new URLSearchParams();
+      if (filters.passengerNames?.[0]) newParams.set("name", filters.passengerNames[0]);
+      if (filters.states?.[0]) newParams.set("state", filters.states[0]);
+      if (filters.dateFrom) newParams.set("dateFrom", filters.dateFrom.toISOString());
+      if (filters.dateTo) newParams.set("dateTo", filters.dateTo.toISOString());
+      newParams.set("page", "1");
+      setSearchParams(newParams);
+      setIsDataLoaded(false); // Forzamos recarga de estados locales
+    });
   };
 
+  const handlePageChange = (newPage: number) => {
+    startTransition(() => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("page", String(newPage));
+      setSearchParams(newParams);
+      setIsDataLoaded(false);
+    });
+  };
+
+  // 4. TUS FUNCIONES ORIGINALES (CRUD)
   const handleCreateReservation = async (data: { state: ReservationState; passengers: Pax[] }) => {
     try {
       const body = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
       const newRes = await fetchAPI<Reservation>("/reservations", { method: "POST", body: JSON.stringify(body) });
+
+      // Actualizamos estados locales
       setReservations((prev) => [newRes, ...prev]);
       setFilteredReservations((prev) => [newRes, ...prev]);
+
+      // Redirección original
       navigate(`/reservas/${newRes.id}`);
     } catch (e) { console.error(e); }
   };
 
   const handleDeleteReservation = async (id: string): Promise<void> => {
-    const previousReservations = [...reservations];
-    const previousFiltered = [...filteredReservations];
-
-    // ✅ Actualización reactiva instantánea
-    setReservations((prev) => prev.filter((r) => r.id !== id));
-    setFilteredReservations((prev) => prev.filter((r) => r.id !== id));
-
+    if (!confirm("¿Eliminar reserva?")) return;
     startTransition(async () => {
       try {
         await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
-      } catch (error) {
-        console.error("❌ Error al eliminar:", error);
-        setReservations(previousReservations);
-        setFilteredReservations(previousFiltered);
-        alert("No se pudo eliminar la reserva.");
-      }
+        setSearchParams(new URLSearchParams(searchParams));
+        setIsDataLoaded(false);
+      } catch (error) { console.error(error); }
     });
   };
 
@@ -122,6 +138,7 @@ export default function ReservasPage() {
         const updated = await fetchAPI<Reservation>(`/reservations/${data.id}`, { method: "PATCH", body: JSON.stringify(body) });
         setReservations((prev) => prev.map((r) => (r.id === data.id ? updated : r)));
         setFilteredReservations((prev) => prev.map((r) => (r.id === data.id ? updated : r)));
+        setSearchParams(new URLSearchParams(searchParams)); // Sincronizamos con URL
       }
       setDialogOpen(false);
       setSelectedReservation(null);
@@ -132,7 +149,7 @@ export default function ReservasPage() {
     <>
       <Head title="Reservas" description="Gestión de reservas." />
       <DashboardLayout>
-        <div className="space-y-6 w-full">
+        <div className={cn("space-y-6 w-full transition-opacity", isPending && "opacity-50")}>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
@@ -140,11 +157,10 @@ export default function ReservasPage() {
             </div>
             <Button
               onClick={() => { setDialogMode("create"); setDialogOpen(true); }}
-              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+              className="h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm cursor-pointer"
               disabled={isPending}
             >
-              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              Crear Reserva
+              <Plus className="h-4 w-4" /> Crear Reserva
             </Button>
           </div>
 
@@ -153,8 +169,8 @@ export default function ReservasPage() {
           <Suspense fallback={<ReservationsTable reservations={[]} isLoading={true} />}>
             <ReservationsContent
               promise={reservationsPromise}
-              reservations={reservations} // ✅ Pasamos el estado actual
-              filteredReservations={filteredReservations} // ✅ Pasamos el estado filtrado actual
+              reservations={reservations}
+              filteredReservations={filteredReservations}
               isDataLoaded={isDataLoaded}
               onDataLoad={(data) => {
                 setReservations(data);
@@ -163,6 +179,7 @@ export default function ReservasPage() {
               }}
               onDelete={handleDeleteReservation}
               onEdit={handleEditReservation}
+              onPageChange={handlePageChange}
             />
           </Suspense>
         </div>
@@ -183,12 +200,13 @@ export default function ReservasPage() {
 }
 
 function ReservationsContent({
-  promise,  
+  promise,
   filteredReservations,
   isDataLoaded,
   onDataLoad,
   onDelete,
   onEdit,
+  onPageChange
 }: {
   promise: Promise<PaginatedResponse<Reservation>>;
   reservations: Reservation[];
@@ -197,25 +215,44 @@ function ReservationsContent({
   onDataLoad: (data: Reservation[]) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  onPageChange: (page: number) => void;
 }) {
   const response = use(promise);
-  
-  // ✅ Sincronizar solo cuando la promesa termina y el estado local está vacío
+
   useEffect(() => {
     if (!isDataLoaded && response.data) {
       onDataLoad(response.data);
     }
   }, [response.data, isDataLoaded, onDataLoad]);
 
-  // ✅ IMPORTANTE: Si ya cargamos datos, usamos el estado del padre (reservations/filteredReservations)
-  // Si no, usamos lo que viene de la promesa (response.data)
   const displayData = isDataLoaded ? filteredReservations : (response.data ?? []);
 
   return (
-    <ReservationsTable
-      reservations={displayData}
-      onDelete={onDelete}
-      onEdit={onEdit}
-    />
+    <div className="space-y-4">
+      <ReservationsTable
+        reservations={displayData}
+        onDelete={onDelete}
+        onEdit={onEdit}
+      />
+
+      {/* PAGINACIÓN CON META DEL BACKEND */}
+      <div className="flex items-center justify-between py-4 border-t border-border">
+        <p className="text-xs text-muted-foreground">
+          Página {response.meta.page} de {response.meta.totalPages} ({response.meta.total} reservas)
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant="outline" size="sm" className="h-8 text-xs"
+            disabled={response.meta.page <= 1}
+            onClick={() => onPageChange(response.meta.page - 1)}
+          >Anterior</Button>
+          <Button
+            variant="outline" size="sm" className="h-8 text-xs"
+            disabled={!response.meta.hasNext}
+            onClick={() => onPageChange(response.meta.page + 1)}
+          >Siguiente</Button>
+        </div>
+      </div>
+    </div>
   );
 }
