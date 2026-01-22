@@ -189,6 +189,7 @@ function ReservationsContent({ promise, onDelete, onEdit, onPageChange }: Conten
       <ReservationsTable 
         reservations={data} 
         onDelete={onDelete} 
+        onView={(id) => navigate(`/reservas/${id}`)}
         onEdit={(id) => {
           const res = data.find(r => r.id === id);
           if (res) onEdit(res);

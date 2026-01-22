@@ -31,13 +31,15 @@ interface ReservationsTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   isLoading?: boolean;
+  onView: (id: string) => void;
 }
 
 export function ReservationsTable({ 
   reservations, 
   onEdit, 
   onDelete, 
-  isLoading = false 
+  isLoading = false,
+  onView
 }: ReservationsTableProps) {
   const navigate = useNavigate();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string } | null>(null);
@@ -103,7 +105,8 @@ export function ReservationsTable({
                 reservations.map((res) => (
                   <TableRow 
                     key={res.id} 
-                    className="hover:bg-accent/50 transition-colors group"
+                    onClick={() => onView(res.id)}
+                    className="hover:bg-accent/50 transition-colors group cursor-pointer"
                   >
                     <TableCell className="px-2 md:px-4">
                       {getStateBadge(res.state)}
