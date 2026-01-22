@@ -18,21 +18,10 @@ import { usePassengersStore } from "@/stores/usePassengerStore";
 import { Head } from "@/components/seo/Head";
 import { cn } from "@/lib/utils/class_value.utils";
 
-// --- INTERFACES DE PARÁMETROS ---
-interface FetchParams {
-  page: number;
-  name?: string;
-  state?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}
-
 // --- SERVICIO DE FETCH ---
-const getReservations = (params: FetchParams): Promise<PaginatedResponse<Reservation>> => {
+const getReservations = (params: { page: number; name?: string; state?: string; dateFrom?: string; dateTo?: string }): Promise<PaginatedResponse<Reservation>> => {
   const query = new URLSearchParams();
   const limit = 20;
-  
-  // CÁLCULO CRUCIAL: Convierte página humana a salto de registros para la DB
   const offset = (params.page - 1) * limit;
 
   query.append("include", "paxReservations,currencyTotals,hotels,planes,cruises,transfers,excursions,medicalAssists");
@@ -58,19 +47,16 @@ export default function ReservasPage() {
 
   const [isPending, startTransition] = useTransition();
 
-  // 1. LEER VALORES DE LA URL (Fuente de verdad)
   const page = Number(searchParams.get("page")) || 1;
   const name = searchParams.get("name") ?? undefined;
   const state = searchParams.get("state") ?? undefined;
   const dateFrom = searchParams.get("dateFrom") ?? undefined;
   const dateTo = searchParams.get("dateTo") ?? undefined;
 
-  // 2. LA PROMESA COMO ESTADO
   const [reservationsPromise, setReservationsPromise] = useState<Promise<PaginatedResponse<Reservation>>>(() =>
     getReservations({ page, name, state, dateFrom, dateTo })
   );
 
-  // 3. SINCRONIZACIÓN MAESTRA: Escucha la URL y dispara el fetch
   useEffect(() => {
     startTransition(() => {
       setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
@@ -89,7 +75,6 @@ export default function ReservasPage() {
     }
   }, [fetched, setFetched, setPassengers]);
 
-  // 4. HANDLERS (Solo actualizan la URL)
   const handleFilterChange = (filters: Filters): void => {
     const newParams = new URLSearchParams();
     if (filters.passengerNames?.[0]) newParams.set("name", filters.passengerNames[0]);
@@ -106,26 +91,17 @@ export default function ReservasPage() {
     setSearchParams(newParams);
   };
 
-  const handleDeleteReservation = async (id: string): Promise<void> => {
-    if (!confirm("¿Eliminar reserva?")) return;
-    try {
-      await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
-      startTransition(() => {
-        setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
-      });
-    } catch (error) { console.error(error); }
-  };
-
   const handleConfirmDialog = async (data: { id?: string; state: ReservationState; passengers: Pax[] }) => {
     try {
+      const body = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
       if (dialogMode === "create") {
-        const body = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
         const newRes = await fetchAPI<Reservation>("/reservations", { method: "POST", body: JSON.stringify(body) });
         navigate(`/reservas/${newRes.id}`);
       } else if (dialogMode === "edit" && data.id) {
-        const body = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
         await fetchAPI<Reservation>(`/reservations/${data.id}`, { method: "PATCH", body: JSON.stringify(body) });
-        setSearchParams(new URLSearchParams(searchParams)); 
+        startTransition(() => {
+          setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
+        });
       }
       setDialogOpen(false);
       setSelectedReservation(null);
@@ -136,23 +112,34 @@ export default function ReservasPage() {
     <>
       <Head title="Reservas" description="Gestión de reservas." />
       <DashboardLayout>
-        <div className={cn("space-y-6 w-full transition-opacity duration-300", isPending && "opacity-50 pointer-events-none")}>
+        <div className={cn("space-y-6 w-full transition-opacity duration-300", isPending && "opacity-50")}>
+          
+          {/* 1️⃣ HEADER RESPONSIVE (Igual que Pasajeros) */}
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold md:text-3xl">Reservas</h1>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
               <p className="text-xs text-muted-foreground md:text-sm">Administra todas las reservas</p>
             </div>
-            <Button onClick={() => { setDialogMode("create"); setDialogOpen(true); }} className="cursor-pointer">
-              <Plus className="h-4 w-4 mr-2" /> Crear Reserva
+            <Button 
+              onClick={() => { setSelectedReservation(null); setDialogMode("create"); setDialogOpen(true); }} 
+              className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
+              disabled={isPending}
+            >
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              {isPending ? "Cargando..." : "Crear Reserva"}
             </Button>
           </div>
 
           <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
 
-          <Suspense fallback={<ReservationsTable reservations={[]} isLoading={true} />}>
+          <Suspense fallback={<ReservationsTable reservations={[]} isLoading={true} onView={() => {}} />}>
             <ReservationsContent
               promise={reservationsPromise}
-              onDelete={handleDeleteReservation}
+              onDelete={async (id) => {
+                if (!confirm("¿Eliminar reserva?")) return;
+                await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
+                startTransition(() => setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo })));
+              }}
               onEdit={(res) => { setSelectedReservation(res); setDialogMode("edit"); setDialogOpen(true); }}
               onPageChange={handlePageChange}
             />
@@ -174,15 +161,14 @@ export default function ReservasPage() {
   );
 }
 
-interface ContentProps {
-  promise: Promise<PaginatedResponse<Reservation>>;
-  onDelete: (id: string) => void;
-  onEdit: (res: Reservation) => void;
-  onPageChange: (page: number) => void;
-}
-
-function ReservationsContent({ promise, onDelete, onEdit, onPageChange }: ContentProps) {
+function ReservationsContent({ promise, onDelete, onEdit, onPageChange }: { 
+  promise: Promise<PaginatedResponse<Reservation>>; 
+  onDelete: (id: string) => void; 
+  onEdit: (res: Reservation) => void; 
+  onPageChange: (page: number) => void; 
+}) {
   const { data, meta } = use(promise);
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
@@ -195,15 +181,29 @@ function ReservationsContent({ promise, onDelete, onEdit, onPageChange }: Conten
           if (res) onEdit(res);
         }} 
       />
-      <div className="flex items-center justify-between py-4 border-t border-border">
-        <p className="text-xs md:text-sm text-muted-foreground">
-          Página {meta.page} de {meta.totalPages} ({meta.total} resultados)
+
+      {/* 2️⃣ PAGINACIÓN RESPONSIVE (Botones flex-1 en mobile) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-border">
+        <p className="text-xs md:text-sm text-muted-foreground order-2 sm:order-1 text-center sm:text-left">
+          Página <strong>{meta.page}</strong> de {meta.totalPages} ({meta.total} resultados)
         </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)} className="cursor-pointer h-8 text-xs">
+        <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={meta.page <= 1} 
+            onClick={() => onPageChange(meta.page - 1)} 
+            className="flex-1 sm:flex-none cursor-pointer h-8 text-xs md:text-sm"
+          >
             Anterior
           </Button>
-          <Button variant="outline" size="sm" disabled={!meta.hasNext} onClick={() => onPageChange(meta.page + 1)} className="cursor-pointer h-8 text-xs">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={!meta.hasNext} 
+            onClick={() => onPageChange(meta.page + 1)} 
+            className="flex-1 sm:flex-none cursor-pointer h-8 text-xs md:text-sm"
+          >
             Siguiente
           </Button>
         </div>
