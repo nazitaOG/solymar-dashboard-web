@@ -7,6 +7,21 @@ import { useAuthStore } from "@/stores/useAuthStore"
  * - Traduce códigos HTTP a mensajes amigables si el backend calla
  * - Devuelve JSON tipado <T>
  */
+function cleanPayload<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanPayload(item)) as unknown as T;
+  }
+
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([, v]) => v !== "" && v !== null && v !== undefined)
+        .map(([k, v]) => [k, cleanPayload(v)])
+    ) as unknown as T;
+  }
+
+  return obj;
+}
 
 const PUBLIC_ENDPOINTS = ["/auth/login", "/auth/register", "/auth/forgot-password"]
 
@@ -26,6 +41,17 @@ export async function fetchAPI<T>(
 ): Promise<T> {
   const { getValidToken, logout } = useAuthStore.getState()
 
+  if (options.body && typeof options.body === "string") {
+    try {
+      const parsedBody: unknown = JSON.parse(options.body);
+      const cleanedBody = cleanPayload(parsedBody);
+      options.body = JSON.stringify(cleanedBody);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error("Error parsing/cleaning body:", error);
+      }
+    }
+  }
   const isPublic = PUBLIC_ENDPOINTS.some((p) => endpoint.startsWith(p))
   const token = isPublic ? null : await getValidToken()
 
@@ -48,21 +74,21 @@ export async function fetchAPI<T>(
     try {
       const data = await res.json()
       // 🛡️ Blindaje total: buscamos el mensaje en cualquier propiedad común de Nest/Prisma
-      backendMessage = 
-        (Array.isArray(data.message) ? data.message.join(", ") : data.message) || 
-        data.error?.message || 
-        data.error || 
+      backendMessage =
+        (Array.isArray(data.message) ? data.message.join(", ") : data.message) ||
+        data.error?.message ||
+        data.error ||
         ""
     } catch {
       try { backendMessage = await res.text() } catch { backendMessage = "" }
     }
 
     const friendly = FRIENDLY_MESSAGES[res.status]
-    
+
     // 🚀 PRIORIDAD: Si el backend habló (P0001 de Postgres), usamos eso. 
     // Solo si backendMessage está vacío usamos el friendly.
-    const message = (backendMessage && backendMessage.trim().length > 0) 
-      ? backendMessage 
+    const message = (backendMessage && backendMessage.trim().length > 0)
+      ? backendMessage
       : (friendly || `Error ${res.status}`);
 
     if (import.meta.env.DEV) {
