@@ -12,26 +12,32 @@ import { fetchAPI } from "@/lib/api/fetchApi";
 import type { Reservation, ReservationState } from "@/lib/interfaces/reservation/reservation.interface";
 import type { PaginatedResponse } from "@/lib/interfaces/api.interface";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
-import type {
-  ReservationFilters as Filters,
-} from "@/lib/interfaces/reservation/reservation.interface";
+import type { ReservationFilters as Filters } from "@/lib/interfaces/reservation/reservation.interface";
 
 import { usePassengersStore } from "@/stores/usePassengerStore";
 import { Head } from "@/components/seo/Head";
 import { cn } from "@/lib/utils/class_value.utils";
 
-// --- SERVICIO DE FETCH ---
-const getReservations = (params: {
+// --- INTERFACES DE PARÁMETROS ---
+interface FetchParams {
   page: number;
   name?: string;
   state?: string;
   dateFrom?: string;
-  dateTo?: string
-}) => {
+  dateTo?: string;
+}
+
+// --- SERVICIO DE FETCH ---
+const getReservations = (params: FetchParams): Promise<PaginatedResponse<Reservation>> => {
   const query = new URLSearchParams();
+  const limit = 20;
+  
+  // CÁLCULO CRUCIAL: Convierte página humana a salto de registros para la DB
+  const offset = (params.page - 1) * limit;
+
   query.append("include", "paxReservations,currencyTotals,hotels,planes,cruises,transfers,excursions,medicalAssists");
-  query.append("limit", "20");
-  query.append("offset", ((params.page - 1) * 20).toString());
+  query.append("limit", limit.toString());
+  query.append("offset", offset.toString());
 
   if (params.name) query.append("passengerName", params.name);
   if (params.state) query.append("state", params.state);
@@ -52,19 +58,25 @@ export default function ReservasPage() {
 
   const [isPending, startTransition] = useTransition();
 
-  // 1. LEER VALORES ACTUALES DE LA URL
+  // 1. LEER VALORES DE LA URL (Fuente de verdad)
   const page = Number(searchParams.get("page")) || 1;
-  const name = searchParams.get("name") || undefined;
-  const state = searchParams.get("state") || undefined;
-  const dateFrom = searchParams.get("dateFrom") || undefined;
-  const dateTo = searchParams.get("dateTo") || undefined;
+  const name = searchParams.get("name") ?? undefined;
+  const state = searchParams.get("state") ?? undefined;
+  const dateFrom = searchParams.get("dateFrom") ?? undefined;
+  const dateTo = searchParams.get("dateTo") ?? undefined;
 
-  // 2. PROMESA EN EL STATE (Solución para el refresco instantáneo en React 19)
-  const [reservationsPromise, setReservationsPromise] = useState(() =>
+  // 2. LA PROMESA COMO ESTADO
+  const [reservationsPromise, setReservationsPromise] = useState<Promise<PaginatedResponse<Reservation>>>(() =>
     getReservations({ page, name, state, dateFrom, dateTo })
   );
 
-  // Sincronización de pasajeros
+  // 3. SINCRONIZACIÓN MAESTRA: Escucha la URL y dispara el fetch
+  useEffect(() => {
+    startTransition(() => {
+      setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
+    });
+  }, [page, name, state, dateFrom, dateTo]);
+
   useEffect(() => {
     if (!fetched) {
       startTransition(async () => {
@@ -77,7 +89,7 @@ export default function ReservasPage() {
     }
   }, [fetched, setFetched, setPassengers]);
 
-  // 3. HANDLERS QUE DISPARAN EL RE-FETCH
+  // 4. HANDLERS (Solo actualizan la URL)
   const handleFilterChange = (filters: Filters): void => {
     const newParams = new URLSearchParams();
     if (filters.passengerNames?.[0]) newParams.set("name", filters.passengerNames[0]);
@@ -85,46 +97,23 @@ export default function ReservasPage() {
     if (filters.dateFrom) newParams.set("dateFrom", filters.dateFrom.toISOString());
     if (filters.dateTo) newParams.set("dateTo", filters.dateTo.toISOString());
     newParams.set("page", "1");
-
-    startTransition(() => {
-      setSearchParams(newParams);
-      // Forzamos la nueva promesa en el estado
-      setReservationsPromise(getReservations({
-        page: 1,
-        name: filters.passengerNames?.[0],
-        state: filters.states?.[0],
-        dateFrom: filters.dateFrom?.toISOString(),
-        dateTo: filters.dateTo?.toISOString()
-      }));
-    });
+    setSearchParams(newParams);
   };
 
-  const handlePageChange = (newPage: number) => {
-    startTransition(() => {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set("page", String(newPage));
-      setSearchParams(newParams);
-
-      setReservationsPromise(getReservations({
-        page: newPage, name, state, dateFrom, dateTo
-      }));
-    });
+  const handlePageChange = (newPage: number): void => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("page", String(newPage));
+    setSearchParams(newParams);
   };
 
   const handleDeleteReservation = async (id: string): Promise<void> => {
     if (!confirm("¿Eliminar reserva?")) return;
-    startTransition(async () => {
-      try {
-        await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
+    try {
+      await fetchAPI(`/reservations/${id}`, { method: "DELETE" });
+      startTransition(() => {
         setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
-      } catch (error) { console.error(error); }
-    });
-  };
-
-  const handleEditReservation = (res: Reservation): void => {
-    setSelectedReservation(res);
-    setDialogMode("edit");
-    setDialogOpen(true);
+      });
+    } catch (error) { console.error(error); }
   };
 
   const handleConfirmDialog = async (data: { id?: string; state: ReservationState; passengers: Pax[] }) => {
@@ -136,10 +125,7 @@ export default function ReservasPage() {
       } else if (dialogMode === "edit" && data.id) {
         const body = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
         await fetchAPI<Reservation>(`/reservations/${data.id}`, { method: "PATCH", body: JSON.stringify(body) });
-
-        startTransition(() => {
-          setReservationsPromise(getReservations({ page, name, state, dateFrom, dateTo }));
-        });
+        setSearchParams(new URLSearchParams(searchParams)); 
       }
       setDialogOpen(false);
       setSelectedReservation(null);
@@ -153,28 +139,21 @@ export default function ReservasPage() {
         <div className={cn("space-y-6 w-full transition-opacity duration-300", isPending && "opacity-50 pointer-events-none")}>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">Reservas</h1>
               <p className="text-xs text-muted-foreground md:text-sm">Administra todas las reservas</p>
             </div>
-            <Button
-              onClick={() => { setDialogMode("create"); setDialogOpen(true); }}
-              className="h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              Crear Reserva
+            <Button onClick={() => { setDialogMode("create"); setDialogOpen(true); }} className="cursor-pointer">
+              <Plus className="h-4 w-4 mr-2" /> Crear Reserva
             </Button>
           </div>
 
-          <ReservationFilters
-            passengers={passengers}
-            onFilterChange={handleFilterChange}
-          />
+          <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
 
           <Suspense fallback={<ReservationsTable reservations={[]} isLoading={true} />}>
             <ReservationsContent
               promise={reservationsPromise}
               onDelete={handleDeleteReservation}
-              onEdit={handleEditReservation}
+              onEdit={(res) => { setSelectedReservation(res); setDialogMode("edit"); setDialogOpen(true); }}
               onPageChange={handlePageChange}
             />
           </Suspense>
@@ -195,51 +174,35 @@ export default function ReservasPage() {
   );
 }
 
-function ReservationsContent({
-  promise,
-  onDelete,
-  onEdit,
-  onPageChange,
-}: {
+interface ContentProps {
   promise: Promise<PaginatedResponse<Reservation>>;
   onDelete: (id: string) => void;
   onEdit: (res: Reservation) => void;
   onPageChange: (page: number) => void;
-}) {
+}
+
+function ReservationsContent({ promise, onDelete, onEdit, onPageChange }: ContentProps) {
   const { data, meta } = use(promise);
 
   return (
     <div className="space-y-4">
-      <ReservationsTable
-        reservations={data}
-        onDelete={onDelete}
+      <ReservationsTable 
+        reservations={data} 
+        onDelete={onDelete} 
         onEdit={(id) => {
           const res = data.find(r => r.id === id);
           if (res) onEdit(res);
-        }}
+        }} 
       />
-
       <div className="flex items-center justify-between py-4 border-t border-border">
         <p className="text-xs md:text-sm text-muted-foreground">
           Página {meta.page} de {meta.totalPages} ({meta.total} resultados)
         </p>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={meta.page <= 1}
-            onClick={() => onPageChange(meta.page - 1)}
-            className="h-8 text-xs cursor-pointer"
-          >
+          <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)} className="cursor-pointer h-8 text-xs">
             Anterior
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!meta.hasNext}
-            onClick={() => onPageChange(meta.page + 1)}
-            className="h-8 text-xs cursor-pointer"
-          >
+          <Button variant="outline" size="sm" disabled={!meta.hasNext} onClick={() => onPageChange(meta.page + 1)} className="cursor-pointer h-8 text-xs">
             Siguiente
           </Button>
         </div>
