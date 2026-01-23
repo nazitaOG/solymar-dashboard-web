@@ -58,7 +58,7 @@ export function ReservationsTable({
     };
 
     return (
-      <Badge variant="default" className={`${variants[state]} text-[10px] md:text-xs whitespace-nowrap font-medium`}>
+      <Badge variant="default" className={`${variants[state]} text-[10px] md:text-xs whitespace-nowrap`}>
         {labels[state]}
       </Badge>
     );
@@ -74,23 +74,22 @@ export function ReservationsTable({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 w-full">
-        {/* Contenedor con scroll horizontal */}
         <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
           <Table className="min-w-[800px] md:min-w-[1000px] w-full">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm w-[120px]">Estado</TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Estado</TableHead>
                 <TableHead className="px-2 md:px-4 text-xs md:text-sm">Pasajeros</TableHead>
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm w-[200px]">Totales</TableHead>
-                <TableHead className="px-2 md:px-4 text-xs md:text-sm w-[150px]">Creada</TableHead>
-                <TableHead className="px-2 md:px-4 text-right text-xs md:text-sm w-[140px]">Acciones</TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Totales</TableHead>
+                <TableHead className="px-2 md:px-4 text-xs md:text-sm">Creada</TableHead>
+                <TableHead className="px-2 md:px-4 text-right text-xs md:text-sm">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex justify-center items-center gap-2">
+                  <TableCell colSpan={5} className="h-24">
+                    <div className="flex justify-center items-center">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
                     </div>
                   </TableCell>
@@ -126,11 +125,9 @@ export function ReservationsTable({
                       <div className="space-y-1">
                         {res.currencyTotals?.map((ct, i) => (
                           <div key={i} className="text-xs md:text-sm font-medium whitespace-nowrap">
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                              {formatCurrency(ct.amountPaid ?? 0, ct.currency ?? "USD")}
-                            </span>
+                            {formatCurrency(ct.amountPaid ?? 0, ct.currency ?? "USD")}
                             <span className="text-muted-foreground font-normal mx-1">/</span>
-                            <span>{formatCurrency(ct.totalPrice ?? 0, ct.currency ?? "USD")}</span>
+                            {formatCurrency(ct.totalPrice ?? 0, ct.currency ?? "USD")}
                           </div>
                         ))}
                       </div>
@@ -140,7 +137,6 @@ export function ReservationsTable({
                       {res.createdAt ? format(new Date(res.createdAt), "dd MMM yyyy", { locale: es }) : "—"}
                     </TableCell>
 
-                    {/* Acciones con stopPropagation para no disparar el onClick de la fila */}
                     <TableCell className="px-2 md:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1 md:gap-2">
                         <Button
