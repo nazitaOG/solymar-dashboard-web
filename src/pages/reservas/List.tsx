@@ -96,7 +96,6 @@ export default function ReservasPage() {
   };
 
   const handleDeleteReservation = (id: string) => {
-    if (!confirm("¿Eliminar reserva?")) return;
     deleteReservation.mutate(id);
   };
 
