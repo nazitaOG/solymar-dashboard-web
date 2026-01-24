@@ -40,24 +40,24 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
+  --background: oklch(0.18 0.01 260);
+  --foreground: oklch(0.92 0.005 260);
+  --card: oklch(0.18 0.01 260);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
+  --popover: oklch(0.18 0.01 260);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted: oklch(0.24 0.01 260);
+  --muted-foreground: oklch(0.65 0.01 260);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
+  --border: oklch(0.28 0.01 260);
+  --input: oklch(0.28 0.01 260);
   --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -131,12 +131,12 @@
   input:-webkit-autofill:focus, 
   input:-webkit-autofill:active {
       /* 1. Pinta el texto de blanco */
-      -webkit-text-fill-color: white !important;
+      -webkit-text-fill-color: var(--foreground) !important;
       
       /* 2. Pinta el fondo usando una sombra interna sólida.
             Calculé este color (#23212b) para que coincida con tu bg-white/5 
             sobre el fondo #17151f */
-      -webkit-box-shadow: 0 0 0 30px #23212b inset !important;
+      -webkit-box-shadow: 0 0 0 30px oklch(0.24 0.01 260) inset !important;
       
       /* 3. Asegura que el borde no se vea amarillo */
       background-clip: content-box !important;

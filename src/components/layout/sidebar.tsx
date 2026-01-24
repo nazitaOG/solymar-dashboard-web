@@ -1,14 +1,14 @@
 import { NavLink, useLocation, useNavigate } from "react-router";
 import { cn } from "@/lib/utils/class_value.utils";
-import { 
-  Calendar, 
-  Users, 
-  BarChart3, 
-  Settings, 
-  Sun, 
-  Moon, 
+import {
+  Calendar,
+  Users,
+  BarChart3,
+  Settings,
+  Sun,
+  Moon,
   LogOut,
-  X 
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/router/routes";
@@ -55,7 +55,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleLogout = () => {
     logout();
-    navigate("/"); 
+    navigate("/");
   };
 
   return (
@@ -76,16 +76,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="flex h-full flex-col overflow-hidden">
-          
+
           {/* Header del Sidebar */}
           <div className="flex h-16 md:h-20 items-center justify-between lg:justify-start gap-2 border-b border-border px-5 shrink-0">
             {/* Logo Desktop */}
-            <img 
-              src="/logo.png" 
-              alt="Sol y Mar" 
-              className="hidden lg:block h-12 w-full object-contain" 
-            />
-            
+            <div className="hidden lg:flex items-center justify-center w-full">
+              <img
+                src="/logo.png"
+                alt="Sol y Mar"
+                className="h-12 w-auto object-contain block dark:hidden"
+              />
+              <img
+                src="/logo-blanco.png"
+                alt="Sol y Mar"
+                className="h-12 w-auto object-contain hidden dark:block"
+              />
+            </div>
+
             {/* Cabecera Móvil Pro */}
             <div className="flex lg:hidden w-full items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">

@@ -294,7 +294,7 @@ export function ReservationDetailHeader({
                 e.preventDefault();
                 setPaymentDetailsOpen(true);
               }}
-              className="text-sm self-start pb-3 pl-1 font-medium text-red-500 hover:text-red-600 hover:underline flex items-center gap-1.5 transition-colors mb-1 whitespace-nowrap mt-2 sm:mt-0"
+              className={`text-sm self-start pb-3 pl-1 font-medium flex items-center gap-1.5 transition-all mt-2 sm:mt-0 whitespace-nowrap mb-1 hover:underline text-red-500 hover:text-red-600 dark:text-red-400/70 dark:hover:text-red-400`}
             >
               <AlertCircle className="h-4 w-4" />
               ¿Qué falta pagar?
