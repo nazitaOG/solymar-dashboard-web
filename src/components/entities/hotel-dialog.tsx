@@ -288,35 +288,36 @@ export function HotelDialog({
             ))}
 
             <div className="space-y-1 [&>button]:cursor-pointer">
-              <Label className="text-[11px] md:text-xs">Fecha de entrada *</Label>
+              <Label className="text-[11px] md:text-xs">Periodo de estadía *</Label>
               {isView ? (
                 <div className="h-8 md:h-9 flex items-center text-xs md:text-sm bg-muted/50 rounded px-3 border border-input">
-                  {formData.startDate ? formData.startDate.toLocaleDateString() : "—"}
+                  {formData.startDate && formData.endDate
+                    ? `${formData.startDate.toLocaleDateString()} - ${formData.endDate.toLocaleDateString()}`
+                    : "—"}
                 </div>
               ) : (
                 <DateTimePicker
-                  date={formData.startDate}
-                  setDate={(date) => setFormData({ ...formData, startDate: date })}
+                  withRange={true}
+                  dateRange={{
+                    from: formData.startDate,
+                    to: formData.endDate,
+                  }}
+                  setDateRange={(range) => {
+                    setFormData({
+                      ...formData,
+                      startDate: range?.from,
+                      endDate: range?.to,
+                    });
+                  }}
                   includeTime={false}
+                  label="Seleccionar periodo"
                 />
               )}
-              {errors.startDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.startDate}</p>}
-            </div>
-
-            <div className="space-y-1 [&>button]:cursor-pointer">
-              <Label className="text-[11px] md:text-xs">Fecha de salida *</Label>
-              {isView ? (
-                <div className="h-8 md:h-9 flex items-center text-xs md:text-sm bg-muted/50 rounded px-3 border border-input">
-                  {formData.endDate ? formData.endDate.toLocaleDateString() : "—"}
-                </div>
-              ) : (
-                <DateTimePicker
-                  date={formData.endDate}
-                  setDate={(date) => setFormData({ ...formData, endDate: date })}
-                  includeTime={false}
-                />
+              {(errors.startDate || errors.endDate) && (
+                <p className="text-red-500 text-[10px] md:text-xs">
+                  {errors.startDate || errors.endDate}
+                </p>
               )}
-              {errors.endDate && <p className="text-red-500 text-[10px] md:text-xs">{errors.endDate}</p>}
             </div>
 
             {!hotel && !isView && (
@@ -342,9 +343,8 @@ export function HotelDialog({
                   onChange={(val) => setFormData({ ...formData, [id]: val })} // Actualizamos estado
                   placeholder={id === "totalPrice" ? "Ej: 1500.00" : "Ej: 0"}
                   disabled={isView}
-                  className={`h-8 md:h-9 text-xs md:text-sm ${
-                    isView ? "bg-muted/50 cursor-default" : ""
-                  } ${errors[id] ? "border-red-500" : ""}`}
+                  className={`h-8 md:h-9 text-xs md:text-sm ${isView ? "bg-muted/50 cursor-default" : ""
+                    } ${errors[id] ? "border-red-500" : ""}`}
                 />
                 {errors[id] && <p className="text-red-500 text-[10px] md:text-xs">{errors[id]}</p>}
               </div>
