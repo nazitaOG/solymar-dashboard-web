@@ -816,6 +816,15 @@ export default function ReservationDetailPage() {
       ),
     },
     {
+      key: "bookingReference",
+      label: "Referencia",
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs md:text-sm">
+          {String(value ?? "—")}
+        </span>
+      )
+    },
+    {
       key: "city",
       label: "Ciudad",
       render: (value) => (
@@ -834,15 +843,6 @@ export default function ReservationDetailPage() {
             {formatDate(String(row.endDate))}
           </div>
         </div>
-      ),
-    },
-    {
-      key: "roomType",
-      label: "Habitación",
-      render: (value) => (
-        <span className="whitespace-nowrap text-xs md:text-sm">
-          {String(value || "—")}
-        </span>
       ),
     },
     {
