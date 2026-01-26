@@ -175,8 +175,9 @@ export default function AdminLogin() {
                       placeholder="admin@solymar.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 bg-background border-input focus:border-primary transition-all"
-                      disabled={loginMutation.isPending}
+                      className="h-11 bg-white border-input focus:border-primary transition-all 
+                      [&:-webkit-autofill]:shadow-[0_0_0_1000px_#ffffff_inset] 
+                      [&:-webkit-autofill]:-webkit-text-fill-color-black"                      disabled={loginMutation.isPending}
                     />
                   </div>
 
@@ -198,8 +199,9 @@ export default function AdminLogin() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="h-11 pr-10 bg-background border-input focus:border-primary transition-all"
-                        disabled={loginMutation.isPending}
+                        className="h-11 pr-10 bg-white border-input focus:border-primary transition-all 
+                        [&:-webkit-autofill]:shadow-[0_0_0_1000px_#ffffff_inset] 
+                        [&:-webkit-autofill]:-webkit-text-fill-color-black"                        disabled={loginMutation.isPending}
                       />
                       <button
                         type="button"
