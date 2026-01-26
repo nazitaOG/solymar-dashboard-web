@@ -1,142 +1,41 @@
-import { useState, useEffect, useTransition, FormEvent } from "react"
-import { useNavigate } from "react-router"
+import { useState, useEffect, FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, UserCheck } from "lucide-react" // Agregué ArrowLeft
-import { useAuthStore } from "@/stores/useAuthStore"
-import { fetchAPI } from "@/lib/api/fetchApi"
+import { Eye, EyeOff, Loader2, ArrowLeft, UserCheck } from "lucide-react"
 import { loginSchema, forgotPasswordSchema } from "@/lib/schemas/login/login.schema"
 import { Head } from "@/components/seo/Head"
+import { useLoginMutation, useForgotPasswordMutation } from "@/hooks/login/useAuthMutations"
 
-const travelImages = [
-  { url: "/images/santorini-sunset.png", location: "Santorini, Greece" },
-  { url: "/images/paris-eiffel-golden-hour.png", location: "Paris, France" },
-  { url: "/images/tokyo-fuji-cherry.png", location: "Tokyo, Japan" },
-  { url: "/images/newyork-skyline.jpg", location: "New York, USA" },
-  { url: "/images/bali-rice-terraces.png", location: "Bali, Indonesia" },
-]
+// Configuración Demo
+const isDemoMode = import.meta.env.VITE_APP_MODE === 'demo'
+const demoEmail = import.meta.env.VITE_DEMO_EMAIL || 'demo@solymar.com'
+const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || 'Demo123!'
 
-interface LoginResponse {
-  username: string
-  email: string
-  token: string
-  isActive: boolean
-}
-
-// Tipos de vista
 type AuthView = "login" | "forgot-password"
 
 export default function AdminLogin() {
-  const [view, setView] = useState<AuthView>("login") // Estado para controlar la vista
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [view, setView] = useState<AuthView>("login")
 
-  // Login States
+  // States de Formulario
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
 
-  // Forgot Password States
+  // State de Forgot Password
   const [forgotEmail, setForgotEmail] = useState("")
   const [forgotSuccess, setForgotSuccess] = useState(false)
 
-  const [error, setError] = useState<string | null>(null)
+  // Errores de validación local (Zod)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
-  const { setToken } = useAuthStore()
-  const navigate = useNavigate()
-  const [isPending, startTransition] = useTransition()
+  // TanStack Query Mutations
+  const loginMutation = useLoginMutation()
+  const forgotMutation = useForgotPasswordMutation()
 
-  const isDemoMode = import.meta.env.VITE_APP_MODE === 'demo'
-  const demoEmail = import.meta.env.VITE_DEMO_EMAIL || 'demo@solymar.com'
-  const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || 'Demo123!'
-
-  // --- HANDLERS ---
-
-  const performLogin = (loginEmail: string, loginPass: string) => {
-    setError(null)
-    const parsed = loginSchema.safeParse({ email: loginEmail, password: loginPass })
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await fetchAPI<LoginResponse>("/auth/login", {
-          method: "POST",
-          body: JSON.stringify({ email: loginEmail, password: loginPass }),
-        })
-
-        setToken(res.token)
-
-        if (rememberMe) localStorage.setItem("rememberEmail", loginEmail)
-        else localStorage.removeItem("rememberEmail")
-
-        navigate("/reservas", { replace: true })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error inesperado.")
-      }
-    })
-  }
-
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    performLogin(email, password)
-  }
-
-  // 🆕 HANDLER PARA EL BOTÓN DEMO
-  const handleDemoLogin = () => {
-    // 1. Llenamos los campos visualmente (efecto WOW)
-    setEmail(demoEmail)
-    setPassword(demoPassword)
-
-    // 2. Ejecutamos el login automáticamente
-    performLogin(demoEmail, demoPassword)
-  }
-
-  const handleForgotPassword = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError(null)
-    setForgotSuccess(false)
-
-    const parsed = forgotPasswordSchema.safeParse({ email: forgotEmail })
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        // Llamada al endpoint público que creamos
-        await fetchAPI("/auth/forgot-password", {
-          method: "POST",
-          body: JSON.stringify({ email: forgotEmail }),
-        })
-
-        // UX Senior: Siempre mostramos éxito para evitar enumeración de usuarios,
-        // incluso si el email no existe en backend (aunque el backend ya maneja eso).
-        setForgotSuccess(true)
-      } catch (err) {
-        // Solo mostramos error si es algo técnico (500), no validación lógica
-        console.error(err)
-        setError("Ocurrió un error al intentar enviar el correo. Intenta nuevamente mas tarde.")
-      }
-    })
-  }
-
-
-  // --- EFFECTS ---
-
-  useEffect(() => {
-    const id = setInterval(
-      () => setCurrentImageIndex((i) => (i + 1) % travelImages.length),
-      4000
-    )
-    return () => clearInterval(id)
-  }, [])
-
+  // --- LOGIC: EFFECTS ---
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberEmail")
     if (savedEmail) {
@@ -145,12 +44,54 @@ export default function AdminLogin() {
     }
   }, [])
 
-  // Limpiar errores al cambiar de vista
   useEffect(() => {
-    setError(null)
+    setValidationError(null)
     setForgotSuccess(false)
+    loginMutation.reset()
+    forgotMutation.reset()
   }, [view])
 
+  // --- LOGIC: HANDLERS ---
+
+  const handleLogin = (e: FormEvent) => {
+    e.preventDefault()
+    setValidationError(null)
+
+    // 1. Zod Validation
+    const parsed = loginSchema.safeParse({ email, password })
+    if (!parsed.success) {
+      setValidationError(parsed.error.issues[0].message)
+      return
+    }
+
+    // 2. Guardamos intención de recordar en localStorage temporal para el hook
+    localStorage.setItem("tempRequestRemember", String(rememberMe))
+
+    // 3. Ejecutar Mutación
+    loginMutation.mutate({ email, password })
+  }
+
+  const handleDemoLogin = () => {
+    setEmail(demoEmail)
+    setPassword(demoPassword)
+    localStorage.setItem("tempRequestRemember", "false")
+    loginMutation.mutate({ email: demoEmail, password: demoPassword })
+  }
+
+  const handleForgotPassword = (e: FormEvent) => {
+    e.preventDefault()
+    setValidationError(null)
+
+    const parsed = forgotPasswordSchema.safeParse({ email: forgotEmail })
+    if (!parsed.success) {
+      setValidationError(parsed.error.issues[0].message)
+      return
+    }
+
+    forgotMutation.mutate({ email: forgotEmail }, {
+      onSuccess: () => setForgotSuccess(true)
+    })
+  }
 
   return (
     <>
@@ -158,227 +99,244 @@ export default function AdminLogin() {
         title={view === 'login' ? "Iniciar Sesión" : "Recuperar Contraseña"}
         description="Portal de acceso administrativo de Solymar Viajes."
       />
-      <div className="min-h-screen w-full flex justify-center bg-[#17151f]/96 px-4 py-8 md:py-12">
-        <div className="w-full md:pb-6 max-w-5xl bg-[#17151f] text-white rounded-none md:rounded-md overflow-hidden shadow-xl border border-white/5 flex flex-col md:grid md:grid-cols-2">
-          {/* Slideshow (Igual que antes) */}
-          <div className="relative w-full h-48 sm:h-64 md:h-full md:m-3 md:rounded-md overflow-hidden">
-            <div className="hidden md:flex absolute top-3 left-3 items-center gap-2 text-white/90 z-10">
-              <img src="/logo.png" alt="Sol y Mar Viajes y Turismo" className="w-44 h-10" />
-            </div>
 
-            <div className="absolute inset-0">
-              {travelImages.map((image, index) => (
-                <div
-                  key={index}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${index === currentImageIndex ? "opacity-100" : "opacity-0"
-                    }`}
-                >
-                  <img
-                    src={image.url}
-                    alt={image.location}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-3 right-3 text-white">
-                    <p className="text-xs bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-                      Ahora mostrando: {image.location}
-                    </p>
-                  </div>
-                </div>
-              ))}
+      <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+
+        {/* === LEFT PANEL (Desktop) / TOP PANEL (Mobile) === */}
+        <div className="lg:w-[28%] bg-[#ffca00] justify-between relative overflow-hidden flex flex-col">
+
+          {/* Header Branding (Visible siempre) */}
+          <div className="relative z-10 p-4 lg:p-6 flex justify-center 2xl:justify-start">
+            <div className="w-fit bg-white/20 backdrop-blur-sm border border-white/10 p-3 rounded-3xl shadow-sm">
+              <img
+                src="/logo.png"
+                alt="Sol y Mar Viajes"
+                // h-12: Tamaño grandecito para móvil/tablet donde es protagonista
+                // 2xl:h-8: Tamaño "chiquito" para la esquina en pantallas gigantes
+                className="h-12 2xl:h-10 3xl:h-12 w-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
+              />
             </div>
           </div>
 
-          {/* LOGIC SWAP: Renderizado condicional basado en 'view' */}
-          <div className="flex-1 p-6 sm:p-8 md:p-12 flex items-center justify-center">
+          {/* IMAGE CONTAINER */}
+          {/* 'hidden lg:block': Oculto en móvil/tablet, visible solo en pantallas grandes (Desktop) */}
+          <div className="w-full z-10 hidden lg:block">
+            <img
+              src="/amarelo.jpg"
+              alt="Imagen de vuelos"
+              className="w-full h-auto"
+            />
+          </div>
 
-            {/* VISTA 1: LOGIN */}
-            {view === "login" && (
-              <div className="w-full max-w-md mx-auto space-y-6">
-                <div className="flex md:hidden justify-center mb-6">
-                  <img src="/logo.png" alt="Sol y Mar Logo" className="w-48 h-auto" />
-                </div>
-                <form onSubmit={handleLogin} className="w-full max-w-md mx-auto space-y-6">
-                  <div>
-                    <h1 className="text-3xl font-semibold mb-1">Inicia sesión</h1>
-                    <p className="text-sm text-white/70">
-                      ¿No tienes cuenta?{" "}
-                      <a
-                        className="underline hover:text-white transition-colors"
-                        href="mailto:solymarbue@hotmail.com?subject=Solicitud..."
-                      >
-                        Contacta con nosotros
-                      </a>
-                    </p>
-                  </div>
+          {/* === CÍRCULOS DECORATIVOS === */}
+          {/* 'hidden lg:block': Ocultos en móvil/tablet, visibles solo en Desktop */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden 2xl:block">
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/30" />
+            {/* Si tenías un segundo círculo abajo a la izquierda, iría aquí */}
+          </div>
 
-                  <div className="grid gap-4">
-                    <div>
-                      <Label htmlFor="email" className="text-white/80 mb-1">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="tu@email.com"
-                          className="pl-9 rounded-md border-none bg-white/5"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
+        </div>
 
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <Label htmlFor="password" className="text-white/80">Contraseña</Label>
-                        {/* Botón para cambiar a Forgot Password */}
-                        <button
-                          type="button"
-                          onClick={() => setView("forgot-password")}
-                          className="text-xs text-white/50 cursor-pointer hover:text-white underline transition-colors"
-                        >
-                          ¿Olvidaste tu contraseña?
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="pl-9 pr-10 rounded-md border-none bg-white/5"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((s) => !s)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white cursor-pointer"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
+        {/* === RIGHT PANEL: FORM LOGIC === */}
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
+          <div className="w-full max-w-md space-y-8">
 
-                    <div className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        id="remember" // 1. Agregamos un ID único
-                        className="rounded-sm border-none bg-white/30 cursor-pointer"
-                        checked={rememberMe}
-                        onCheckedChange={(v) => setRememberMe(!!v)}
-                      />
-                      <Label
-                        htmlFor="remember" // 2. Vinculamos el label al ID del checkbox
-                        className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        Recordarme en este dispositivo
-                      </Label>
-                    </div>
+            {/* Form Container */}
+            <div className="bg-card rounded-xl border border-border shadow-sm p-8 sm:p-10 animate-in slide-in-from-right-4 duration-500">
 
-                    {error && <p className="text-red-400 text-sm">{error}</p>}
-
-                    <Button
-                      type="submit"
-                      disabled={isPending}
-                      className={`cursor-pointer text-white w-full transition-all duration-300 rounded-md border-none bg-white/5 hover:bg-white/10 ${isPending ? "opacity-70 cursor-wait" : ""}`}
-                    >
-                      {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
-                    </Button>
-                  </div>
-                </form>
-                {/* 🆕 SECCIÓN SOLO VISIBLE EN DEMO */}
-                {isDemoMode && (
-                  <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="relative flex items-center py-2">
-                      <div className="flex-grow border-t border-white/10"></div>
-                      <span className="flex-shrink-0 mx-4 text-white/30 text-xs uppercase">Modo Portafolio</span>
-                      <div className="flex-grow border-t border-white/10"></div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      onClick={handleDemoLogin}
-                      disabled={isPending}
-                      className="w-full cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/50 transition-all gap-2"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      {isPending ? "Accediendo..." : "Ingresar como Reclutador (Demo)"}
-                    </Button>
-                    <p className="text-center text-[10px] text-white/30 mt-2">
-                      Acceso con datos de prueba, crea y edita reservas, clientes y más.
-                    </p>
-                  </div>
+              {/* Header Logic */}
+              <div className="space-y-2 mb-8">
+                {view === 'forgot-password' && (
+                  <button
+                    onClick={() => setView('login')}
+                    className="flex items-center text-xs text-muted-foreground hover:text-primary mb-2 transition-colors"
+                  >
+                    <ArrowLeft className="w-3 h-3 mr-1" /> Volver
+                  </button>
                 )}
+                <h1 className="text-2xl font-bold text-card-foreground tracking-tight">
+                  {view === 'login' ? "Bienvenido de nuevo" : "Recuperar cuenta"}
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  {view === 'login'
+                    ? "Accede al dashboard administrativo"
+                    : "Ingresa tu email para restablecer la contraseña"}
+                </p>
               </div>
 
-            )}
+              {/* === LOGIN FORM === */}
+              {view === "login" && (
+                <form onSubmit={handleLogin} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="admin@solymar.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-11 bg-background border-input focus:border-primary transition-all"
+                      disabled={loginMutation.isPending}
+                    />
+                  </div>
 
-            {/* VISTA 2: FORGOT PASSWORD */}
-            {view === "forgot-password" && (
-              <form onSubmit={handleForgotPassword} className="w-full max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex md:hidden justify-center mb-6">
-                  <img src="/logo.png" alt="Sol y Mar Logo" className="w-48 h-auto" />
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setView("login")}
-                    className=" cursor-pointer flex items-center gap-1 text-sm text-white/50 hover:text-white mb-4 transition-colors"
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="password">Contraseña</Label>
+                      <button
+                        type="button"
+                        onClick={() => setView("forgot-password")}
+                        className="text-sm cursor-pointer text-primary hover:text-primary/80 transition-colors font-medium"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-11 pr-10 bg-background border-input focus:border-primary transition-all"
+                        disabled={loginMutation.isPending}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      checked={rememberMe}
+                      onCheckedChange={(c) => setRememberMe(!!c)}
+                      className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer select-none">
+                      Recordarme en este dispositivo
+                    </Label>
+                  </div>
+
+                  {/* Errores */}
+                  {(validationError || loginMutation.isError) && (
+                    <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
+                      {validationError || (loginMutation.error as Error)?.message || "Error al iniciar sesión"}
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={loginMutation.isPending}
+                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow transition-all cursor-pointer"
                   >
-                    <ArrowLeft className="w-4  h-4" /> Volver al login
-                  </button>
-                  <h1 className="text-2xl font-semibold mb-1">Recuperar cuenta</h1>
-                  <p className="text-sm text-white/70">
-                    Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.
-                  </p>
-                </div>
+                    {loginMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Ingresando...
+                      </>
+                    ) : (
+                      "Iniciar Sesión"
+                    )}
+                  </Button>
 
-                {!forgotSuccess ? (
-                  <div className="grid gap-4">
-                    <div>
-                      <Label htmlFor="forgot-email" className="text-white/80 mb-1">Email registrado</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  {/* === RESTAURADO: SECCIÓN DE SOLICITUD DE CUENTA === */}
+                  <div className="relative pt-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">O</span>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    ¿No tienes cuenta?{" "}
+                    <a
+                      href="mailto:solymarbue@hotmail.com?subject=Solicitud de Acceso Admin&body=Hola, solicito acceso al panel administrativo de Sol y Mar."
+                      className="text-primary hover:text-primary/80 font-medium transition-colors hover:underline"
+                    >
+                      Contacta con nosotros
+                    </a>
+                  </p>
+
+                  {/* Demo Mode Button */}
+                  {isDemoMode && (
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        onClick={handleDemoLogin}
+                        disabled={loginMutation.isPending}
+                        variant="outline"
+                        className="w-full h-10 border-amber-500/30 text-amber-600 hover:bg-amber-50 hover:text-amber-700 gap-2 cursor-pointer"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Acceso Rápido Reclutador
+                      </Button>
+                    </div>
+                  )}
+                </form>
+              )}
+
+              {/* === FORGOT PASSWORD FORM === */}
+              {view === "forgot-password" && (
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  {!forgotSuccess ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="forgot-email">Email registrado</Label>
                         <Input
                           id="forgot-email"
                           type="email"
-                          placeholder="tu@email.com"
-                          className="pl-9 rounded-md border-none bg-white/5"
+                          placeholder="admin@solymar.com"
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
-                          required
+                          className="h-11 bg-background border-input"
+                          disabled={forgotMutation.isPending}
                         />
                       </div>
+
+                      {(validationError || forgotMutation.isError) && (
+                        <p className="text-red-500 text-sm">{validationError || "Error enviando correo"}</p>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={forgotMutation.isPending}
+                        className="w-full h-11 cursor-pointer"
+                      >
+                        {forgotMutation.isPending ? "Enviando..." : "Enviar enlace de recuperación"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-md text-center animate-in zoom-in-95">
+                      <p className="text-green-700 font-medium mb-2">¡Correo enviado!</p>
+                      <p className="text-sm text-muted-foreground">
+                        Si existe una cuenta asociada a <strong>{forgotEmail}</strong>, recibirás instrucciones en breve.
+                      </p>
                     </div>
+                  )}
+                </form>
+              )}
 
-                    {error && <p className="text-red-400 text-sm">{error}</p>}
+            </div>
 
-                    <Button
-                      type="submit"
-                      disabled={isPending}
-                      className="cursor-pointer w-full transition-all duration-300 rounded-md border-none bg-white/20 hover:bg-white/30 text-white font-medium"
-                    >
-                      {isPending ? "Enviando..." : "Enviar enlace de recuperación"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-md text-center">
-                    <p className="text-green-200 font-medium mb-2">¡Correo enviado!</p>
-                    <p className="text-sm text-white/70">
-                      Si existe una cuenta asociada a <strong>{forgotEmail}</strong>, recibirás instrucciones en breve.
-                    </p>
-                    <p className="text-xs text-white/40 mt-4">Revisa tu bandeja de spam si no lo ves.</p>
-                  </div>
-                )}
-              </form>
-            )}
-
+            {/* Footer */}
+            <p className="mt-8 text-center text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} Sol y Mar Viajes y Turismo.{" "}
+              <a href="mailto:soporte@solymar.com" className="text-primary hover:underline">
+                Soporte Técnico
+              </a>
+            </p>
           </div>
         </div>
       </div>
     </>
-
   )
 }
