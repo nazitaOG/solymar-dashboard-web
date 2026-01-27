@@ -6,6 +6,10 @@
 html, body {
   overscroll-behavior: none;
 }
+img {
+  user-select: none;
+  -webkit-user-drag: none; /* Propiedad específica para WebKit/Chrome */
+}
 
 :root {
   --background: oklch(1 0 0);

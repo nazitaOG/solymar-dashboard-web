@@ -112,7 +112,7 @@ export default function AdminLogin() {
             Esto hace la magia. Si la página es más larga que la pantalla (por zoom o pantallas chicas),
             este panel se queda "pegado" a la vista y no scrollea, manteniendo el diseño intacto.
         */}
-        <div className="lg:w-[28%] bg-[#ffca00] justify-between relative overflow-hidden flex flex-col shrink-0 lg:h-screen lg:sticky lg:top-0">
+        <div className="lg:w-[28%] bg-gradient-to-l from-[#fdc401] via-[#fdcd00] to-[#fcc300] justify-between relative overflow-hidden flex flex-col shrink-0 lg:h-screen lg:sticky lg:top-0">
 
           {/* Header Branding */}
           <div className="relative z-10 p-4 lg:p-6 flex justify-center 2xl:justify-start">
