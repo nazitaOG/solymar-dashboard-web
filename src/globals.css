@@ -122,26 +122,35 @@
   body {
     @apply bg-background text-foreground;
   }
-}
 
-@layer base {
-  /* HACK PARA ELIMINAR EL FONDO AMARILLO DE AUTOFILL */
+  /* --- COLOR DE SELECCIÓN GENERAL --- */
+  ::selection {
+    background-color: #ffca00; /* Azul celeste (sky-500) */
+    color: black;
+  }
+  
+  /* --- COLOR DE SELECCIÓN ESPECÍFICO PARA INPUTS --- */
+  input::selection,
+  input::-moz-selection {
+    background-color: #ffca00 !important;
+    color: black !important;
+  }
+
+  /* --- FIX PARA AUTOFILL DE CHROME --- */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
   input:-webkit-autofill:active {
-      /* 1. Pinta el texto de blanco */
-      -webkit-text-fill-color: var(--foreground) !important;
-      
-      /* 2. Pinta el fondo usando una sombra interna sólida.
-            Calculé este color (#23212b) para que coincida con tu bg-white/5 
-            sobre el fondo #17151f */
-      -webkit-box-shadow: 0 0 0 30px oklch(0.24 0.01 260) inset !important;
-      
-      /* 3. Asegura que el borde no se vea amarillo */
+      -webkit-text-fill-color: black !important;
+      -webkit-box-shadow: 0 0 0 1000px white inset !important;
       background-clip: content-box !important;
-      
-      /* 4. Cambia el color del cursor */
-      caret-color: white !important;
+      transition: background-color 5000s ease-in-out 0s;
+  }
+  
+  /* --- FIX: SELECCIÓN EN INPUTS CON AUTOFILL --- */
+  /* Esto soluciona el problema del fondo negro al hacer drag */
+  input:-webkit-autofill::selection {
+      -webkit-text-fill-color: black !important;
+      background-color: #ffca00!important;
   }
 }

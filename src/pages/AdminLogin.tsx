@@ -167,6 +167,7 @@ export default function AdminLogin() {
               {/* === LOGIN FORM === */}
               {view === "login" && (
                 <form onSubmit={handleLogin} className="space-y-6">
+                  {/* INPUT DE EMAIL */}
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -175,12 +176,13 @@ export default function AdminLogin() {
                       placeholder="admin@solymar.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 bg-white border-input focus:border-primary transition-all 
-                      [&:-webkit-autofill]:shadow-[0_0_0_1000px_#ffffff_inset] 
-                      [&:-webkit-autofill]:-webkit-text-fill-color-black"                      disabled={loginMutation.isPending}
+                      // LIMPIO: Dejamos que el CSS Global se encargue del autofill
+                      className="h-11 bg-white border-input focus:border-primary text-black"
+                      disabled={loginMutation.isPending}
                     />
                   </div>
 
+                  {/* INPUT DE PASSWORD */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label htmlFor="password">Contraseña</Label>
@@ -199,9 +201,9 @@ export default function AdminLogin() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="h-11 pr-10 bg-white border-input focus:border-primary transition-all 
-                        [&:-webkit-autofill]:shadow-[0_0_0_1000px_#ffffff_inset] 
-                        [&:-webkit-autofill]:-webkit-text-fill-color-black"                        disabled={loginMutation.isPending}
+                         // LIMPIO AQUÍ TAMBIÉN
+                        className="h-11 pr-10 bg-white border-input focus:border-primary text-black"
+                        disabled={loginMutation.isPending}
                       />
                       <button
                         type="button"
