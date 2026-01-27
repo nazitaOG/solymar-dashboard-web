@@ -64,7 +64,7 @@ export default function AdminLogin() {
       return
     }
 
-    // 2. Guardamos intención de recordar en localStorage temporal para el hook
+    // 2. Guardamos intención de recordar
     localStorage.setItem("tempRequestRemember", String(rememberMe))
 
     // 3. Ejecutar Mutación
@@ -100,12 +100,21 @@ export default function AdminLogin() {
         description="Portal de acceso administrativo de Solymar Viajes."
       />
 
+      {/* SMART RESPONSIVE CONTAINER:
+        - min-h-screen: Asegura que ocupe al menos toda la pantalla.
+        - flex-col lg:flex-row: Columna en móvil, Fila en desktop.
+        - NO usamos overflow-hidden global para permitir scroll si hay zoom.
+      */}
       <div className="light login-container min-h-screen flex flex-col lg:flex-row bg-white">
 
-        {/* === LEFT PANEL (Desktop) / TOP PANEL (Mobile) === */}
-        <div className="lg:w-[28%] bg-[#ffca00] justify-between relative overflow-hidden flex flex-col">
+        {/* LEFT PANEL (STICKY):
+          - lg:sticky lg:top-0 lg:h-screen: 
+            Esto hace la magia. Si la página es más larga que la pantalla (por zoom o pantallas chicas),
+            este panel se queda "pegado" a la vista y no scrollea, manteniendo el diseño intacto.
+        */}
+        <div className="lg:w-[28%] bg-[#ffca00] justify-between relative overflow-hidden flex flex-col shrink-0 lg:h-screen lg:sticky lg:top-0">
 
-          {/* Header Branding (Visible siempre) */}
+          {/* Header Branding */}
           <div className="relative z-10 p-4 lg:p-6 flex justify-center 2xl:justify-start">
             <div className="w-fit bg-white/20 backdrop-blur-sm border border-white/10 p-3 rounded-3xl shadow-sm">
               <img
@@ -121,18 +130,22 @@ export default function AdminLogin() {
             <img
               src="/amarelo.jpg"
               alt="Imagen de vuelos"
-              className="w-full h-auto"
+              className="w-full h-auto object-cover"
             />
           </div>
 
-          {/* === CÍRCULOS DECORATIVOS === */}
+          {/* DECORACIÓN */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none hidden 2xl:block">
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/30" />
           </div>
 
         </div>
 
-        {/* === RIGHT PANEL: FORM LOGIC === */}
+        {/* RIGHT PANEL:
+          - flex-1: Ocupa el resto.
+          - Flexbox centra el contenido verticalmente si hay espacio.
+          - Si no hay espacio, el navegador habilita el scroll naturalmente.
+        */}
         <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-white">
           <div className="w-full max-w-md space-y-8">
 
@@ -144,7 +157,7 @@ export default function AdminLogin() {
                 {view === 'forgot-password' && (
                   <button
                     onClick={() => setView('login')}
-                    className="flex items-center text-xs text-gray-600 hover:text-black mb-2 transition-colors"
+                    className="flex items-center text-xs text-gray-600 hover:text-black mb-2 transition-colors cursor-pointer"
                   >
                     <ArrowLeft className="w-3 h-3 mr-1" /> Volver
                   </button>
@@ -171,8 +184,7 @@ export default function AdminLogin() {
                       placeholder="admin@solymar.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={{ backgroundColor: 'white' }}
-                      className="h-11 !bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
+                      className="h-11 bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
                       disabled={loginMutation.isPending}
                     />
                   </div>
@@ -196,8 +208,7 @@ export default function AdminLogin() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        style={{ backgroundColor: 'white' }}
-                        className="h-11 pr-10 !bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
+                        className="h-11 pr-10 bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
                         disabled={loginMutation.isPending}
                       />
                       <button
@@ -224,7 +235,7 @@ export default function AdminLogin() {
                     </Label>
                   </div>
 
-                  {/* ERRORES - Solo si existen */}
+                  {/* ERRORES */}
                   {(validationError || loginMutation.isError) && (
                     <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">
                       {validationError || (loginMutation.error as Error)?.message || "Error al iniciar sesión"}
@@ -236,15 +247,6 @@ export default function AdminLogin() {
                     <Button
                       type="submit"
                       disabled={loginMutation.isPending}
-                      style={{
-                        backgroundColor: 'black',
-                        color: 'white',
-                        width: '100%',
-                        height: '44px',
-                        borderRadius: '8px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
                       className="w-full h-11 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
                     >
                       {loginMutation.isPending ? (
@@ -279,7 +281,7 @@ export default function AdminLogin() {
                     </a>
                   </p>
 
-                  {/* BOTÓN DEMO (Solo si isDemoMode) */}
+                  {/* BOTÓN DEMO */}
                   {isDemoMode && (
                     <div>
                       <Button
@@ -287,28 +289,7 @@ export default function AdminLogin() {
                         onClick={handleDemoLogin}
                         disabled={loginMutation.isPending}
                         variant="outline"
-                        style={{
-                          backgroundColor: 'white',
-                          borderWidth: '2px',
-                          borderStyle: 'solid',
-                          borderColor: 'rgba(245, 158, 11, 0.4)', // amber-500 with 40% opacity
-                          color: 'rgb(217, 119, 6)', // amber-600
-                          width: '100%',
-                          height: '44px',
-                          borderRadius: '8px',
-                          cursor: 'pointer'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgb(255, 251, 235)' // amber-50
-                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.6)' // amber-500 with 60% opacity
-                          e.currentTarget.style.color = 'rgb(180, 83, 9)' // amber-700
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'white'
-                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.4)'
-                          e.currentTarget.style.color = 'rgb(217, 119, 6)'
-                        }}
-                        className="w-full h-11 bg-white border-2 border-amber-500/40 text-amber-600 hover:bg-amber-50 hover:border-amber-500/60 hover:text-amber-700 gap-2 cursor-pointer transition-all rounded-lg"
+                        className="w-full h-11 cursor-pointer transition-all rounded-lg gap-2 bg-white border-2 border-amber-500/40 text-amber-600 hover:bg-amber-50 hover:border-amber-500/60 hover:text-amber-700"
                       >
                         <UserCheck className="w-4 h-4" />
                         Acceso Rápido Reclutador
@@ -331,8 +312,7 @@ export default function AdminLogin() {
                           placeholder="admin@solymar.com"
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
-                          style={{ backgroundColor: 'white' }}
-                          className="h-11 !bg-white border-gray-200 text-black placeholder:text-gray-400"
+                          className="h-11 bg-white border-gray-200 text-black placeholder:text-gray-400"
                           disabled={forgotMutation.isPending}
                         />
                       </div>
