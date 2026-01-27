@@ -100,7 +100,7 @@ export default function AdminLogin() {
         description="Portal de acceso administrativo de Solymar Viajes."
       />
 
-      <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+      <div className="light login-container min-h-screen flex flex-col lg:flex-row bg-white">
 
         {/* === LEFT PANEL (Desktop) / TOP PANEL (Mobile) === */}
         <div className="lg:w-[28%] bg-[#ffca00] justify-between relative overflow-hidden flex flex-col">
@@ -111,15 +111,12 @@ export default function AdminLogin() {
               <img
                 src="/logo.png"
                 alt="Sol y Mar Viajes"
-                // h-12: Tamaño grandecito para móvil/tablet donde es protagonista
-                // 2xl:h-8: Tamaño "chiquito" para la esquina en pantallas gigantes
                 className="h-12 2xl:h-10 3xl:h-12 w-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
               />
             </div>
           </div>
 
           {/* IMAGE CONTAINER */}
-          {/* 'hidden lg:block': Oculto en móvil/tablet, visible solo en pantallas grandes (Desktop) */}
           <div className="w-full z-10 hidden lg:block">
             <img
               src="/amarelo.jpg"
@@ -129,35 +126,33 @@ export default function AdminLogin() {
           </div>
 
           {/* === CÍRCULOS DECORATIVOS === */}
-          {/* 'hidden lg:block': Ocultos en móvil/tablet, visibles solo en Desktop */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none hidden 2xl:block">
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/30" />
-            {/* Si tenías un segundo círculo abajo a la izquierda, iría aquí */}
           </div>
 
         </div>
 
         {/* === RIGHT PANEL: FORM LOGIC === */}
-        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-white">
           <div className="w-full max-w-md space-y-8">
 
             {/* Form Container */}
-            <div className="bg-card rounded-xl border border-border shadow-sm p-8 sm:p-10 animate-in slide-in-from-right-4 duration-500">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10">
 
               {/* Header Logic */}
               <div className="space-y-2 mb-8">
                 {view === 'forgot-password' && (
                   <button
                     onClick={() => setView('login')}
-                    className="flex items-center text-xs text-muted-foreground hover:text-primary mb-2 transition-colors"
+                    className="flex items-center text-xs text-gray-600 hover:text-black mb-2 transition-colors"
                   >
                     <ArrowLeft className="w-3 h-3 mr-1" /> Volver
                   </button>
                 )}
-                <h1 className="text-2xl font-bold text-card-foreground tracking-tight">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                   {view === 'login' ? "Bienvenido de nuevo" : "Recuperar cuenta"}
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-gray-600 text-sm">
                   {view === 'login'
                     ? "Accede al dashboard administrativo"
                     : "Ingresa tu email para restablecer la contraseña"}
@@ -166,18 +161,18 @@ export default function AdminLogin() {
 
               {/* === LOGIN FORM === */}
               {view === "login" && (
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleLogin} className="space-y-5">
                   {/* INPUT DE EMAIL */}
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-gray-900">Email</Label>
                     <Input
                       id="email"
                       type="email"
                       placeholder="admin@solymar.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      // LIMPIO: Dejamos que el CSS Global se encargue del autofill
-                      className="h-11 bg-white border-input focus:border-primary text-black"
+                      style={{ backgroundColor: 'white' }}
+                      className="h-11 !bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
                       disabled={loginMutation.isPending}
                     />
                   </div>
@@ -185,11 +180,11 @@ export default function AdminLogin() {
                   {/* INPUT DE PASSWORD */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor="password">Contraseña</Label>
+                      <Label htmlFor="password" className="text-gray-900">Contraseña</Label>
                       <button
                         type="button"
                         onClick={() => setView("forgot-password")}
-                        className="text-sm cursor-pointer text-primary hover:text-primary/80 transition-colors font-medium"
+                        className="text-sm cursor-pointer text-black hover:text-gray-700 transition-colors font-medium"
                       >
                         ¿Olvidaste tu contraseña?
                       </button>
@@ -201,14 +196,14 @@ export default function AdminLogin() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                         // LIMPIO AQUÍ TAMBIÉN
-                        className="h-11 pr-10 bg-white border-input focus:border-primary text-black"
+                        style={{ backgroundColor: 'white' }}
+                        className="h-11 pr-10 !bg-white border-gray-200 focus:border-black transition-all text-black placeholder:text-gray-400"
                         disabled={loginMutation.isPending}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 transition-colors"
                         tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -216,69 +211,104 @@ export default function AdminLogin() {
                     </div>
                   </div>
 
+                  {/* CHECKBOX */}
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="remember"
                       checked={rememberMe}
                       onCheckedChange={(c) => setRememberMe(!!c)}
-                      className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      className="border-gray-300 cursor-pointer bg-white data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white"
                     />
-                    <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer select-none">
+                    <Label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer select-none">
                       Recordarme en este dispositivo
                     </Label>
                   </div>
 
-                  {/* Errores */}
+                  {/* ERRORES - Solo si existen */}
                   {(validationError || loginMutation.isError) && (
-                    <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
+                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">
                       {validationError || (loginMutation.error as Error)?.message || "Error al iniciar sesión"}
                     </div>
                   )}
 
-                  <Button
-                    type="submit"
-                    disabled={loginMutation.isPending}
-                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow transition-all cursor-pointer"
-                  >
-                    {loginMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Ingresando...
-                      </>
-                    ) : (
-                      "Iniciar Sesión"
-                    )}
-                  </Button>
+                  {/* BOTÓN DE INICIAR SESIÓN */}
+                  <div className="pt-1">
+                    <Button
+                      type="submit"
+                      disabled={loginMutation.isPending}
+                      style={{
+                        backgroundColor: 'black',
+                        color: 'white',
+                        width: '100%',
+                        height: '44px',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                      className="w-full h-11 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
+                    >
+                      {loginMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Ingresando...
+                        </>
+                      ) : (
+                        "Iniciar Sesión"
+                      )}
+                    </Button>
+                  </div>
 
-                  {/* === RESTAURADO: SECCIÓN DE SOLICITUD DE CUENTA === */}
-                  <div className="relative pt-2">
+                  {/* SEPARADOR "O" */}
+                  <div className="relative py-4">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
+                      <span className="w-full border-t border-gray-200" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">O</span>
+                      <span className="bg-white px-2 text-gray-500">O</span>
                     </div>
                   </div>
 
-                  <p className="text-center text-sm text-muted-foreground">
+                  {/* TEXTO DE CONTACTO */}
+                  <p className="text-center text-sm text-gray-600">
                     ¿No tienes cuenta?{" "}
                     <a
                       href="mailto:solymarbue@hotmail.com?subject=Solicitud de Acceso Admin&body=Hola, solicito acceso al panel administrativo de Sol y Mar."
-                      className="text-primary hover:text-primary/80 font-medium transition-colors hover:underline"
+                      className="text-black hover:text-gray-700 font-medium transition-colors hover:underline"
                     >
                       Contacta con nosotros
                     </a>
                   </p>
 
-                  {/* Demo Mode Button */}
+                  {/* BOTÓN DEMO (Solo si isDemoMode) */}
                   {isDemoMode && (
-                    <div className="pt-2">
+                    <div>
                       <Button
                         type="button"
                         onClick={handleDemoLogin}
                         disabled={loginMutation.isPending}
                         variant="outline"
-                        className="w-full h-10 border-amber-500/30 text-amber-600 hover:bg-amber-50 hover:text-amber-700 gap-2 cursor-pointer"
+                        style={{
+                          backgroundColor: 'white',
+                          borderWidth: '2px',
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(245, 158, 11, 0.4)', // amber-500 with 40% opacity
+                          color: 'rgb(217, 119, 6)', // amber-600
+                          width: '100%',
+                          height: '44px',
+                          borderRadius: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgb(255, 251, 235)' // amber-50
+                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.6)' // amber-500 with 60% opacity
+                          e.currentTarget.style.color = 'rgb(180, 83, 9)' // amber-700
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white'
+                          e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.4)'
+                          e.currentTarget.style.color = 'rgb(217, 119, 6)'
+                        }}
+                        className="w-full h-11 bg-white border-2 border-amber-500/40 text-amber-600 hover:bg-amber-50 hover:border-amber-500/60 hover:text-amber-700 gap-2 cursor-pointer transition-all rounded-lg"
                       >
                         <UserCheck className="w-4 h-4" />
                         Acceso Rápido Reclutador
@@ -294,14 +324,15 @@ export default function AdminLogin() {
                   {!forgotSuccess ? (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="forgot-email">Email registrado</Label>
+                        <Label htmlFor="forgot-email" className="text-gray-900">Email registrado</Label>
                         <Input
                           id="forgot-email"
                           type="email"
                           placeholder="admin@solymar.com"
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
-                          className="h-11 bg-background border-input"
+                          style={{ backgroundColor: 'white' }}
+                          className="h-11 !bg-white border-gray-200 text-black placeholder:text-gray-400"
                           disabled={forgotMutation.isPending}
                         />
                       </div>
@@ -313,15 +344,15 @@ export default function AdminLogin() {
                       <Button
                         type="submit"
                         disabled={forgotMutation.isPending}
-                        className="w-full h-11 cursor-pointer"
+                        className="w-full h-11 cursor-pointer bg-black hover:bg-gray-800 text-white"
                       >
                         {forgotMutation.isPending ? "Enviando..." : "Enviar enlace de recuperación"}
                       </Button>
                     </>
                   ) : (
-                    <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-md text-center animate-in zoom-in-95">
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-md text-center">
                       <p className="text-green-700 font-medium mb-2">¡Correo enviado!</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600">
                         Si existe una cuenta asociada a <strong>{forgotEmail}</strong>, recibirás instrucciones en breve.
                       </p>
                     </div>
@@ -332,9 +363,9 @@ export default function AdminLogin() {
             </div>
 
             {/* Footer */}
-            <p className="mt-8 text-center text-xs text-muted-foreground">
+            <p className="mt-8 text-center text-xs text-gray-500">
               &copy; {new Date().getFullYear()} Sol y Mar Viajes y Turismo.{" "}
-              <a href="mailto:soporte@solymar.com" className="text-primary hover:underline">
+              <a href="mailto:soporte@solymar.com" className="text-black hover:underline">
                 Soporte Técnico
               </a>
             </p>

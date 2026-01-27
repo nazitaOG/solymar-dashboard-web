@@ -125,15 +125,15 @@
 
   /* --- COLOR DE SELECCIÓN GENERAL --- */
   ::selection {
-    background-color: #ffca00; /* Azul celeste (sky-500) */
-    color: black;
+    background-color: #0ea5e9; /* Azul celeste (sky-500) */
+    color: white;
   }
   
   /* --- COLOR DE SELECCIÓN ESPECÍFICO PARA INPUTS --- */
   input::selection,
   input::-moz-selection {
-    background-color: #ffca00 !important;
-    color: black !important;
+    background-color: #0ea5e9 !important;
+    color: white !important;
   }
 
   /* --- FIX PARA AUTOFILL DE CHROME --- */
@@ -150,7 +150,35 @@
   /* --- FIX: SELECCIÓN EN INPUTS CON AUTOFILL --- */
   /* Esto soluciona el problema del fondo negro al hacer drag */
   input:-webkit-autofill::selection {
-      -webkit-text-fill-color: black !important;
-      background-color: #ffca00!important;
+      -webkit-text-fill-color: white !important;
+      background-color: #0ea5e9 !important;
+  }
+
+  /* --- FIX: FONDO BLANCO EN INPUTS DEL LOGIN --- */
+  /* Fuerza fondo blanco en todos los inputs dentro de .login-container */
+  .login-container input {
+    background-color: white !important;
+  }
+  
+  .login-container input:disabled {
+    background-color: white !important;
+    opacity: 1 !important;
+  }
+  
+  .login-container input:focus,
+  .login-container input:hover {
+    background-color: white !important;
+  }
+
+  /* --- FIX: CHECKBOX DEL LOGIN --- */
+  /* Asegurar que el checkbox tenga fondo blanco y se vea bien */
+  .login-container [role="checkbox"] {
+    background-color: white !important;
+    border-color: rgb(209 213 219) !important; /* gray-300 */
+  }
+  
+  .login-container [role="checkbox"][data-state="checked"] {
+    background-color: black !important;
+    border-color: black !important;
   }
 }
