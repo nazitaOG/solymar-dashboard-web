@@ -133,15 +133,15 @@ img {
 
   /* --- COLOR DE SELECCIÓN GENERAL --- */
   ::selection {
-    background-color: #0ea5e9; /* Azul celeste (sky-500) */
-    color: white;
+    background-color: #fdcd00;
+    color: black;
   }
   
   /* --- COLOR DE SELECCIÓN ESPECÍFICO PARA INPUTS --- */
   input::selection,
   input::-moz-selection {
-    background-color: #0ea5e9 !important;
-    color: white !important;
+    background-color:  #fdcd00 !important;
+    color: black !important;
   }
 
   /* --- FIX PARA AUTOFILL DE CHROME --- */
@@ -158,8 +158,8 @@ img {
   /* --- FIX: SELECCIÓN EN INPUTS CON AUTOFILL --- */
   /* Esto soluciona el problema del fondo negro al hacer drag */
   input:-webkit-autofill::selection {
-      -webkit-text-fill-color: white !important;
-      background-color: #0ea5e9 !important;
+      -webkit-text-fill-color: black !important;
+      background-color: #fdcd00 !important;
   }
 
   /* --- FIX: FONDO BLANCO EN INPUTS DEL LOGIN --- */
