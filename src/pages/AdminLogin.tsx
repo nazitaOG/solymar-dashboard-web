@@ -107,20 +107,22 @@ export default function AdminLogin() {
       */}
       <div className="light login-container min-h-screen flex flex-col lg:flex-row bg-white">
 
-        {/* LEFT PANEL (STICKY):
-          - lg:sticky lg:top-0 lg:h-screen: 
-            Esto hace la magia. Si la página es más larga que la pantalla (por zoom o pantallas chicas),
-            este panel se queda "pegado" a la vista y no scrollea, manteniendo el diseño intacto.
-        */}
+        {/* LEFT PANEL (STICKY) */}
         <div className="lg:w-[28%] bg-gradient-to-l from-[#fdc401] via-[#fdcd00] to-[#fcc300] justify-between relative overflow-hidden flex flex-col shrink-0 lg:h-screen lg:sticky lg:top-0">
 
           {/* Header Branding */}
-          <div className="relative z-10 p-4 lg:p-6 flex justify-center 2xl:justify-start">
-            <div className="w-fit bg-white/20 backdrop-blur-sm border border-white/10 p-3 rounded-3xl shadow-sm">
+          <div className="relative z-10 p-4 lg:p-6 flex justify-center lg:justify-start">
+            {/* CAMBIO CLAVE: "lg:justify-start"
+      - En móvil (default): Se mantiene centrado (justify-center).
+      - En Laptop/PC (lg): Se mueve a la izquierda para alejarse del círculo.
+  */}
+
+            <div className="w-fit bg-white/20 backdrop-blur-sm border border-white/10 p-3 lg:p-2 xl:p-3 rounded-3xl shadow-sm">
               <img
                 src="/logo.png"
                 alt="Sol y Mar Viajes"
-                className="h-12 2xl:h-10 3xl:h-12 w-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
+                draggable="false"
+                className="h-12 lg:h-8 xl:h-10 2xl:h-12 w-auto object-contain opacity-95 hover:opacity-100 transition-opacity select-none"
               />
             </div>
           </div>
@@ -130,17 +132,26 @@ export default function AdminLogin() {
             <img
               src="/amarelo.jpg"
               alt="Imagen de vuelos"
-              className="w-full h-auto object-cover"
+              draggable="false"
+              className="w-full h-auto object-cover select-none"
             />
           </div>
 
-          {/* DECORACIÓN */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden 2xl:block">
-            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/30" />
+          {/* DECORACIÓN CIRCULO 
+      LOGIC:
+      - hidden lg:block: Ahora aparece desde Laptops (antes solo 2xl).
+      - lg:w-32 (Pequeño en laptop) -> xl:w-48 (Medio) -> 2xl:w-64 (Grande).
+      - Ajustamos la posición (-top/right) acorde al tamaño para que quede centrado en la esquina.
+  */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none hidden lg:block">
+            <div className="absolute rounded-full bg-white/30 
+      lg:-top-10 lg:-right-10 lg:w-32 lg:h-32 
+      xl:w-48 xl:h-48 
+      2xl:-top-20 2xl:-right-20 2xl:w-64 2xl:h-64"
+            />
           </div>
 
         </div>
-
         {/* RIGHT PANEL:
           - flex-1: Ocupa el resto.
           - Flexbox centra el contenido verticalmente si hay espacio.
