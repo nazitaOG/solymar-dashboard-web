@@ -14,24 +14,59 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/favicon.ico" />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://solymarviajes.vercel.app/" />
-    <meta property="og:title" content="Solymar Viajes - Panel de Control" />
-    <meta property="og:description" content="Sistema interno de gestión de reservas y pasajeros." />
-    <meta property="og:image" content="https://solymarviajes.vercel.app/og.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://solymarviajes.vercel.app/" />
-    <meta name="twitter:title" content="Solymar Viajes - Panel de Control" />
-    <meta name="twitter:description" content="Sistema interno de gestión de reservas y pasajeros." />
-    <meta name="twitter:image" content="https://solymarviajes.vercel.app/og.png" />
-
-  </head>
+    </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      
+      <div 
+        class="initial-loader"
+        style="
+          position: fixed; 
+          top: 0; 
+          left: 0; 
+          z-index: 9999; 
+          display: flex; 
+          height: 100vh; 
+          width: 100vw; 
+          align-items: center; 
+          justify-content: center; 
+          background-color: #ffffff;
+        "
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="48" 
+          height="48" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+          style="color: #0f172a;"
+        >
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+          <animateTransform 
+            attributeName="transform" 
+            attributeType="XML" 
+            type="rotate" 
+            from="0 12 12" 
+            to="360 12 12" 
+            dur="1s" 
+            repeatCount="indefinite" 
+          />
+        </svg>
+      </div>
+
+    </div>
+    
+    <script>
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector('.initial-loader').style.backgroundColor = '#09090b';
+        document.querySelector('svg').style.color = '#ffffff';
+      }
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
