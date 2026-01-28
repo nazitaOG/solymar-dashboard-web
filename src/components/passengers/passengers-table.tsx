@@ -40,7 +40,8 @@ interface PassengersTableProps {
   onView: (passenger: Pax) => void;
   onEdit: (passenger: Pax) => void;
   onDelete: (id: string) => void;
-  isDeletingId?: string | null;
+  // 👇 CAMBIO 1: Aceptamos boolean en lugar de string
+  isDeleting?: boolean;
   isLoading?: boolean;
   externalError?: string | null;
 }
@@ -52,7 +53,8 @@ export function PassengersTable({
   onView,
   onEdit,
   onDelete,
-  isDeletingId,
+  // 👇 CAMBIO 2: Recibimos el prop
+  isDeleting = false,
   isLoading = false,
   externalError,
 }: PassengersTableProps) {
@@ -127,7 +129,7 @@ export function PassengersTable({
     <div className="space-y-4">
       <div className="grid grid-cols-1 w-full">
         <div className="rounded-lg border border-border bg-card overflow-x-auto w-full max-w-full">
-          <Table className="min-w-[800px] md:min-w-[1200px] w-full"> {/* Aumenté un poco el min-w para que entren las columnas */}
+          <Table className="min-w-[800px] md:min-w-[1200px] w-full">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="px-2 md:px-4 text-xs md:text-sm">
@@ -156,7 +158,7 @@ export function PassengersTable({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24"> {/* Actualizado colSpan a 7 */}
+                  <TableCell colSpan={7} className="h-24">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
                     </div>
@@ -165,7 +167,7 @@ export function PassengersTable({
               ) : currentPassengers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7} /* Actualizado colSpan a 7 */
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground text-xs md:text-sm"
                   >
                     No se encontraron pasajeros
@@ -232,7 +234,8 @@ export function PassengersTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          disabled={isDeletingId === passenger.id}
+                          // 👇 CAMBIO 3: Usamos el boolean global para bloquear
+                          disabled={isDeleting}
                           className="h-7 w-7 md:h-9 md:w-9 cursor-pointer text-destructive hover:bg-destructive/10"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -242,11 +245,7 @@ export function PassengersTable({
                             });
                           }}
                         >
-                          {isDeletingId === passenger.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                          )}
+                          <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -312,14 +311,29 @@ export function PassengersTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">
+            <AlertDialogCancel
+              className="cursor-pointer"
+              // 👇 CAMBIO 4: Bloqueamos cancelar si ya se está borrando (opcional)
+              disabled={isDeleting}
+            >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={(e) => {
+                e.preventDefault(); // Evita que se cierre solo, esperamos a confirmDelete
+                confirmDelete();
+              }}
               className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+              disabled={isDeleting}
             >
-              Confirmar
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                "Confirmar"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

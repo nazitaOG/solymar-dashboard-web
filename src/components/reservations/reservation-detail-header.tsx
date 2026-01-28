@@ -54,6 +54,7 @@ interface ReservationDetailHeaderProps {
   onPassengersChange: (passengers: Pax[]) => void;
   onNameChange?: (newName: string) => void;
   paymentItems: FinancialItem[];
+  availablePassengers: Pax[];
 }
 
 export function ReservationDetailHeader({
@@ -62,6 +63,7 @@ export function ReservationDetailHeader({
   onPassengersChange,
   onNameChange,
   paymentItems,
+  availablePassengers,
 }: ReservationDetailHeaderProps) {
   const [editPassengersOpen, setEditPassengersOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -346,6 +348,7 @@ export function ReservationDetailHeader({
         onOpenChange={setEditPassengersOpen}
         currentPassengers={currentPassengers}
         onSave={onPassengersChange}
+        availablePassengers={availablePassengers}
       />
 
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>

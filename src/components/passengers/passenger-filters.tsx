@@ -1,130 +1,291 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Filter, Search } from "lucide-react"
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandInput,
+  CommandEmpty,
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { Check, X, Filter } from "lucide-react";
+import { cn } from "@/lib/utils/class_value.utils";
+// Opciones estáticas
+const nationalityOptions = [
+  { value: "ARGENTINA", label: "Argentina" },
+  { value: "URUGUAY", label: "Uruguay" },
+  { value: "CHILE", label: "Chile" },
+  { value: "BRASIL", label: "Brasil" },
+  { value: "PARAGUAY", label: "Paraguay" },
+  { value: "BOLIVIA", label: "Bolivia" },
+  { value: "PERU", label: "Perú" },
+  { value: "OTHER", label: "Otro" },
+];
 
-interface PassengerFiltersProps {
-  onFilterChange: (filters: {
-    search: string
-    nationality?: string
-    documentFilter?: string
-  }) => void
-}
+const docOptions = [
+  { value: "with-dni", label: "Con DNI" },
+  { value: "with-passport", label: "Con Pasaporte" },
+];
 
-export function PassengerFilters({ onFilterChange }: PassengerFiltersProps) {
-  const [search, setSearch] = useState("")
-  const [nationality, setNationality] = useState<string>("all")
-  const [documentFilter, setDocumentFilter] = useState<string>("all")
+// 🚀 CAMBIO: Borramos la interfaz de props y los argumentos de la función.
+// Ahora el componente no recibe nada, se maneja solo con la URL.
+export default function PassengerFilters() {
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // 🔎 Aplicar filtros
+  // 1. ESTADO LOCAL
+  const [localName, setLocalName] = useState(searchParams.get("name") || "");
+  const [selectedNationality, setSelectedNationality] = useState<string | undefined>(
+    searchParams.get("nationality") || undefined
+  );
+  const [selectedDoc, setSelectedDoc] = useState<string | undefined>(
+    searchParams.get("documentFilter") || undefined
+  );
+
+  // Estados de los Popovers
+  const [openNationality, setOpenNationality] = useState(false);
+  const [openDoc, setOpenDoc] = useState(false);
+
+  // 2. APLICAR FILTROS
   const handleApplyFilters = () => {
-    onFilterChange({
-      search,
-      nationality: nationality === "all" ? undefined : nationality.toUpperCase(),
-      documentFilter: documentFilter === "all" ? undefined : documentFilter,
-    })
-  }
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams();
 
-  // 🧹 Limpiar filtros
+      // Mantenemos limit si existe
+      if (prev.get("limit")) newParams.set("limit", prev.get("limit")!);
+
+      // Name
+      if (localName.trim()) newParams.set("name", localName.trim());
+
+      // Nacionalidad
+      if (selectedNationality) newParams.set("nationality", selectedNationality);
+
+      // Documento
+      if (selectedDoc) newParams.set("documentFilter", selectedDoc);
+
+      // Reset a página 1
+      newParams.set("page", "1");
+      return newParams;
+    });
+  };
+
+  // 3. LIMPIAR FILTROS
   const handleClearFilters = () => {
-    setSearch("")
-    setNationality("all")
-    setDocumentFilter("all")
-    onFilterChange({ search: "" })
-  }
+    setLocalName("");
+    setSelectedNationality(undefined);
+    setSelectedDoc(undefined);
+
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams();
+      if (prev.get("limit")) newParams.set("limit", prev.get("limit")!);
+      return newParams;
+    });
+  };
+
+  // Toggles para Badges
+  const clearName = () => setLocalName("");
+  const clearNationality = () => setSelectedNationality(undefined);
+  const clearDoc = () => setSelectedDoc(undefined);
 
   return (
-    <div className="space-y-4 w-full md:w-fit rounded-lg border border-border bg-card p-3 md:p-4">
+    <div className="space-y-4 w-full rounded-lg border border-border bg-card p-3 md:p-4">
+
+      {/* Título */}
       <div className="flex items-center gap-2">
         <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
         <h3 className="font-semibold text-sm md:text-base">Filtros</h3>
       </div>
 
-      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        {/* 🔍 Buscar por nombre */}
+      {/* Grid Responsiva */}
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
+
+        {/* 1. INPUT NOMBRE */}
         <div className="space-y-1.5 md:space-y-2">
-          <Label htmlFor="search" className="text-xs md:text-sm">Buscar por nombre</Label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 md:h-4 md:w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nombre del pasajero..."
-              // El input mantiene su cursor de texto por defecto
-              className="pl-8 md:pl-9 h-8 md:h-10 text-xs md:text-sm"
-            />
-          </div>
+          <Label className="text-xs md:text-sm">Buscar por nombre</Label>
+          <Input
+            value={localName}
+            onChange={(e) => setLocalName(e.target.value)}
+            placeholder="Nombre del pasajero..."
+            className="h-8 md:h-10 text-xs md:text-sm bg-transparent w-full"
+          />
         </div>
 
-        {/* 🌎 Nacionalidad */}
+        {/* 2. NACIONALIDAD */}
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Nacionalidad</Label>
-          <Select value={nationality} onValueChange={setNationality}>
-            {/* 👇 cursor-pointer en trigger */}
-            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm cursor-pointer">
-              <SelectValue placeholder="Todas las nacionalidades" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* 👇 cursor-pointer en items */}
-              <SelectItem value="all" className="text-xs md:text-sm cursor-pointer">Todas las nacionalidades</SelectItem>
-              <SelectItem value="Argentina" className="text-xs md:text-sm cursor-pointer">Argentina</SelectItem>
-              <SelectItem value="Uruguay" className="text-xs md:text-sm cursor-pointer">Uruguay</SelectItem>
-              <SelectItem value="Chile" className="text-xs md:text-sm cursor-pointer">Chile</SelectItem>
-              <SelectItem value="Brasil" className="text-xs md:text-sm cursor-pointer">Brasil</SelectItem>
-              <SelectItem value="Paraguay" className="text-xs md:text-sm cursor-pointer">Paraguay</SelectItem>
-              <SelectItem value="Perú" className="text-xs md:text-sm cursor-pointer">Perú</SelectItem>
-              <SelectItem value="Bolivia" className="text-xs md:text-sm cursor-pointer">Bolivia</SelectItem>
-              <SelectItem value="Otro" className="text-xs md:text-sm cursor-pointer">Otro</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover open={openNationality} onOpenChange={setOpenNationality}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal cursor-pointer"
+              >
+                <span className="truncate">
+                  {selectedNationality
+                    ? nationalityOptions.find((n) => n.value === selectedNationality)?.label
+                    : "Todas las nacionalidades"}
+                </span>
+                <Filter className="ml-2 h-3 w-3 md:h-4 md:w-4 opacity-50 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <Command className="w-full">
+                <CommandInput placeholder="Buscar nacionalidad..." className="h-9" />
+                <CommandList>
+                  <CommandEmpty>No encontrada.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => { setSelectedNationality(undefined); setOpenNationality(false); }}
+                      className="text-xs md:text-sm cursor-pointer"
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", !selectedNationality ? "opacity-100" : "opacity-0")} />
+                      Todas
+                    </CommandItem>
+                    {nationalityOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          setSelectedNationality(prev => prev === option.value ? undefined : option.value);
+                          setOpenNationality(false);
+                        }}
+                        className="text-xs md:text-sm cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
+                            selectedNationality === option.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
-        {/* 🪪 Documento */}
+        {/* 3. DOCUMENTO */}
         <div className="space-y-1.5 md:space-y-2">
           <Label className="text-xs md:text-sm">Documento</Label>
-          <Select value={documentFilter} onValueChange={setDocumentFilter}>
-            {/* 👇 cursor-pointer en trigger */}
-            <SelectTrigger className="bg-transparent h-8 md:h-10 text-xs md:text-sm cursor-pointer">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* 👇 cursor-pointer en items */}
-              <SelectItem value="all" className="text-xs md:text-sm cursor-pointer">Todos</SelectItem>
-              <SelectItem value="with-dni" className="text-xs md:text-sm cursor-pointer">Con DNI</SelectItem>
-              <SelectItem value="with-passport" className="text-xs md:text-sm cursor-pointer">Con Pasaporte</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover open={openDoc} onOpenChange={setOpenDoc}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between bg-transparent h-8 md:h-10 text-xs md:text-sm px-3 font-normal cursor-pointer"
+              >
+                <span className="truncate">
+                  {selectedDoc
+                    ? docOptions.find((d) => d.value === selectedDoc)?.label
+                    : "Todos los documentos"}
+                </span>
+                <Filter className="ml-2 h-3 w-3 md:h-4 md:w-4 opacity-50 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <Command className="w-full">
+                <CommandList>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => { setSelectedDoc(undefined); setOpenDoc(false); }}
+                      className="text-xs md:text-sm cursor-pointer"
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", !selectedDoc ? "opacity-100" : "opacity-0")} />
+                      Todos
+                    </CommandItem>
+                    {docOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          setSelectedDoc(prev => prev === option.value ? undefined : option.value);
+                          setOpenDoc(false);
+                        }}
+                        className="text-xs md:text-sm cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-3.5 w-3.5 md:h-4 md:w-4",
+                            selectedDoc === option.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button 
-          onClick={handleApplyFilters} 
-          size="sm" 
-          // 👇 cursor-pointer
-          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+      {/* Badges */}
+      {(localName || selectedNationality || selectedDoc) && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {localName && (
+            <Badge variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6 pr-0.5">
+              Nombre: {localName}
+              {/* 🚀 CORRECCIÓN: Botón explícito para asegurar el click */}
+              <button
+                type="button"
+                onClick={clearName}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {selectedNationality && (
+            <Badge variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6 pr-0.5">
+              {nationalityOptions.find((o) => o.value === selectedNationality)?.label}
+              <button
+                type="button"
+                onClick={clearNationality}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {selectedDoc && (
+            <Badge variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6 pr-0.5">
+              {docOptions.find((o) => o.value === selectedDoc)?.label}
+              <button
+                type="button"
+                onClick={clearDoc}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Botones de Acción */}
+      <div className="flex gap-2 pt-2">
+        <Button
+          onClick={handleApplyFilters}
+          size="sm"
+          className="h-8 md:h-9 text-xs md:text-sm px-6 cursor-pointer"
         >
           Aplicar filtros
         </Button>
-        <Button 
-          onClick={handleClearFilters} 
-          variant="outline" 
-          size="sm" 
-          // 👇 cursor-pointer
-          className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+        <Button
+          onClick={handleClearFilters}
+          variant="outline"
+          size="sm"
+          className="h-8 md:h-9 text-xs md:text-sm px-6 cursor-pointer"
         >
           Limpiar
         </Button>
       </div>
     </div>
-  )
+  );
 }

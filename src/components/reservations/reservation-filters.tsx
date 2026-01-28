@@ -252,15 +252,35 @@ export function ReservationFiltersComponent({
       {(selectedPassengers.length > 0 || selectedStates.length > 0) && (
         <div className="flex flex-wrap gap-1 mt-1">
           {selectedPassengers.map((id) => (
-            <Badge key={id} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
+            <Badge
+              key={id}
+              variant="secondary"
+              className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6 pr-0.5"
+            >
               {passengers.find((p) => p.id === id)?.name}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => togglePassenger(id)} />
+              <button
+                type="button"
+                onClick={() => togglePassenger(id)}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </Badge>
           ))}
           {selectedStates.map((st) => (
-            <Badge key={st} variant="secondary" className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6">
+            <Badge
+              key={st}
+              variant="secondary"
+              className="gap-1 text-[10px] md:text-xs px-1.5 py-0 h-5 md:h-6 pr-0.5"
+            >
               {stateOptions.find((o) => o.value === st)?.label}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => toggleState(st)} />
+              <button
+                type="button"
+                onClick={() => toggleState(st)}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </Badge>
           ))}
         </div>

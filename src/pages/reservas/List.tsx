@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition } from "react";
+import { useState } from "react";
 import { useNavigate, Outlet, useSearchParams } from "react-router-dom";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -8,10 +8,10 @@ import { ReservationDialog } from "@/components/reservations/reservation-dialog"
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 
-import { fetchAPI } from "@/lib/api/fetchApi";
+// Hooks
 import { useReservations } from "@/hooks/reservations/useReservations";
 import { useReservationMutations } from "@/hooks/reservations/useReservationMutation";
-import { usePassengersStore } from "@/stores/usePassengerStore";
+import { usePaxSelect } from "@/hooks/pax/usePaxSelect"; // 👈 Hook con memoria (Store replacement)
 import { Head } from "@/components/seo/Head";
 import { cn } from "@/lib/utils/class_value.utils";
 
@@ -22,40 +22,30 @@ import type { ReservationFilters as Filters } from "@/lib/interfaces/reservation
 export default function ReservasPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { passengers, setPassengers, fetched, setFetched, addPassenger } = usePassengersStore();
 
+  // 1️⃣ Estado UI (Control de Diálogos)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
-  const [, startTransition] = useTransition();
-
-  // 1. Params de URL
+  // 2️⃣ Params de URL (Lectura)
   const page = Number(searchParams.get("page")) || 1;
   const name = searchParams.get("name") ?? undefined;
   const state = searchParams.get("state") ?? undefined;
   const dateFrom = searchParams.get("dateFrom") ?? undefined;
   const dateTo = searchParams.get("dateTo") ?? undefined;
 
-  // 2. Query con cache (Lectura)
-  const { data: reservationsData, isLoading, isFetching } = useReservations({ 
-    page, name, state, dateFrom, dateTo 
+  // 3️⃣ Data Fetching (Reservas - Paginado, siempre fresco)
+  const { data: reservationsData, isLoading, isFetching } = useReservations({
+    page, name, state, dateFrom, dateTo
   });
 
-  // 3. Hook de Mutaciones (Escritura)
-  const { createReservation, updateReservation, deleteReservation } = useReservationMutations();
+  // 4️⃣ Data Fetching (Pasajeros - Memoria tipo Store)
+  // Se carga la primera vez y no vuelve a pedir datos a menos que se cree/edite un pax.
+  const { data: availablePassengers = [] } = usePaxSelect();
 
-  useEffect(() => {
-    if (!fetched) {
-      startTransition(async () => {
-        try {
-          const passengersData = await fetchAPI<Pax[]>("/pax");
-          setPassengers(passengersData);
-          setFetched(true);
-        } catch (error) { console.error(error); }
-      });
-    }
-  }, [fetched, setFetched, setPassengers]);
+  // 5️⃣ Mutaciones (Escritura)
+  const { createReservation, updateReservation, deleteReservation } = useReservationMutations();
 
   // Handlers de filtros y paginación
   const handleFilterChange = (filters: Filters): void => {
@@ -77,7 +67,7 @@ export default function ReservasPage() {
   // 🔥 Confirmación del Diálogo usando Mutaciones
   const handleConfirmDialog = (data: { id?: string; state: ReservationState; passengers: Pax[] }) => {
     const payload = { state: data.state, paxIds: data.passengers.map((p) => p.id) };
-    
+
     if (dialogMode === "create") {
       createReservation.mutate(payload, {
         onSuccess: (newRes) => {
@@ -99,23 +89,30 @@ export default function ReservasPage() {
     deleteReservation.mutate(id);
   };
 
-  // Estado de carga global para botones (si alguna mutación está procesando)
+  // ✅ Callback para cuando se crea un pasajero desde el ReservationDialog.
+  // No necesitamos hacer nada manual porque el hook useCreatePax ya invalidó la query "pax".
+  // TanStack Query actualizará "availablePassengers" automáticamente.
+  const handlePassengerCreated = () => {
+    // Lógica opcional si quisieras seleccionarlo automáticamente en el form
+    // Pero la actualización de datos es automática.
+  };
+
+  // Estado de carga global para botones
   const isMutating = createReservation.isPending || updateReservation.isPending || deleteReservation.isPending;
 
   return (
     <>
       <Head title="Reservas" description="Gestión de reservas." />
       <DashboardLayout>
-        {/* Usamos opacity para el feedback de carga de cache */}
         <div className={cn("space-y-6 w-full transition-opacity duration-300", (isFetching || isMutating) && "opacity-60")}>
-          
+
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Reservas</h1>
               <p className="text-xs text-muted-foreground md:text-sm">Administra todas las reservas</p>
             </div>
-            <Button 
-              onClick={() => { setSelectedReservation(null); setDialogMode("create"); setDialogOpen(true); }} 
+            <Button
+              onClick={() => { setSelectedReservation(null); setDialogMode("create"); setDialogOpen(true); }}
               className="cursor-pointer h-8 gap-2 px-3 text-xs md:h-10 md:px-4 md:text-sm w-full sm:w-auto"
               disabled={isLoading || isFetching || isMutating}
             >
@@ -124,17 +121,21 @@ export default function ReservasPage() {
             </Button>
           </div>
 
-          <ReservationFilters passengers={passengers} onFilterChange={handleFilterChange} />
+          <ReservationFilters
+            // Pasamos la lista "cacheada"
+            passengers={availablePassengers}
+            onFilterChange={handleFilterChange}
+          />
 
-          <ReservationsTable 
-            reservations={reservationsData?.data ?? []} 
-            isLoading={isLoading} 
+          <ReservationsTable
+            reservations={reservationsData?.data ?? []}
+            isLoading={isLoading}
             onDelete={handleDeleteReservation}
             onView={(id) => navigate(`/reservas/${id}`)}
             onEdit={(id) => {
               const res = reservationsData?.data.find(r => r.id === id);
               if (res) { setSelectedReservation(res); setDialogMode("edit"); setDialogOpen(true); }
-            }} 
+            }}
           />
 
           {reservationsData && (
@@ -143,20 +144,20 @@ export default function ReservasPage() {
                 Página <strong>{reservationsData.meta.page}</strong> de {reservationsData.meta.totalPages} ({reservationsData.meta.total} resultados)
               </p>
               <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={reservationsData.meta.page <= 1 || isFetching} 
-                  onClick={() => handlePageChange(reservationsData.meta.page - 1)} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={reservationsData.meta.page <= 1 || isFetching}
+                  onClick={() => handlePageChange(reservationsData.meta.page - 1)}
                   className="flex-1 sm:flex-none h-8 text-xs md:text-sm cursor-pointer"
                 >
                   Anterior
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={!reservationsData.meta.hasNext || isFetching} 
-                  onClick={() => handlePageChange(reservationsData.meta.page + 1)} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!reservationsData.meta.hasNext || isFetching}
+                  onClick={() => handlePageChange(reservationsData.meta.page + 1)}
                   className="flex-1 sm:flex-none h-8 text-xs md:text-sm cursor-pointer"
                 >
                   Siguiente
@@ -170,11 +171,12 @@ export default function ReservasPage() {
           open={dialogOpen}
           mode={dialogMode}
           onOpenChange={setDialogOpen}
-          availablePassengers={passengers}
+          availablePassengers={availablePassengers}
           reservation={selectedReservation}
           isPending={isMutating}
           onConfirm={handleConfirmDialog}
-          onPassengerCreated={addPassenger}
+          // Pasamos el handler simplificado
+          onPassengerCreated={handlePassengerCreated}
         />
         <Outlet />
       </DashboardLayout>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -12,12 +12,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { X, UserPlus, Plus } from "lucide-react";
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { PassengerDialog } from "@/components/passengers/passenger-dialog";
-import { usePassengersStore } from "@/stores/usePassengerStore";
+// import { usePassengersStore } from "@/stores/usePassengerStore"; // 👈 YA NO LO NECESITAMOS PARA LEER
 
 interface EditPassengersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentPassengers: Pax[];
+  // 👇 1. AGREGAMOS ESTO: Recibimos la lista desde el padre (que ya la tiene segura)
+  availablePassengers: Pax[];
   onSave: (passengers: Pax[]) => void;
 }
 
@@ -25,12 +27,17 @@ export function EditPassengersDialog({
   open,
   onOpenChange,
   currentPassengers,
+  availablePassengers, // 👇 2. RECIBIMOS LA PROP
   onSave,
 }: EditPassengersDialogProps) {
   const [selectedPassengers, setSelectedPassengers] = useState<Pax[]>(currentPassengers);
   const [isPassengerDialogOpen, setIsPassengerDialogOpen] = useState(false);
 
-  const { passengers: availablePassengers, addPassenger } = usePassengersStore();
+  // 👇 3. BLINDAJE ANTI-CRASH (La solución al error filter is not a function)
+  // Si por alguna razón llega null/undefined, usamos un array vacío.
+  const safeAvailablePassengers = Array.isArray(availablePassengers)
+    ? availablePassengers
+    : [];
 
   useEffect(() => {
     if (open) {
@@ -56,20 +63,20 @@ export function EditPassengersDialog({
   const handleCreatePassenger = () => setIsPassengerDialogOpen(true);
 
   const handlePassengerCreated = (newPax: Pax) => {
-    addPassenger(newPax);
+    // Ya no dependemos del store aquí, simplemente lo agregamos a la selección local
     setSelectedPassengers((prev) => [...prev, newPax]);
     setIsPassengerDialogOpen(false);
 
-    setTimeout(() => {
-      onSave([...selectedPassengers, newPax]);
-      onOpenChange(false);
-    }, 100);
+    // Guardado automático opcional
+    // setTimeout(() => {
+    //   onSave([...selectedPassengers, newPax]);
+    //   onOpenChange(false);
+    // }, 100);
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* 👇 AQUÍ ESTÁ EL CAMBIO: [&>button]:cursor-pointer */}
         <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle className="text-sm md:text-base">
@@ -138,13 +145,15 @@ export function EditPassengersDialog({
                     <CommandList>
                       <CommandEmpty>No se encontraron pasajeros</CommandEmpty>
                       <CommandGroup>
-                        {availablePassengers
+                        {/* 👇 USAMOS safeAvailablePassengers EN LUGAR DE availablePassengers */}
+                        {safeAvailablePassengers
                           .filter((p) => !selectedPassengers.find((sp) => sp.id === p.id))
+                          .slice(0, 50) // Limitamos a 50 para rendimiento
                           .map((passenger) => (
                             <CommandItem
                               key={passenger.id}
                               onSelect={() => addExistingPassenger(passenger)}
-                              className="text-xs md:text-sm cursor-pointer" // Agregué cursor aquí también por si acaso
+                              className="text-xs md:text-sm cursor-pointer"
                             >
                               <div className="flex flex-col">
                                 <span className="font-medium">
@@ -199,9 +208,10 @@ export function EditPassengersDialog({
         key="passenger-dialog"
         open={isPassengerDialogOpen}
         onOpenChange={setIsPassengerDialogOpen}
+        // Fix de tipado rápido para cuando creamos uno nuevo
         passenger={undefined as unknown as Pax}
         mode="create"
-        onSave={handlePassengerCreated}
+        onSuccess={handlePassengerCreated}
       />
     </>
   );

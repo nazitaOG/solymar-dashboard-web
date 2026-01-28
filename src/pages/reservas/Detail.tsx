@@ -54,13 +54,16 @@ import {
   CurrencyTotal,
 } from "@/lib/interfaces/currency/currency.interface";
 import { Head } from "@/components/seo/Head";
+import { usePaxSelect } from "@/hooks/pax/usePaxSelect";
 
 export default function ReservationDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // Eliminamos dependencia de location.state para datos críticos para evitar inconsistencias al recargar
-  // const location = useLocation();
-  // const passedReservation = location.state as Reservation | undefined;
+  const { data: sourceData } = usePaxSelect();
+
+  // 2. Extracción Segura
+  // Usamos PaxType porque así lo llamaste en los imports de este archivo
+  const availablePassengers = (sourceData as unknown as { data: PaxType[] })?.data ?? [];
 
   const initialReservation: ReservationDetail = {
     id: "",
@@ -1378,6 +1381,7 @@ export default function ReservationDetailPage() {
                 onPassengersChange={handlePassengersChange}
                 paymentItems={financialItems}
                 onNameChange={handleNameChange}
+                availablePassengers={availablePassengers}
               />
 
               <Tabs defaultValue="hotels" className="w-full">

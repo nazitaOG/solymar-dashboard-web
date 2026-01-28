@@ -3,14 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-html, body {
-  overscroll-behavior: none;
-}
-img {
-  user-select: none;
-  -webkit-user-drag: none; /* Propiedad específica para WebKit/Chrome */
-}
-
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -133,15 +125,15 @@ img {
 
   /* --- COLOR DE SELECCIÓN GENERAL --- */
   ::selection {
-    background-color: #fdcd00;
-    color: black;
+    background-color: #0ea5e9; /* Azul celeste (sky-500) */
+    color: white;
   }
   
   /* --- COLOR DE SELECCIÓN ESPECÍFICO PARA INPUTS --- */
   input::selection,
   input::-moz-selection {
-    background-color:  #fdcd00 !important;
-    color: black !important;
+    background-color: #0ea5e9 !important;
+    color: white !important;
   }
 
   /* --- FIX PARA AUTOFILL DE CHROME --- */
@@ -158,8 +150,8 @@ img {
   /* --- FIX: SELECCIÓN EN INPUTS CON AUTOFILL --- */
   /* Esto soluciona el problema del fondo negro al hacer drag */
   input:-webkit-autofill::selection {
-      -webkit-text-fill-color: black !important;
-      background-color: #fdcd00 !important;
+      -webkit-text-fill-color: white !important;
+      background-color: #0ea5e9 !important;
   }
 
   /* --- FIX: FONDO BLANCO EN INPUTS DEL LOGIN --- */
@@ -188,5 +180,25 @@ img {
   .login-container [role="checkbox"][data-state="checked"] {
     background-color: black !important;
     border-color: black !important;
+  }
+
+  /* --- FIX: BOTÓN RECLUTADOR (Funciona en light y dark) --- */
+  .login-container .demo-recruiter-btn {
+    background-color: white !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: rgba(245, 158, 11, 0.4) !important; /* amber-500/40 */
+    color: rgb(217, 119, 6) !important; /* amber-600 */
+  }
+  
+  .login-container .demo-recruiter-btn:hover:not(:disabled) {
+    background-color: rgb(255, 251, 235) !important; /* amber-50 */
+    border-color: rgba(245, 158, 11, 0.6) !important; /* amber-500/60 */
+    color: rgb(180, 83, 9) !important; /* amber-700 */
+  }
+
+  .login-container .demo-recruiter-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }

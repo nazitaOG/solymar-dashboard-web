@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useTransition, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,13 +30,13 @@ import {
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 
-// Asegúrate de que tus interfaces y schemas estén actualizados (ver abajo)
+// Interfaces y Utils
 import type { Pax } from "@/lib/interfaces/pax/pax.interface";
 import { CreatePaxSchema } from "@/lib/schemas/pax/create-pax.schema";
-import { fetchAPI } from "@/lib/api/fetchApi";
 import { paxToRequest } from "@/lib/utils/pax/pax_transform.utils";
-import type { CreatePaxRequest } from "@/lib/interfaces/pax/pax-request.interface";
-import { useDeletePassenger } from "@/hooks/pax/useDeletePassanger";
+
+// Hooks
+import { useCreatePax, useUpdatePax } from "@/hooks/pax/usePaxMutations";
 
 // ----------------------------------------------------
 
@@ -46,18 +45,15 @@ interface PassengerDialogProps {
   onOpenChange: (open: boolean) => void;
   passenger?: Pax;
   mode: "create" | "edit" | "view";
-  onSave?: (passenger: Pax) => void;
-  onDelete?: (id: string) => void;
+  onSuccess?: (savedPax: Pax) => void;
 }
 
 interface FormDataState {
   name: string;
   birthDate: Date | undefined;
   nationality: string;
-  // ✅ Nuevos campos de contacto
   email: string;
-  phoneNumber: string; 
-  // -------------------------
+  phoneNumber: string;
   dniNum: string;
   dniExpirationDate: Date | undefined;
   passportNum: string;
@@ -68,10 +64,8 @@ const defaultFormData: FormDataState = {
   name: "",
   birthDate: undefined,
   nationality: "Argentina",
-  // ✅ Default vacíos
   email: "",
   phoneNumber: "",
-  // ----------------
   dniNum: "",
   dniExpirationDate: undefined,
   passportNum: "",
@@ -90,16 +84,9 @@ const getInitialData = (pax?: Pax): FormDataState => {
   const normalizeNationality = (n?: string) => {
     if (!n) return "Argentina";
     const upper = n.toUpperCase();
-    // Mapeo simple de nacionalidades comunes
     const map: Record<string, string> = {
-      ARGENTINA: "Argentina",
-      URUGUAY: "Uruguay",
-      CHILE: "Chile",
-      BRASIL: "Brasil",
-      PARAGUAY: "Paraguay",
-      PERU: "Perú",
-      PERÚ: "Perú",
-      BOLIVIA: "Bolivia",
+      ARGENTINA: "Argentina", URUGUAY: "Uruguay", CHILE: "Chile", BRASIL: "Brasil",
+      PARAGUAY: "Paraguay", PERU: "Perú", PERÚ: "Perú", BOLIVIA: "Bolivia",
     };
     return map[upper] || "Otro";
   };
@@ -108,10 +95,8 @@ const getInitialData = (pax?: Pax): FormDataState => {
     name: pax.name ?? "",
     birthDate: toDate(pax.birthDate),
     nationality: normalizeNationality(pax.nationality),
-    // ✅ Carga de datos existentes
     email: pax.email ?? "",
     phoneNumber: pax.phoneNumber ?? "",
-    // ---------------------------
     dniNum: pax.dni?.dniNum || "",
     dniExpirationDate: toDate(pax.dni?.expirationDate),
     passportNum: pax.passport?.passportNum || "",
@@ -135,26 +120,18 @@ export function PassengerDialog({
   onOpenChange,
   passenger,
   mode,
-  onSave,
-  onDelete,
+  onSuccess,
 }: PassengerDialogProps) {
   const [formData, setFormData] = useState<FormDataState>(defaultFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isPending, startTransition] = useTransition();
-
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-
   const initialDataRef = useRef<FormDataState>(defaultFormData);
 
-  const { deletePassenger, isPending: isDeleting, error: deleteError } =
-    useDeletePassenger({
-      onDeleteSuccess: (id) => {
-        onDelete?.(id);
-        setShowDeleteConfirm(false);
-        onOpenChange(false);
-      },
-    });
+  // Hooks de mutación
+  const createMutation = useCreatePax();
+  const updateMutation = useUpdatePax();
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
     if (open) {
@@ -167,44 +144,40 @@ export function PassengerDialog({
       initialDataRef.current = defaultFormData;
       setErrors({});
       setShowDiscardConfirm(false);
+      createMutation.reset();
+      updateMutation.reset();
     }
   }, [passenger, open]);
 
   const isDirty = useMemo(() => {
     if (!open) return false;
-
     const normalize = (data: FormDataState) => ({
       name: data.name?.trim() || "",
       birthDate: data.birthDate?.getTime() ?? 0,
       nationality: data.nationality || "Argentina",
-      // ✅ Dirty check para contacto
       email: data.email?.trim() || "",
       phoneNumber: data.phoneNumber?.trim() || "",
-      // --------------------------
       dniNum: data.dniNum?.trim() || "",
       dniExpirationDate: data.dniExpirationDate?.getTime() ?? 0,
       passportNum: data.passportNum?.trim() || "",
       passportExpirationDate: data.passportExpirationDate?.getTime() ?? 0,
     });
-
     const current = JSON.stringify(normalize(formData));
     const initial = JSON.stringify(normalize(initialDataRef.current));
-
     return current !== initial;
   }, [formData, open]);
 
+  // ✅ SOLUCIÓN 1: Aquí definimos la variable
   const currentPlaceholders =
     docPlaceholders[formData.nationality] || docPlaceholders.Otro;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const payloadForZod = {
       name: formData.name,
       birthDate: formData.birthDate ? formData.birthDate.toISOString() : "",
       nationality: formData.nationality,
-      // ✅ Payload para validar
       email: formData.email,
       phoneNumber: formData.phoneNumber,
-      // ----------------------
       passportNum: formData.passportNum,
       passportExpirationDate: formData.passportExpirationDate || "",
       dniNum: formData.dniNum,
@@ -222,68 +195,62 @@ export function PassengerDialog({
       setErrors(fieldErrors);
       return;
     }
-
     setErrors({});
 
-    if (mode === 'edit' && !isDirty) {
-        onOpenChange(false); 
-        return;
+    if (mode === "edit" && !isDirty) {
+      onOpenChange(false);
+      return;
     }
 
-    startTransition(async () => {
-      try {
-        const normalized: Partial<Pax> = {
-          name: result.data.name,
-          birthDate: result.data.birthDate.toISOString(),
-          nationality: result.data.nationality,
-          // ✅ Datos listos para la API
-          email: result.data.email || undefined, // null si viene vacío
-          phoneNumber: result.data.phoneNumber || undefined,
-          // --------------------------
-          dni: result.data.dniNum
-            ? {
-                dniNum: result.data.dniNum,
-                expirationDate: result.data.dniExpirationDate?.toISOString(),
-              }
-            : undefined,
-          passport: result.data.passportNum
-            ? {
-                passportNum: result.data.passportNum,
-                expirationDate: result.data.passportExpirationDate?.toISOString(),
-              }
-            : undefined,
-        };
-        const requestBody: CreatePaxRequest = paxToRequest(normalized);
+    const normalizedData = {
+      name: result.data.name,
+      birthDate: result.data.birthDate.toISOString(),
+      nationality: result.data.nationality,
+      email: result.data.email || undefined,
+      phoneNumber: result.data.phoneNumber || undefined,
+      dni: result.data.dniNum
+        ? { dniNum: result.data.dniNum, expirationDate: result.data.dniExpirationDate?.toISOString() }
+        : undefined,
+      passport: result.data.passportNum
+        ? { passportNum: result.data.passportNum, expirationDate: result.data.passportExpirationDate?.toISOString() }
+        : undefined,
+    };
 
-        let saved: Pax;
-        if (mode === "create") {
-          saved = await fetchAPI<Pax>("/pax", {
-            method: "POST",
-            body: JSON.stringify(requestBody),
-          });
-        } else if (mode === "edit" && passenger?.id) {
-          saved = await fetchAPI<Pax>(`/pax/${passenger.id}`, {
-            method: "PATCH",
-            body: JSON.stringify(requestBody),
-          });
-        } else {
-          throw new Error("Modo no válido");
-        }
+    const requestBody = paxToRequest(normalizedData);
 
-        onSave?.(saved);
-        onOpenChange(false);
-      } catch (error) {
-        let msg = "Error al guardar el pasajero.";
-        if (error instanceof Error) {
-          if (error.message.includes("unique constraint (dniNum)")) {
-            msg = "Ya existe un pasajero registrado con este número de DNI.";
-          } else {
-            msg = error.message;
-          }
-        }
-        setErrors({ general: msg });
+    try {
+      let savedPax: Pax;
+
+      if (mode === "create") {
+        savedPax = await createMutation.mutateAsync(requestBody);
+      } else if (mode === "edit" && passenger?.id) {
+        savedPax = await updateMutation.mutateAsync({
+          id: passenger.id,
+          data: requestBody,
+        });
+      } else {
+        throw new Error("Modo inválido o falta ID");
       }
-    });
+
+      onSuccess?.(savedPax);
+      onOpenChange(false);
+
+      // ✅ SOLUCIÓN 2: Eliminamos el 'any' y usamos 'unknown'
+    } catch (error: unknown) {
+      let msg = "Error al guardar.";
+
+      // Verificamos si es una instancia de Error
+      const rawMsg = error instanceof Error ? error.message : String(error);
+
+      if (rawMsg.includes("unique constraint") && rawMsg.includes("dniNum")) {
+        msg = "Ya existe un pasajero registrado con este DNI.";
+      } else if (rawMsg.includes("unique constraint") && rawMsg.includes("passportNum")) {
+        msg = "Ya existe un pasajero registrado con este Pasaporte.";
+      } else {
+        msg = rawMsg;
+      }
+      setErrors({ general: msg });
+    }
   };
 
   const isViewMode = mode === "view";
@@ -291,9 +258,10 @@ export function PassengerDialog({
 
   return (
     <>
-      <Dialog 
-        open={open} 
+      <Dialog
+        open={open}
         onOpenChange={(isOpen) => {
+          if (isSaving) return;
           if (!isOpen && isDirty && !isViewMode) {
             setShowDiscardConfirm(true);
           } else if (!isOpen) {
@@ -301,14 +269,12 @@ export function PassengerDialog({
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-lg text-xs md:text-sm [&>button]:cursor-pointer scrollbar-thin"
           onWheel={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
-            if (isDirty && !isViewMode) {
-              e.preventDefault();
-              setShowDiscardConfirm(true);
-            }
+            if (isSaving) { e.preventDefault(); return; }
+            if (isDirty && !isViewMode) { e.preventDefault(); setShowDiscardConfirm(true); }
           }}
         >
           <DialogHeader>
@@ -321,7 +287,7 @@ export function PassengerDialog({
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* SECCIÓN DATOS BÁSICOS */}
+            {/* DATOS BÁSICOS */}
             <div className="space-y-3">
               <h4 className="font-medium text-xs md:text-sm">Información básica</h4>
               <div className="grid gap-3 md:grid-cols-2">
@@ -332,7 +298,7 @@ export function PassengerDialog({
                     value={formData.name}
                     placeholder="Lionel Andres Messi"
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    disabled={isViewMode}
+                    disabled={isViewMode || isSaving}
                     className={`h-8 md:h-9 text-xs md:text-sm ${errors.name ? "border-red-500" : ""}`}
                   />
                   {errors.name && <p className="text-red-500 text-[10px]">{errors.name}</p>}
@@ -340,7 +306,7 @@ export function PassengerDialog({
 
                 <div className="space-y-1">
                   <Label className="text-[11px] md:text-xs">Fecha de nacimiento *</Label>
-                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                  <div className={isViewMode || isSaving ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.birthDate}
                       setDate={(date) => setFormData({ ...formData, birthDate: date })}
@@ -358,7 +324,7 @@ export function PassengerDialog({
                   <Select
                     value={formData.nationality}
                     onValueChange={(v) => setFormData({ ...formData, nationality: v })}
-                    disabled={isViewMode}
+                    disabled={isViewMode || isSaving}
                   >
                     <SelectTrigger className={`bg-transparent cursor-pointer h-8 md:h-9 text-xs md:text-sm ${errors.nationality ? "border-red-500" : ""}`}>
                       <SelectValue />
@@ -374,43 +340,43 @@ export function PassengerDialog({
               </div>
             </div>
 
-            {/* SECCIÓN CONTACTO */}
+            {/* CONTACTO */}
             <div className="pt-2">
-               <h4 className="font-medium text-xs md:text-sm">Contacto</h4>
-               <div className="grid gap-3 pt-3 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="email" className="text-[11px] md:text-xs">Email <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      placeholder="ejemplo@correo.com"
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      disabled={isViewMode}
-                      className={`h-8 md:h-9 text-xs md:text-sm ${errors.email ? "border-red-500" : ""}`}
-                    />
-                    {errors.email && <p className="text-red-500 text-[10px]">{errors.email}</p>}
-                  </div>
+              <h4 className="font-medium text-xs md:text-sm">Contacto</h4>
+              <div className="grid gap-3 pt-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="email" className="text-[11px] md:text-xs">Email <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    placeholder="ejemplo@correo.com"
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={isViewMode || isSaving}
+                    className={`h-8 md:h-9 text-xs md:text-sm ${errors.email ? "border-red-500" : ""}`}
+                  />
+                  {errors.email && <p className="text-red-500 text-[10px]">{errors.email}</p>}
+                </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="phoneNumber" className="text-[11px] md:text-xs">Teléfono <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
-                    <Input
-                      id="phoneNumber"
-                      type="tel"
-                      value={formData.phoneNumber}
-                      placeholder="+54 9 11 1234 5678"
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      disabled={isViewMode}
-                      className={`h-8 md:h-9 text-xs md:text-sm ${errors.phoneNumber ? "border-red-500" : ""}`}
-                    />
-                    {errors.phoneNumber && <p className="text-red-500 text-[10px]">{errors.phoneNumber}</p>}
-                  </div>
-               </div>
+                <div className="space-y-1">
+                  <Label htmlFor="phoneNumber" className="text-[11px] md:text-xs">Teléfono <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    value={formData.phoneNumber}
+                    placeholder="+54 9 11 1234 5678"
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    disabled={isViewMode || isSaving}
+                    className={`h-8 md:h-9 text-xs md:text-sm ${errors.phoneNumber ? "border-red-500" : ""}`}
+                  />
+                  {errors.phoneNumber && <p className="text-red-500 text-[10px]">{errors.phoneNumber}</p>}
+                </div>
+              </div>
             </div>
 
             <Separator />
 
-            {/* SECCIÓN DOCUMENTACIÓN */}
+            {/* DOCUMENTACIÓN */}
             <div className="space-y-3">
               <h4 className="font-medium text-xs md:text-sm">Documentación</h4>
               <div className="grid gap-3 md:grid-cols-2">
@@ -420,7 +386,8 @@ export function PassengerDialog({
                     id="dniNum"
                     value={formData.dniNum}
                     onChange={(e) => setFormData({ ...formData, dniNum: e.target.value })}
-                    disabled={isViewMode}
+                    disabled={isViewMode || isSaving}
+                    // ✅ SOLUCIÓN 1: Aquí usamos la variable que estaba sin usar
                     placeholder={currentPlaceholders.dni}
                     className={`h-8 md:h-9 text-xs md:text-sm placeholder:text-[10px] md:placeholder:text-xs ${errors.dniNum ? "border-red-500" : ""}`}
                   />
@@ -428,7 +395,7 @@ export function PassengerDialog({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] md:text-xs">Vencimiento DNI *</Label>
-                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                  <div className={isViewMode || isSaving ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.dniExpirationDate}
                       setDate={(date) => setFormData({ ...formData, dniExpirationDate: date })}
@@ -446,7 +413,8 @@ export function PassengerDialog({
                     id="passportNum"
                     value={formData.passportNum}
                     onChange={(e) => setFormData({ ...formData, passportNum: e.target.value })}
-                    disabled={isViewMode}
+                    disabled={isViewMode || isSaving}
+                    // ✅ SOLUCIÓN 1: Aquí usamos la variable que estaba sin usar
                     placeholder={currentPlaceholders.passport}
                     className={`h-8 md:h-9 text-xs md:text-sm placeholder:text-[10px] md:placeholder:text-xs ${errors.passportNum ? "border-red-500" : ""}`}
                   />
@@ -454,7 +422,7 @@ export function PassengerDialog({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px] md:text-xs">Vencimiento Pasaporte *</Label>
-                  <div className={isViewMode ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
+                  <div className={isViewMode || isSaving ? "opacity-60 pointer-events-none" : "[&>button]:cursor-pointer"}>
                     <DateTimePicker
                       date={formData.passportExpirationDate}
                       setDate={(date) => setFormData({ ...formData, passportExpirationDate: date })}
@@ -469,9 +437,9 @@ export function PassengerDialog({
               </div>
             </div>
 
-            {(errors.general || deleteError) && (
+            {errors.general && (
               <p className="text-red-500 text-[10px] md:text-xs text-center mt-2 font-medium bg-red-50 p-2 rounded-md border border-red-100">
-                {errors.general || deleteError}
+                {errors.general}
               </p>
             )}
           </div>
@@ -480,6 +448,7 @@ export function PassengerDialog({
             <Button
               variant="outline"
               className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
+              disabled={isSaving}
               onClick={() => {
                 if (isDirty && !isViewMode) setShowDiscardConfirm(true);
                 else onOpenChange(false);
@@ -488,33 +457,21 @@ export function PassengerDialog({
               {isViewMode ? "Cerrar" : "Cancelar"}
             </Button>
             {!isViewMode && (
-              <Button 
-                onClick={handleSave} 
-                disabled={isPending || (!isCreateMode && !isDirty)}
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || (!isCreateMode && !isDirty)}
                 className="h-8 md:h-9 text-xs md:text-sm cursor-pointer"
               >
-                {isPending ? "Guardando..." : isCreateMode ? "Crear" : "Guardar cambios"}
+                {isSaving
+                  ? "Guardando..."
+                  : isCreateMode
+                    ? "Crear"
+                    : "Guardar cambios"}
               </Button>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => passenger?.id && deletePassenger(passenger.id)} 
-              className="bg-red-600 hover:bg-red-700 cursor-pointer"
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Eliminando..." : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <AlertDialogContent>
@@ -524,8 +481,8 @@ export function PassengerDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer" onClick={() => setShowDiscardConfirm(false)}>Seguir editando</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => { setShowDiscardConfirm(false); onOpenChange(false); }} 
+            <AlertDialogAction
+              onClick={() => { setShowDiscardConfirm(false); onOpenChange(false); }}
               className="cursor-pointer"
             >
               Descartar
