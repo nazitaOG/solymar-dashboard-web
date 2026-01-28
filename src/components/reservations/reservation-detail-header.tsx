@@ -156,7 +156,8 @@ export function ReservationDetailHeader({
   const totalsByCurrency = useMemo(() => {
     const acc: Record<string, { total: number; paid: number; missing: number }> = {};
 
-    paymentItems.forEach(item => {
+    // 🛡️ BLINDAJE 1: Aseguramos que paymentItems sea un array antes de iterar
+    (paymentItems || []).forEach(item => {
       const curr = item.currency;
       if (!acc[curr]) {
         acc[curr] = { total: 0, paid: 0, missing: 0 };
@@ -172,7 +173,8 @@ export function ReservationDetailHeader({
     return acc;
   }, [paymentItems]);
 
-  const currentPassengers = reservation.paxReservations.map((pr) => pr.pax);
+  // 🛡️ BLINDAJE 2: Acceso seguro a paxReservations para evitar 'map of undefined'
+  const currentPassengers = reservation.paxReservations?.map((pr) => pr.pax) ?? [];
 
   const handleConfirmStateChange = async (): Promise<void> => {
     if (!pendingState) return;
@@ -289,7 +291,7 @@ export function ReservationDetailHeader({
               ))}
             </div>
           </div>
-          {paymentItems.length > 0 && (
+          {(paymentItems || []).length > 0 && (
             <a
               href="#"
               onClick={(e) => {
@@ -304,14 +306,13 @@ export function ReservationDetailHeader({
           )}
         </div>
 
-        {/* --- Sección de Pasajeros (ACTUALIZADA) --- */}
+        {/* --- Sección de Pasajeros --- */}
         <div className="flex flex-col h-fit justify-between sm:flex-row items-start sm:items-center w-full gap-4">
           <div className="flex gap-2 flex-wrap w-full sm:w-auto sm:flex-1">
             {currentPassengers.map((passenger) => (
               <Badge
                 key={passenger.id}
                 variant="outline"
-                // 🟢 AHORA SON CLICKEABLES
                 className="gap-2 py-1.5 px-3 max-w-full cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => handleViewPassenger(passenger)}
               >
@@ -333,13 +334,12 @@ export function ReservationDetailHeader({
 
       {/* --- DIALOGOS --- */}
 
-      {/* 🟢 NUEVO DIALOGO PARA VER PASAJERO */}
       {viewPaxOpen && (
         <PassengerDialog
           open={viewPaxOpen}
           onOpenChange={setViewPaxOpen}
           passenger={selectedPax}
-          mode="view" // Solo lectura
+          mode="view"
         />
       )}
 
@@ -411,11 +411,11 @@ export function ReservationDetailHeader({
 
             <div className="space-y-3">
               <h4 className="text-sm font-medium leading-none">Desglose de items</h4>
-              {paymentItems.length === 0 ? (
+              {(paymentItems || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">No hay servicios cargados en esta reserva.</p>
               ) : (
                 <ul className="grid gap-2">
-                  {paymentItems.map((item) => {
+                  {(paymentItems || []).map((item) => {
                     const missing = item.totalPrice - item.amountPaid;
                     const isMissing = missing > 0.01;
 

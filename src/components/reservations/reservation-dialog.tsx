@@ -50,7 +50,7 @@ interface ReservationDialogProps {
   onConfirm: (data: { id?: string; state: ReservationState; passengers: Pax[] }) => void
   reservation?: Reservation | null
   onPassengerCreated?: (newPassenger: Pax) => void
-  isPending?: boolean // 🚀 Recibimos el estado de la mutación desde el padre
+  isPending?: boolean 
 }
 
 export function ReservationDialog({
@@ -79,14 +79,15 @@ export function ReservationDialog({
     if (open) {
       if (isEdit && reservation) {
         setState(reservation.state)
-        const normalized = reservation.paxReservations.map((paxRes) => ({
+        // Blindaje para evitar crash si paxReservations es undefined
+        const normalized = reservation.paxReservations?.map((paxRes) => ({
           id: paxRes.pax.id,
           name: paxRes.pax.name,
           birthDate: paxRes.pax.birthDate,
           nationality: paxRes.pax.nationality,
           passport: paxRes.pax.passport,
           dni: paxRes.pax.dni,
-        }))
+        })) ?? []
         setSelectedPassengers(normalized)
       } else {
         setState(ReservationState.PENDING)
@@ -99,7 +100,7 @@ export function ReservationDialog({
   const isDirty = useMemo(() => {
     if (!open) return false
     const initialData = isEdit && reservation
-      ? { state: reservation.state, pIds: reservation.paxReservations.map(pr => pr.pax.id).sort().join(",") }
+      ? { state: reservation.state, pIds: reservation.paxReservations?.map(pr => pr.pax.id).sort().join(",") ?? "" }
       : { state: ReservationState.PENDING, pIds: "" }
 
     const currentData = { state, pIds: selectedPassengers.map(p => p.id).sort().join(",") }
@@ -233,7 +234,8 @@ export function ReservationDialog({
           if (!isOpen) setPaxDialogKey(prev => prev + 1)
         }}
         mode="create"
-        onSave={(newPax) => {
+        // 👇 CAMBIO CLAVE AQUÍ: Usamos onSuccess en lugar de onSave
+        onSuccess={(newPax) => {
           addPassenger(newPax)
           onPassengerCreated?.(newPax)
           setPassengerDialogOpen(false)
