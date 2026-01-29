@@ -17,10 +17,10 @@ export function LanguageToggle() {
       variant="ghost" 
       size="sm" 
       onClick={toggleLanguage}
-      className="gap-2 px-2"
+      className="gap-2 px-2 cursor-pointer rounded-full"
       title="Cambiar idioma"
     >
-      <span className="cursor-pointer font-bold text-xs">{isEs ? 'ES' : 'EN'}</span>
+      <span className="font-bold text-xs">{isEs ? 'ES' : 'EN'}</span>
     </Button>
   );
 }
