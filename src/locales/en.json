@@ -1,0 +1,49 @@
+{
+  "common": {
+    "save": "Save changes",
+    "create": "Create",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search...",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "discard": "Discard",
+    "back": "Back",
+    "settings": "Settings",
+    "reports": "Reports"
+  },
+  "status": {
+    "PENDING": "Pending",
+    "CONFIRMED": "Confirmed",
+    "CANCELLED": "Cancelled"
+  },
+  "reservations": {
+    "title": "Reservations",
+    "new_reservation": "New Reservation",
+    "edit_reservation": "Edit Reservation",
+    "state": "Status",
+    "name_placeholder": "Ex: Disney Trip 2024",
+    "confirm_state_change": "Confirm status change",
+    "confirm_change_desc": "Are you sure you want to change the reservation from {{old}} to {{new}}?",
+    "financials": {
+      "payment_details": "Payment Details",
+      "payment_desc": "Breakdown of pending and paid items.",
+      "total_plan": "Total plan",
+      "paid": "Paid",
+      "missing": "To pay",
+      "what_is_missing": "What is missing?",
+      "no_services": "No services loaded in this reservation."
+    }
+  },
+  "passengers": {
+    "title": "Passengers",
+    "linked_passengers": "Linked passengers",
+    "no_linked": "No linked passengers",
+    "add_existing": "Search existing passenger",
+    "create_new": "Create new passenger",
+    "edit_list": "Edit passengers",
+    "search_placeholder": "Search by name..."
+  }
+}

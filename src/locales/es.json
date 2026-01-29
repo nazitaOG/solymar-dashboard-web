@@ -1,0 +1,49 @@
+{
+  "common": {
+    "save": "Guardar cambios",
+    "create": "Crear",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "search": "Buscar...",
+    "actions": "Acciones",
+    "loading": "Cargando...",
+    "confirm": "Confirmar",
+    "discard": "Descartar",
+    "back": "Volver",
+    "settings": "Ajustes",
+    "reports": "Reportes"
+  },
+  "status": {
+    "PENDING": "Pendiente",
+    "CONFIRMED": "Confirmada",
+    "CANCELLED": "Cancelada"
+  },
+  "reservations": {
+    "title": "Reservas",
+    "new_reservation": "Nueva Reserva",
+    "edit_reservation": "Editar Reserva",
+    "state": "Estado",
+    "name_placeholder": "Ej: Viaje a Disney 2024",
+    "confirm_state_change": "Confirmar cambio de estado",
+    "confirm_change_desc": "¿Seguro que querés cambiar la reserva de {{old}} a {{new}}?",
+    "financials": {
+      "payment_details": "Detalle de Saldos",
+      "payment_desc": "Desglose de items pendientes y pagados.",
+      "total_plan": "Total del plan",
+      "paid": "Pagado",
+      "missing": "Falta pagar",
+      "what_is_missing": "¿Qué falta pagar?",
+      "no_services": "No hay servicios cargados en esta reserva."
+    }
+  },
+  "passengers": {
+    "title": "Pasajeros",
+    "linked_passengers": "Pasajeros vinculados",
+    "no_linked": "No hay pasajeros vinculados",
+    "add_existing": "Buscar pasajero existente",
+    "create_new": "Crear nuevo pasajero",
+    "edit_list": "Editar pasajeros",
+    "search_placeholder": "Buscar por nombre..."
+  }
+}

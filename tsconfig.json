@@ -10,7 +10,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "resolveJsonModule": true,  // Permite importar archivos .json
+    "esModuleInterop": true
   },
   "include": ["src", "vite.config.ts", "src/lib/schemas/reservation/update-reservation-name.schema.ts"]
 }
