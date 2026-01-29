@@ -20,7 +20,7 @@ export function LanguageToggle() {
       className="gap-2 px-2"
       title="Cambiar idioma"
     >
-      <span className="font-bold text-xs">{isEs ? 'ES' : 'EN'}</span>
+      <span className="cursor-pointer font-bold text-xs">{isEs ? 'ES' : 'EN'}</span>
     </Button>
   );
 }
