@@ -1,16 +1,36 @@
 {
+  "app": {
+    "brand": "Solymar Viajes",
+    "dashboard_version": "Dashboard v1.0",
+    "coming_soon": "(Próx.)",
+    "admin_portal_description": "Portal de acceso administrativo de Solymar Viajes.",
+    "logo_alt": "Logo Sol y Mar",
+    "flights_image_alt": "Imagen de vuelos"
+  },
   "common": {
-    "save": "Guardar cambios",
+    "save_changes": "Guardar cambios",
+    "save": "Guardar",
+    "saved": "Guardado",
     "create": "Crear",
+    "close": "Cerrar",
     "cancel": "Cancelar",
     "edit": "Editar",
     "delete": "Eliminar",
+    "view": "Ver",
     "search": "Buscar...",
     "actions": "Acciones",
     "loading": "Cargando...",
     "confirm": "Confirmar",
     "discard": "Descartar",
     "back": "Volver",
+    "back_to": "Volver a {{target}}",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "apply_filters": "Aplicar filtros",
+    "clear": "Limpiar",
+    "required": "Requerido",
+    "optional": "Opcional",
+    "menu": "Menú principal",
     "settings": "Ajustes",
     "reports": "Reportes"
   },
@@ -19,31 +39,856 @@
     "CONFIRMED": "Confirmada",
     "CANCELLED": "Cancelada"
   },
+  "errors": {
+    "unexpected": "Ocurrió un error inesperado.",
+    "something_went_wrong": "Algo salió mal.",
+    "unexpected_app_error": "Se detectó un error inesperado en la aplicación.",
+    "reload_page": "Recargar página"
+  },
+  "date_picker": {
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre"
+    },
+    "weekdays": {
+      "su": "Do",
+      "mo": "Lu",
+      "tu": "Ma",
+      "we": "Mi",
+      "th": "Ju",
+      "fr": "Vi",
+      "sa": "Sa"
+    },
+    "select_range": "Seleccionar rango",
+    "select_date": "Seleccionar fecha",
+    "select_date_time": "Seleccionar fecha y hora"
+  },
+  "auth": {
+    "login": {
+      "head_title": "Iniciar sesión",
+      "forgot_head_title": "Recuperar contraseña",
+      "back": "Volver",
+      "welcome_back": "Bienvenido de nuevo",
+      "recover_account": "Recuperar cuenta",
+      "login_subtitle": "Acceda al panel administrativo",
+      "forgot_subtitle": "Ingrese su email para restablecer la contraseña",
+      "email": "Email",
+      "registered_email": "Email registrado",
+      "password": "Contraseña",
+      "forgot_password": "¿Olvidó su contraseña?",
+      "remember_me": "Recordarme en este dispositivo",
+      "signing_in": "Ingresando...",
+      "sign_in": "Iniciar sesión",
+      "or": "O",
+      "no_account": "¿No tiene cuenta?",
+      "contact_us": "Contacte con nosotros",
+      "recruiter_quick_access": "Acceso rápido (reclutador)",
+      "send_link": "Enviar enlace de recuperación",
+      "sending": "Enviando...",
+      "email_sent_title": "¡Correo enviado!",
+      "email_sent_desc": "Si existe una cuenta asociada a {{email}}, recibirá instrucciones en breve.",
+      "support": "Soporte técnico",
+      "errors": {
+        "login_failed": "Error al iniciar sesión",
+        "send_email_failed": "Error al enviar el correo"
+      },
+      "placeholders": {
+        "email": "admin@solymar.com",
+        "password": "••••••••"
+      }
+    },
+    "reset_password": {
+      "verifying_link": "Verificando enlace...",
+      "expired_link_title": "Enlace expirado",
+      "expired_link_desc": "El enlace de recuperación ya no es válido.",
+      "invalid_link_title": "Enlace no válido",
+      "invalid_link_desc": "Este enlace de recuperación ha expirado, ya fue utilizado o no existe.",
+      "back_to_home": "Volver al inicio",
+      "password_reset_title": "Contraseña restablecida",
+      "password_reset_success": "¡Contraseña restablecida!",
+      "redirecting": "Será redirigido al inicio de sesión en unos segundos...",
+      "go_to_login_now": "Ir al inicio de sesión ahora",
+      "new_password_title": "Nueva contraseña",
+      "new_password_desc": "Ingrese su nueva contraseña para acceder a Solymar Viajes.",
+      "new_password_hint": "Ingrese su nueva contraseña segura.",
+      "confirm_password": "Confirmar contraseña",
+      "resetting": "Restableciendo...",
+      "change_password": "Cambiar contraseña",
+      "errors": {
+        "request_failed": "No se pudo procesar la solicitud. Intente nuevamente más tarde."
+      },
+      "placeholders": {
+        "password": "••••••••"
+      }
+    }
+  },
+  "not_found": {
+    "page_not_found": "Página no encontrada",
+    "route_missing": "La ruta que intentó abrir no existe o fue movida.",
+    "go_home": "Ir al inicio",
+    "go_back": "Volver atrás",
+    "also_you_can": "También puede ir a /login o /dashboard.",
+    "head_title": "{{status}} - No encontrada",
+    "head_description": "La página que busca no existe."
+  },
   "reservations": {
     "title": "Reservas",
-    "new_reservation": "Nueva Reserva",
-    "edit_reservation": "Editar Reserva",
-    "state": "Estado",
-    "name_placeholder": "Ej: Viaje a Disney 2024",
-    "confirm_state_change": "Confirmar cambio de estado",
-    "confirm_change_desc": "¿Seguro que querés cambiar la reserva de {{old}} a {{new}}?",
-    "financials": {
-      "payment_details": "Detalle de Saldos",
-      "payment_desc": "Desglose de items pendientes y pagados.",
-      "total_plan": "Total del plan",
-      "paid": "Pagado",
-      "missing": "Falta pagar",
-      "what_is_missing": "¿Qué falta pagar?",
-      "no_services": "No hay servicios cargados en esta reserva."
+    "list": {
+      "head_description": "Gestión de reservas.",
+      "subtitle": "Administre todas las reservas",
+      "create_reservation": "Crear reserva",
+      "creating": "Creando...",
+      "page_of": "Página {{page}} de {{totalPages}} ({{total}} resultados)"
+    },
+    "filters": {
+      "title": "Filtros",
+      "date_range": "Rango de fechas",
+      "select_dates": "Seleccionar fechas",
+      "search_by_passenger": "Buscar por pasajero",
+      "search_passenger_placeholder": "Buscar pasajero...",
+      "sort_by_date": "Ordenar por fecha",
+      "state": "Estado",
+      "selected_count": "{{count}} seleccionados",
+      "select_passengers": "Seleccionar pasajeros",
+      "all_states": "Todos los estados",
+      "sort_options": {
+        "newest": "Más nuevas primero",
+        "oldest": "Más antiguas primero"
+      }
+    },
+    "detail": {
+      "not_found": "Reserva no encontrada",
+      "head_title": "Reserva #{{code}} - {{name}}",
+      "head_title_no_name": "Reserva #{{code}} - Sin nombre",
+      "head_description": "Gestión de reserva #{{code}}. Estado: {{state}}.",
+      "change_history": "Historial de cambios",
+      "tabs": {
+        "hotels": "Hoteles",
+        "planes": "Vuelos",
+        "cruises": "Cruceros",
+        "transfers": "Traslados",
+        "car_rentals": "Autos",
+        "excursions": "Excursiones",
+        "medical": "Asistencias"
+      },
+      "create": {
+        "hotel": "Crear hotel",
+        "plane": "Crear vuelo",
+        "cruise": "Crear crucero",
+        "transfer": "Crear traslado",
+        "car_rental": "Crear auto",
+        "excursion": "Crear excursión",
+        "medical_assist": "Crear asistencia"
+      },
+      "empty": {
+        "hotels": "No hay hoteles agregados aún",
+        "planes": "No hay vuelos agregados aún",
+        "cruises": "No hay cruceros agregados aún",
+        "transfers": "No hay traslados agregados aún",
+        "car_rentals": "No hay alquileres de autos agregados aún",
+        "excursions": "No hay excursiones agregadas aún",
+        "medical": "No hay asistencias agregadas aún"
+      },
+      "columns": {
+        "hotel": {
+          "hotel": "Hotel",
+          "reference": "Referencia",
+          "city": "Ciudad",
+          "checkin_checkout": "Check-in / Check-out",
+          "provider": "Proveedor",
+          "price": "Precio",
+          "of": "de"
+        },
+        "plane": {
+          "route": "Ruta",
+          "departure_arrival": "Salida / Llegada",
+          "airline": "Aerolínea",
+          "reference": "Referencia",
+          "price": "Precio",
+          "no_segments": "— Sin tramos —",
+          "arrow": "→",
+          "of": "de"
+        },
+        "cruise": {
+          "shipping_company": "Naviera",
+          "route": "Ruta",
+          "departure_arrival": "Salida / Llegada",
+          "reference": "Referencia",
+          "price": "Precio",
+          "of": "de"
+        },
+        "transfer": {
+          "origin": "Origen",
+          "destination": "Destino",
+          "departure_arrival": "Salida / Llegada",
+          "provider": "Proveedor",
+          "type": "Tipo",
+          "price": "Precio",
+          "of": "de"
+        },
+        "excursion": {
+          "excursion": "Excursión",
+          "place_origin": "Lugar / Origen",
+          "date": "Fecha",
+          "provider": "Proveedor",
+          "price": "Precio",
+          "of": "de"
+        },
+        "medical": {
+          "provider": "Proveedor",
+          "assist_type": "Tipo de asistencia",
+          "reference": "Referencia",
+          "price": "Precio",
+          "of": "de"
+        },
+        "car_rental": {
+          "provider": "Proveedor",
+          "vehicle": "Vehículo",
+          "pickup_dropoff": "Retiro / Devolución",
+          "place": "Lugar",
+          "pickup_short": "Ret:",
+          "dropoff_short": "Dev:",
+          "price": "Precio",
+          "of": "de"
+        }
+      },
+      "alerts": {
+        "save_notes_failed": "Error al guardar las notas.",
+        "save_passengers_failed": "No se pudieron guardar los pasajeros en la reserva.",
+        "load_failed": "No se pudo cargar la reserva"
+      },
+      "financial": {
+        "missing_link": "¿Qué falta por pagar?",
+        "dialog_title": "Detalle de saldos",
+        "dialog_desc": "Desglose de ítems pendientes y pagados.",
+        "total_plan": "Total del plan:",
+        "paid": "Pagado:",
+        "missing": "Por pagar:",
+        "breakdown_title": "Desglose de ítems",
+        "no_services": "No hay servicios cargados en esta reserva.",
+        "missing_label": "Faltan:",
+        "paid_badge": "Pagado"
+      },
+      "name": {
+        "edit_title": "Editar nombre de la reserva",
+        "edit_desc": "Cambie el nombre descriptivo de la reserva.",
+        "label": "Nombre",
+        "placeholder": "Ej: Viaje a Disney 2024",
+        "saving": "Guardando...",
+        "save": "Guardar cambios",
+        "validation_error": "Error en el nombre"
+      },
+      "state": {
+        "confirm_title": "Confirmar cambio de estado",
+        "confirm_desc": "¿Seguro que desea cambiar la reserva de {{old}} a {{new}}?",
+        "updating": "Actualizando...",
+        "updated_toast_title": "Estado actualizado",
+        "updated_toast_desc": "La reserva ahora está marcada como {{state}}.",
+        "update_error_title": "Error",
+        "update_error_desc": "No se pudo actualizar el estado de la reserva."
+      },
+      "toasts": {
+        "name_updated": "Nombre actualizado correctamente",
+        "name_update_error": "Error al actualizar el nombre"
+      }
+    },
+    "dialog": {
+      "edit_title": "Editar reserva",
+      "create_title": "Crear nueva reserva",
+      "state": "Estado",
+      "linked_passengers": "Pasajeros vinculados",
+      "no_linked": "No hay pasajeros vinculados",
+      "add_existing": "Agregar pasajero existente",
+      "search_passenger": "Buscar pasajero",
+      "search_by_name": "Buscar por nombre...",
+      "not_found": "No se encontraron pasajeros",
+      "create_new_passenger": "Crear nuevo pasajero",
+      "saving": "Guardando...",
+      "creating": "Creando...",
+      "save_changes": "Guardar cambios",
+      "create": "Crear reserva",
+      "discard_title": "¿Descartar cambios?",
+      "discard_desc": "Tiene cambios sin guardar. Si sale ahora, se perderán.",
+      "keep_editing": "Seguir editando"
+    },
+    "table": {
+      "state": "Estado",
+      "passengers": "Pasajeros",
+      "totals": "Totales",
+      "created": "Creada",
+      "actions": "Acciones",
+      "empty": "No se encontraron reservas",
+      "passenger_no_name": "Sin nombre",
+      "delete_title": "¿Eliminar reserva?",
+      "delete_desc": "Esta acción no se puede deshacer. Se eliminará la reserva permanentemente."
+    },
+    "notes": {
+      "title": "Notas",
+      "description": "Agregue anotaciones y observaciones sobre la reserva.",
+      "placeholder": "Escriba sus notas aquí...",
+      "saving": "Guardando...",
+      "save_changes": "Guardar cambios",
+      "saved": "Guardado",
+      "dirty_hint": "Hay cambios sin guardar..."
+    },
+    "audit": {
+      "title": "Auditoría",
+      "created": "Creada",
+      "updated": "Última actualización",
+      "by": "Por"
     }
   },
   "passengers": {
     "title": "Pasajeros",
-    "linked_passengers": "Pasajeros vinculados",
-    "no_linked": "No hay pasajeros vinculados",
-    "add_existing": "Buscar pasajero existente",
-    "create_new": "Crear nuevo pasajero",
-    "edit_list": "Editar pasajeros",
-    "search_placeholder": "Buscar por nombre..."
+    "list": {
+      "head_description": "Administre la información de todos los pasajeros registrados en el sistema.",
+      "subtitle": "Lista de pasajeros registrados y gestión de documentos.",
+      "create": "Crear pasajero",
+      "server_error": "Error al conectar con el servidor. Por favor, intente recargar la página.",
+      "pagination": "Página {{page}} de {{totalPages}} (Total: {{total}})"
+    },
+    "filters": {
+      "title": "Filtros",
+      "search_by_name": "Buscar por nombre",
+      "name_placeholder": "Nombre del pasajero...",
+      "nationality": "Nacionalidad",
+      "all_nationalities": "Todas las nacionalidades",
+      "search_nationality": "Buscar nacionalidad...",
+      "not_found": "No encontrada.",
+      "all": "Todas",
+      "document": "Documento",
+      "all_documents": "Todos los documentos",
+      "all_documents_short": "Todos",
+      "badge_name": "Nombre: {{name}}",
+      "apply": "Aplicar filtros",
+      "clear": "Limpiar",
+      "doc_options": {
+        "with_dni": "Con DNI",
+        "with_passport": "Con pasaporte"
+      },
+      "nationality_options": {
+        "ARGENTINA": "Argentina",
+        "URUGUAY": "Uruguay",
+        "CHILE": "Chile",
+        "BRASIL": "Brasil",
+        "PARAGUAY": "Paraguay",
+        "BOLIVIA": "Bolivia",
+        "PERU": "Perú",
+        "OTHER": "Otro"
+      }
+    },
+    "table": {
+      "name": "Nombre",
+      "birth_date": "Fecha de nacimiento",
+      "nationality": "Nacionalidad",
+      "document": "Documento",
+      "email": "Email",
+      "phone": "Teléfono",
+      "actions": "Acciones",
+      "dni": "DNI: {{dni}}",
+      "passport": "Pasaporte: {{passport}}",
+      "no_document": "Sin documento",
+      "empty": "No se encontraron pasajeros",
+      "showing": "Mostrando {{from}} a {{to}} de {{total}} pasajeros",
+      "delete_title": "¿Está seguro?",
+      "delete_desc": "Esta acción eliminará permanentemente al pasajero {{name}}.",
+      "deleting": "Eliminando..."
+    },
+    "dialog": {
+      "create_title": "Crear pasajero",
+      "view_title": "Ver pasajero",
+      "edit_title": "Editar pasajero",
+      "view_desc": "Detalles del pasajero.",
+      "edit_desc": "Ingrese los datos personales.",
+      "sections": {
+        "basic": "Información básica",
+        "contact": "Contacto",
+        "documents": "Documentación"
+      },
+      "fields": {
+        "full_name": "Nombre completo *",
+        "birth_date": "Fecha de nacimiento *",
+        "nationality": "Nacionalidad *",
+        "email_optional": "Email (opcional)",
+        "phone_optional": "Teléfono (opcional)",
+        "dni_number": "Número de DNI *",
+        "dni_expiration": "Vencimiento DNI *",
+        "passport_number": "Número de pasaporte *",
+        "passport_expiration": "Vencimiento pasaporte *"
+      },
+      "placeholders": {
+        "full_name": "Lionel Andres Messi",
+        "email": "ejemplo@correo.com",
+        "phone": "+54 9 11 1234 5678",
+        "dni_argentina": "Ej: 35.123.456",
+        "passport_argentina": "Ej: AAA123456",
+        "dni_uruguay": "Ej: 1.234.567-8",
+        "passport_uruguay": "Ej: AA123456",
+        "dni_chile": "Ej: 12.345.678-K",
+        "passport_chile": "Ej: 12345678",
+        "dni_brasil": "Ej: 123.456.789-00",
+        "passport_brasil": "Ej: AB123456",
+        "dni_paraguay": "Ej: 1234567",
+        "passport_paraguay": "Ej: AA012345",
+        "dni_peru": "Ej: 12345678",
+        "passport_peru": "Ej: 123456789",
+        "dni_bolivia": "Ej: 1234567",
+        "passport_bolivia": "Ej: AA12345",
+        "dni_other": "Nro. documento",
+        "passport_other": "Nro. pasaporte"
+      },
+      "saving": "Guardando...",
+      "errors": {
+        "invalid_mode": "Modo inválido o falta ID",
+        "save_failed": "Error al guardar.",
+        "dni_unique": "Ya existe un pasajero registrado con este DNI.",
+        "passport_unique": "Ya existe un pasajero registrado con este pasaporte."
+      },
+      "discard": {
+        "title": "¿Descartar cambios?",
+        "desc": "Se perderán los datos ingresados.",
+        "keep_editing": "Seguir editando",
+        "discard": "Descartar"
+      }
+    }
+  },
+  "entities": {
+    "table": {
+      "empty": "No hay datos",
+      "actions": "Acciones",
+      "confirm_delete": {
+        "title": "¿Está seguro?",
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro seleccionado."
+      },
+      "aria": {
+        "view": "Ver",
+        "edit": "Editar",
+        "delete": "Eliminar"
+      }
+    },
+    "common": {
+      "confirm_title": "¿Está seguro?",
+      "discard_title": "¿Descartar cambios?",
+      "keep_editing": "Seguir editando",
+      "discard_desc": "Tiene cambios sin guardar. Si sale ahora, se perderán los datos ingresados.",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "hotel": {
+      "title_view": "Ver hotel",
+      "title_edit": "Editar hotel",
+      "title_create": "Crear hotel",
+      "fields": {
+        "hotel_name": "Nombre del hotel *",
+        "city": "Ciudad *",
+        "room_type_optional": "Tipo de habitación (opcional)",
+        "provider": "Proveedor *",
+        "booking_reference": "Referencia de reserva *",
+        "stay_period": "Período de estadía *",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "hotel_name": "Ej: Fontainebleau",
+        "select_period": "Seleccionar período",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "save_failed": "Error al guardar el hotel.",
+        "delete_failed": "Error al eliminar.",
+        "amount_paid_gt_total": "El monto pagado es mayor al total."
+      },
+      "confirm_delete": {
+        "description": "Acción irreversible."
+      },
+      "discard": {
+        "description": "Se perderán los datos."
+      }
+    },
+    "plane": {
+      "title_view": "Ver vuelo",
+      "title_edit": "Editar vuelo",
+      "title_create": "Crear vuelo",
+      "create_button": "Crear vuelo",
+      "fields": {
+        "booking_reference": "Referencia *",
+        "provider_optional": "Proveedor (opcional)",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *",
+        "notes_optional": "Notas (opcional)",
+        "segments": "Tramos del vuelo *"
+      },
+      "placeholders": {
+        "booking_reference": "Ej: PNR-XYZ123",
+        "provider": "Ej: Despegar / Aerolíneas",
+        "notes": "Ej: Solicitar menú vegetariano, asientos en pasillo...",
+        "add_segment": "+ Agregar tramo",
+        "segment_title": "Tramo #{{index}}",
+        "origin_iata": "Origen (IATA)",
+        "destination_iata": "Destino (IATA)",
+        "origin_example": "Ej: EZE",
+        "destination_example": "Ej: MIA",
+        "departure": "Salida",
+        "arrival": "Llegada",
+        "airline_optional": "Aerolínea (opcional)",
+        "flight_number_optional": "Nro. vuelo (opcional)",
+        "airline_example": "Ej: Aerolíneas Argentinas",
+        "flight_number_example": "Ej: AR1302",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 500.00"
+      },
+      "errors": {
+        "no_changes": "No se detectaron cambios para guardar.",
+        "save_failed": "Error al guardar el vuelo.",
+        "delete_failed": "Error al eliminar el vuelo.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total.",
+        "departure_required": "La fecha de salida es obligatoria",
+        "arrival_required": "La fecha de llegada es obligatoria"
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el vuelo."
+      }
+    },
+    "cruise": {
+      "title_view": "Ver crucero",
+      "title_edit": "Editar crucero",
+      "title_create": "Crear crucero",
+      "fields": {
+        "provider": "Proveedor *",
+        "embarkation_port": "Puerto de embarque *",
+        "arrival_port": "Puerto de llegada",
+        "booking_reference": "Referencia",
+        "start_date": "Fecha de salida *",
+        "end_date": "Fecha de llegada",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "select": "Seleccionar",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "start_date_required": "La fecha de salida es obligatoria.",
+        "save_failed": "Ocurrió un error al guardar el crucero.",
+        "delete_failed": "Error al eliminar.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total."
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el crucero."
+      }
+    },
+    "excursion": {
+      "title_view": "Ver excursión",
+      "title_edit": "Editar excursión",
+      "title_create": "Crear excursión",
+      "fields": {
+        "name": "Nombre de la excursión *",
+        "origin": "Origen / Punto de partida *",
+        "provider": "Proveedor *",
+        "booking_reference": "Referencia",
+        "date_time": "Fecha y hora *",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "select": "Seleccionar",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "date_required": "La fecha y hora son obligatorias.",
+        "save_failed": "Ocurrió un error al guardar la excursión.",
+        "delete_failed": "Error al eliminar excursión.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total."
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente la excursión."
+      }
+    },
+    "transfer": {
+      "title_view": "Ver traslado",
+      "title_edit": "Editar traslado",
+      "title_create": "Crear traslado",
+      "fields": {
+        "origin": "Origen *",
+        "destination": "Destino",
+        "provider": "Proveedor *",
+        "booking_reference": "Referencia",
+        "departure_date": "Fecha de salida *",
+        "arrival_date": "Fecha de llegada *",
+        "transport_type": "Tipo de transporte *",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "select": "Seleccionar",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "save_failed": "Ocurrió un error al guardar el traslado.",
+        "delete_failed": "Error al eliminar traslado.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total."
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el traslado."
+      }
+    },
+    "medical_assist": {
+      "title_view": "Ver asistencia médica",
+      "title_edit": "Editar asistencia médica",
+      "title_create": "Crear asistencia médica",
+      "fields": {
+        "provider": "Proveedor *",
+        "booking_reference": "Referencia de reserva *",
+        "assist_type": "Tipo de asistencia",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "provider": "Assist Card",
+        "booking_reference": "ASST-00123",
+        "assist_type": "Emergencia médica internacional",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "save_failed": "Ocurrió un error al guardar la asistencia médica.",
+        "delete_failed": "Error al eliminar asistencia médica.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total."
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente la asistencia médica."
+      }
+    },
+    "car_rental": {
+      "title_view": "Ver alquiler de auto",
+      "title_edit": "Editar alquiler de auto",
+      "title_create": "Nuevo alquiler de auto",
+      "fields": {
+        "pickup_location": "Lugar de retiro *",
+        "dropoff_location": "Lugar de devolución *",
+        "provider": "Proveedor *",
+        "booking_reference": "Referencia",
+        "category": "Categoría *",
+        "model_optional": "Modelo (opcional)",
+        "pickup_date_time": "Fecha/Hora retiro *",
+        "dropoff_date_time": "Fecha/Hora devolución *",
+        "currency": "Moneda *",
+        "total_price": "Precio total *",
+        "amount_paid": "Monto pagado *"
+      },
+      "placeholders": {
+        "select": "Seleccionar",
+        "total_price": "Ej: 1500.00",
+        "amount_paid": "Ej: 0"
+      },
+      "errors": {
+        "save_failed": "Error al guardar el alquiler.",
+        "delete_failed": "Error al eliminar.",
+        "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total."
+      },
+      "confirm_delete": {
+        "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro."
+      }
+    }
+  },
+  "api": {
+    "session_expired": "Sesión expirada. Vuelva a iniciar sesión.",
+    "http": {
+      "400": "Solicitud inválida.",
+      "401": "Email o contraseña incorrectos.",
+      "403": "No tiene permisos para acceder.",
+      "404": "Recurso no encontrado.",
+      "422": "Datos incompletos o inválidos.",
+      "500": "Ocurrió un error en el servidor. Intente más tarde."
+    },
+    "auth": {
+      "invalid_credentials": "Credenciales inválidas",
+      "token_missing": "Token no recibido"
+    },
+    "passengers": {
+      "delete": {
+        "unexpected_server": "Error inesperado en el servidor.",
+        "only_passenger_active_reservation": "No se puede eliminar: es el único pasajero de una reserva activa.",
+        "has_related_records": "No se puede eliminar: tiene registros asociados."
+      }
+    }
+  },
+  "language": {
+    "toggle_title": "Cambiar idioma"
+  },
+  "ui": {
+    "pagination": {
+      "go_to_previous_page": "Ir a la página anterior",
+      "go_to_next_page": "Ir a la página siguiente",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "more_pages": "Más páginas"
+    },
+    "carousel": {
+      "previous_slide": "Diapositiva anterior",
+      "next_slide": "Diapositiva siguiente"
+    },
+    "command": {
+      "palette": "Paleta de comandos",
+      "search_placeholder": "Buscar un comando para ejecutar...",
+      "more": "Más"
+    },
+    "sidebar": {
+      "toggle": "Alternar barra lateral",
+      "title": "Barra lateral",
+      "mobile_description": "Muestra la barra lateral en móvil."
+    }
+  },
+  "validation": {
+    "login": {
+      "password_strength": "La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 símbolo.",
+      "email_required": "El email es obligatorio.",
+      "email_invalid": "Debe ser un email válido.",
+      "password_required": "La contraseña es obligatoria.",
+      "password_too_long": "La contraseña es demasiado larga.",
+      "token_invalid": "Token inválido.",
+      "min_8_chars": "Mínimo 8 caracteres.",
+      "passwords_mismatch": "Las contraseñas no coinciden."
+    },
+    "reservation": {
+      "name_required": "El nombre de la reserva es obligatorio",
+      "name_too_long": "El nombre es demasiado largo (máx 100 caracteres)"
+    },
+    "common": {
+      "currency_invalid": "Moneda inválida",
+      "reservation_id_invalid": "ID de reserva inválido",
+      "reservation_id_invalid_lower": "reservationId inválido",
+      "reservation_id_invalid_plane": "ReservationId inválido",
+      "must_change_one": "Debe modificar al menos un campo",
+      "date_invalid": "Fecha inválida",
+      "amount_paid_non_negative": "El monto pagado debe ser positivo",
+      "total_price_non_negative": "El precio no puede ser negativo",
+      "total_price_non_negative_alt": "El precio total no puede ser negativo",
+      "amount_paid_non_negative_alt": "El monto pagado no puede ser negativo",
+      "amount_paid_gt_total": "El monto pagado no puede ser mayor que el total.",
+      "reference_max_255": "La referencia no puede superar los 255 caracteres",
+      "reference_max_128": "La referencia no puede superar los 128 caracteres"
+    },
+    "date": {
+      "end_before_start": "La fecha de salida no puede ser anterior a la de entrada",
+      "dropoff_before_pickup": "La fecha de devolución no puede ser anterior a la de retiro",
+      "arrival_before_departure": "La fecha de llegada no puede ser anterior a la de salida",
+      "dropoff_min_1h": "Debe haber al menos 1 hora de diferencia para la devolución",
+      "arrival_min_1h": "Debe haber al menos 1 hora de diferencia entre salida y llegada"
+    },
+    "pax": {
+      "name_required": "El nombre no puede estar vacío",
+      "birthdate_required": "La fecha de nacimiento es obligatoria",
+      "birthdate_too_recent": "La fecha de nacimiento no puede ser posterior a 9 meses desde hoy.",
+      "phone_min": "El teléfono debe tener al menos 8 dígitos",
+      "email_invalid": "El formato del email no es correcto",
+      "nationality_required": "La nacionalidad es obligatoria",
+      "passport_length": "Pasaporte: debe tener entre 6 y 9 caracteres alfanuméricos.",
+      "expiration_not_before_today": "La fecha de vencimiento no puede ser anterior a hoy.",
+      "dni_exp_required_if_num": "Si ingresa número de DNI, la fecha de vencimiento es obligatoria.",
+      "dni_num_required_if_exp": "Si ingresa fecha de vencimiento, el número de DNI es obligatorio.",
+      "passport_exp_required_if_num": "Si ingresa número de pasaporte, la fecha de vencimiento es obligatoria.",
+      "passport_num_required_if_exp": "Si ingresa fecha de vencimiento, el número de pasaporte es obligatorio.",
+      "at_least_one_doc": "Debe completar al menos un documento (DNI o Pasaporte)."
+    },
+    "hotel": {
+      "start_required": "La fecha de entrada es obligatoria",
+      "end_required": "La fecha de salida es obligatoria",
+      "city_required": "La ciudad es obligatoria",
+      "city_max": "La ciudad no puede superar los 128 caracteres",
+      "hotel_name_required": "El nombre del hotel es obligatorio",
+      "hotel_name_max": "El nombre del hotel no puede superar los 255 caracteres",
+      "booking_ref_required": "La referencia de reserva es obligatoria",
+      "booking_ref_max": "La referencia no puede superar los 255 caracteres",
+      "room_type_required": "El tipo de habitación es obligatorio",
+      "room_type_max": "El tipo de habitación no puede superar los 255 caracteres",
+      "provider_required": "El proveedor es obligatorio",
+      "provider_max": "El proveedor no puede superar los 128 caracteres"
+    },
+    "cruise": {
+      "embarkation_required": "El puerto de embarque es obligatorio",
+      "port_max": "El puerto no puede tener más de 128 caracteres",
+      "start_required": "La fecha de salida es obligatoria",
+      "start_invalid": "La fecha de salida no es válida",
+      "end_invalid": "La fecha de llegada no es válida",
+      "provider_required": "La naviera (proveedor) es obligatoria",
+      "provider_max": "El proveedor no puede tener más de 128 caracteres"
+    },
+    "excursion": {
+      "name_required": "El nombre de la excursión es obligatorio",
+      "name_max": "El nombre no puede superar los 255 caracteres",
+      "origin_required": "El origen es obligatorio",
+      "origin_max": "El origen no puede superar los 128 caracteres",
+      "provider_required": "El proveedor es obligatorio",
+      "provider_max": "El proveedor no puede superar los 128 caracteres",
+      "date_required": "La fecha de la excursión es obligatoria",
+      "date_invalid": "La fecha de la excursión no es válida"
+    },
+    "transfer": {
+      "origin_required": "El origen es obligatorio",
+      "origin_max": "El origen no puede superar los 128 caracteres",
+      "destination_max": "El destino no puede superar los 128 caracteres",
+      "departure_required": "La fecha de salida es obligatoria",
+      "departure_invalid": "La fecha de salida no es válida",
+      "arrival_required": "La fecha de llegada es obligatoria",
+      "arrival_invalid": "La fecha de llegada no es válida",
+      "provider_required": "El proveedor es obligatorio",
+      "provider_max": "El proveedor no puede superar los 128 caracteres",
+      "transport_type_invalid": "Tipo de transporte inválido"
+    },
+    "medical_assist": {
+      "booking_ref_required": "La referencia de reserva es obligatoria",
+      "booking_ref_max": "La referencia no puede superar los 255 caracteres",
+      "assist_type_max": "El tipo de asistencia no puede superar los 128 caracteres",
+      "provider_required": "El proveedor es obligatorio",
+      "provider_max": "El proveedor no puede superar los 128 caracteres",
+      "must_change_one": "Debe modificar al menos un campo"
+    },
+    "plane": {
+      "booking_ref_required": "La referencia de reserva es obligatoria",
+      "booking_ref_max": "La referencia no puede superar los 255 caracteres",
+      "provider_max": "El proveedor no puede superar los 128 caracteres",
+      "segment_order_min": "El orden debe empezar en 1",
+      "iata_len": "El código debe tener 3 letras",
+      "airline_max": "La aerolínea no puede superar 128 caracteres",
+      "flight_number_max": "El número de vuelo no puede superar 64 caracteres",
+      "origin_destination_equal": "El origen y el destino no pueden ser iguales",
+      "segments_min": "Debe existir al menos 1 tramo"
+    },
+    "car_rental": {
+      "provider_required": "El proveedor es obligatorio",
+      "provider_max": "El proveedor no puede superar los 128 caracteres",
+      "pickup_location_required": "El lugar de retiro es obligatorio",
+      "pickup_location_max": "El lugar de retiro no puede superar los 128 caracteres",
+      "dropoff_location_required": "El lugar de devolución es obligatorio",
+      "dropoff_location_max": "El lugar de devolución no puede superar los 128 caracteres",
+      "pickup_date_required": "La fecha de retiro es obligatoria",
+      "pickup_date_invalid": "La fecha de retiro no es válida",
+      "dropoff_date_required": "La fecha de devolución es obligatoria",
+      "dropoff_date_invalid": "La fecha de devolución no es válida",
+      "car_category_required": "La categoría del auto es obligatoria",
+      "car_category_max": "La categoría no puede superar los 128 caracteres",
+      "car_model_max": "El modelo no puede superar los 255 caracteres"
+    }
   }
 }

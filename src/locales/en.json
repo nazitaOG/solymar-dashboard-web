@@ -1,16 +1,36 @@
 {
+  "app": {
+    "brand": "Solymar Viajes",
+    "dashboard_version": "Dashboard v1.0",
+    "coming_soon": "(Soon)",
+    "admin_portal_description": "Solymar Viajes administrative access portal.",
+    "logo_alt": "Sol y Mar logo",
+    "flights_image_alt": "Flights image"
+  },
   "common": {
-    "save": "Save changes",
+    "save_changes": "Save changes",
+    "save": "Save",
+    "saved": "Saved",
     "create": "Create",
+    "close": "Close",
     "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
+    "view": "View",
     "search": "Search...",
     "actions": "Actions",
     "loading": "Loading...",
     "confirm": "Confirm",
     "discard": "Discard",
     "back": "Back",
+    "back_to": "Back to {{target}}",
+    "next": "Next",
+    "previous": "Previous",
+    "apply_filters": "Apply filters",
+    "clear": "Clear",
+    "required": "Required",
+    "optional": "Optional",
+    "menu": "Main menu",
     "settings": "Settings",
     "reports": "Reports"
   },
@@ -19,31 +39,856 @@
     "CONFIRMED": "Confirmed",
     "CANCELLED": "Cancelled"
   },
+  "errors": {
+    "unexpected": "An unexpected error occurred.",
+    "something_went_wrong": "Something went wrong.",
+    "unexpected_app_error": "An unexpected application error was detected.",
+    "reload_page": "Reload page"
+  },
+  "date_picker": {
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "weekdays": {
+      "su": "Su",
+      "mo": "Mo",
+      "tu": "Tu",
+      "we": "We",
+      "th": "Th",
+      "fr": "Fr",
+      "sa": "Sa"
+    },
+    "select_range": "Select range",
+    "select_date": "Select date",
+    "select_date_time": "Select date and time"
+  },
+  "auth": {
+    "login": {
+      "head_title": "Sign in",
+      "forgot_head_title": "Recover password",
+      "back": "Back",
+      "welcome_back": "Welcome back",
+      "recover_account": "Recover account",
+      "login_subtitle": "Access the admin dashboard",
+      "forgot_subtitle": "Enter your email to reset your password",
+      "email": "Email",
+      "registered_email": "Registered email",
+      "password": "Password",
+      "forgot_password": "Forgot your password?",
+      "remember_me": "Remember me on this device",
+      "signing_in": "Signing in...",
+      "sign_in": "Sign in",
+      "or": "OR",
+      "no_account": "Don't have an account?",
+      "contact_us": "Contact us",
+      "recruiter_quick_access": "Recruiter quick access",
+      "send_link": "Send recovery link",
+      "sending": "Sending...",
+      "email_sent_title": "Email sent!",
+      "email_sent_desc": "If an account is associated with {{email}}, you will receive instructions shortly.",
+      "support": "Technical support",
+      "errors": {
+        "login_failed": "Sign-in failed",
+        "send_email_failed": "Error sending email"
+      },
+      "placeholders": {
+        "email": "admin@solymar.com",
+        "password": "••••••••"
+      }
+    },
+    "reset_password": {
+      "verifying_link": "Verifying link...",
+      "expired_link_title": "Link expired",
+      "expired_link_desc": "The recovery link is no longer valid.",
+      "invalid_link_title": "Invalid link",
+      "invalid_link_desc": "This recovery link has expired, was already used, or does not exist.",
+      "back_to_home": "Back to home",
+      "password_reset_title": "Password reset",
+      "password_reset_success": "Password reset!",
+      "redirecting": "You will be redirected to sign-in in a few seconds...",
+      "go_to_login_now": "Go to sign-in now",
+      "new_password_title": "New password",
+      "new_password_desc": "Enter your new password to access Solymar Viajes.",
+      "new_password_hint": "Enter your new secure password.",
+      "confirm_password": "Confirm password",
+      "resetting": "Resetting...",
+      "change_password": "Change password",
+      "errors": {
+        "request_failed": "The request could not be processed. Please try again later."
+      },
+      "placeholders": {
+        "password": "••••••••"
+      }
+    }
+  },
+  "not_found": {
+    "page_not_found": "Page not found",
+    "route_missing": "The route you tried to open does not exist or was moved.",
+    "go_home": "Go home",
+    "go_back": "Go back",
+    "also_you_can": "You can also go to /login or /dashboard.",
+    "head_title": "{{status}} - Not found",
+    "head_description": "The page you are looking for does not exist."
+  },
   "reservations": {
     "title": "Reservations",
-    "new_reservation": "New Reservation",
-    "edit_reservation": "Edit Reservation",
-    "state": "Status",
-    "name_placeholder": "Ex: Disney Trip 2024",
-    "confirm_state_change": "Confirm status change",
-    "confirm_change_desc": "Are you sure you want to change the reservation from {{old}} to {{new}}?",
-    "financials": {
-      "payment_details": "Payment Details",
-      "payment_desc": "Breakdown of pending and paid items.",
-      "total_plan": "Total plan",
-      "paid": "Paid",
-      "missing": "To pay",
-      "what_is_missing": "What is missing?",
-      "no_services": "No services loaded in this reservation."
+    "list": {
+      "head_description": "Reservations management.",
+      "subtitle": "Manage all reservations",
+      "create_reservation": "Create reservation",
+      "creating": "Creating...",
+      "page_of": "Page {{page}} of {{totalPages}} ({{total}} results)"
+    },
+    "filters": {
+      "title": "Filters",
+      "date_range": "Date range",
+      "select_dates": "Select dates",
+      "search_by_passenger": "Search by passenger",
+      "search_passenger_placeholder": "Search passenger...",
+      "sort_by_date": "Sort by date",
+      "state": "Status",
+      "selected_count": "{{count}} selected",
+      "select_passengers": "Select passengers",
+      "all_states": "All statuses",
+      "sort_options": {
+        "newest": "Newest first",
+        "oldest": "Oldest first"
+      }
+    },
+    "detail": {
+      "not_found": "Reservation not found",
+      "head_title": "Reservation #{{code}} - {{name}}",
+      "head_title_no_name": "Reservation #{{code}} - Untitled",
+      "head_description": "Reservation #{{code}} management. Status: {{state}}.",
+      "change_history": "Change history",
+      "tabs": {
+        "hotels": "Hotels",
+        "planes": "Flights",
+        "cruises": "Cruises",
+        "transfers": "Transfers",
+        "car_rentals": "Cars",
+        "excursions": "Excursions",
+        "medical": "Assistance"
+      },
+      "create": {
+        "hotel": "Create hotel",
+        "plane": "Create flight",
+        "cruise": "Create cruise",
+        "transfer": "Create transfer",
+        "car_rental": "Create car",
+        "excursion": "Create excursion",
+        "medical_assist": "Create assistance"
+      },
+      "empty": {
+        "hotels": "No hotels added yet",
+        "planes": "No flights added yet",
+        "cruises": "No cruises added yet",
+        "transfers": "No transfers added yet",
+        "car_rentals": "No car rentals added yet",
+        "excursions": "No excursions added yet",
+        "medical": "No assistance added yet"
+      },
+      "columns": {
+        "hotel": {
+          "hotel": "Hotel",
+          "reference": "Reference",
+          "city": "City",
+          "checkin_checkout": "Check-in / Check-out",
+          "provider": "Provider",
+          "price": "Price",
+          "of": "of"
+        },
+        "plane": {
+          "route": "Route",
+          "departure_arrival": "Departure / Arrival",
+          "airline": "Airline",
+          "reference": "Reference",
+          "price": "Price",
+          "no_segments": "— No segments —",
+          "arrow": "→",
+          "of": "of"
+        },
+        "cruise": {
+          "shipping_company": "Cruise line",
+          "route": "Route",
+          "departure_arrival": "Departure / Arrival",
+          "reference": "Reference",
+          "price": "Price",
+          "of": "of"
+        },
+        "transfer": {
+          "origin": "Origin",
+          "destination": "Destination",
+          "departure_arrival": "Departure / Arrival",
+          "provider": "Provider",
+          "type": "Type",
+          "price": "Price",
+          "of": "of"
+        },
+        "excursion": {
+          "excursion": "Excursion",
+          "place_origin": "Place / Origin",
+          "date": "Date",
+          "provider": "Provider",
+          "price": "Price",
+          "of": "of"
+        },
+        "medical": {
+          "provider": "Provider",
+          "assist_type": "Assistance type",
+          "reference": "Reference",
+          "price": "Price",
+          "of": "of"
+        },
+        "car_rental": {
+          "provider": "Provider",
+          "vehicle": "Vehicle",
+          "pickup_dropoff": "Pick-up / Drop-off",
+          "place": "Place",
+          "pickup_short": "Pick:",
+          "dropoff_short": "Drop:",
+          "price": "Price",
+          "of": "of"
+        }
+      },
+      "alerts": {
+        "save_notes_failed": "Failed to save notes.",
+        "save_passengers_failed": "Passengers could not be saved in the reservation.",
+        "load_failed": "The reservation could not be loaded"
+      },
+      "financial": {
+        "missing_link": "What's left to pay?",
+        "dialog_title": "Balance details",
+        "dialog_desc": "Breakdown of pending and paid items.",
+        "total_plan": "Total plan:",
+        "paid": "Paid:",
+        "missing": "To pay:",
+        "breakdown_title": "Items breakdown",
+        "no_services": "No services loaded in this reservation.",
+        "missing_label": "Missing:",
+        "paid_badge": "Paid"
+      },
+      "name": {
+        "edit_title": "Edit reservation name",
+        "edit_desc": "Change the reservation's descriptive name.",
+        "label": "Name",
+        "placeholder": "Ex: Disney Trip 2024",
+        "saving": "Saving...",
+        "save": "Save changes",
+        "validation_error": "Name error"
+      },
+      "state": {
+        "confirm_title": "Confirm status change",
+        "confirm_desc": "Are you sure you want to change the reservation from {{old}} to {{new}}?",
+        "updating": "Updating...",
+        "updated_toast_title": "Status updated",
+        "updated_toast_desc": "The reservation is now marked as {{state}}.",
+        "update_error_title": "Error",
+        "update_error_desc": "The reservation status could not be updated."
+      },
+      "toasts": {
+        "name_updated": "Name updated successfully",
+        "name_update_error": "Failed to update name"
+      }
+    },
+    "dialog": {
+      "edit_title": "Edit reservation",
+      "create_title": "Create new reservation",
+      "state": "Status",
+      "linked_passengers": "Linked passengers",
+      "no_linked": "No linked passengers",
+      "add_existing": "Add existing passenger",
+      "search_passenger": "Search passenger",
+      "search_by_name": "Search by name...",
+      "not_found": "No passengers found",
+      "create_new_passenger": "Create new passenger",
+      "saving": "Saving...",
+      "creating": "Creating...",
+      "save_changes": "Save changes",
+      "create": "Create reservation",
+      "discard_title": "Discard changes?",
+      "discard_desc": "You have unsaved changes. If you leave now, they will be lost.",
+      "keep_editing": "Keep editing"
+    },
+    "table": {
+      "state": "Status",
+      "passengers": "Passengers",
+      "totals": "Totals",
+      "created": "Created",
+      "actions": "Actions",
+      "empty": "No reservations found",
+      "passenger_no_name": "No name",
+      "delete_title": "Delete reservation?",
+      "delete_desc": "This action cannot be undone. The reservation will be permanently deleted."
+    },
+    "notes": {
+      "title": "Notes",
+      "description": "Add notes and observations about the reservation.",
+      "placeholder": "Write your notes here...",
+      "saving": "Saving...",
+      "save_changes": "Save changes",
+      "saved": "Saved",
+      "dirty_hint": "There are unsaved changes..."
+    },
+    "audit": {
+      "title": "Audit",
+      "created": "Created",
+      "updated": "Last update",
+      "by": "By"
     }
   },
   "passengers": {
     "title": "Passengers",
-    "linked_passengers": "Linked passengers",
-    "no_linked": "No linked passengers",
-    "add_existing": "Search existing passenger",
-    "create_new": "Create new passenger",
-    "edit_list": "Edit passengers",
-    "search_placeholder": "Search by name..."
+    "list": {
+      "head_description": "Manage all passengers registered in the system.",
+      "subtitle": "Registered passengers list and document management.",
+      "create": "Create passenger",
+      "server_error": "Failed to connect to the server. Please try reloading the page.",
+      "pagination": "Page {{page}} of {{totalPages}} (Total: {{total}})"
+    },
+    "filters": {
+      "title": "Filters",
+      "search_by_name": "Search by name",
+      "name_placeholder": "Passenger name...",
+      "nationality": "Nationality",
+      "all_nationalities": "All nationalities",
+      "search_nationality": "Search nationality...",
+      "not_found": "Not found.",
+      "all": "All",
+      "document": "Document",
+      "all_documents": "All documents",
+      "all_documents_short": "All",
+      "badge_name": "Name: {{name}}",
+      "apply": "Apply filters",
+      "clear": "Clear",
+      "doc_options": {
+        "with_dni": "With national ID",
+        "with_passport": "With passport"
+      },
+      "nationality_options": {
+        "ARGENTINA": "Argentina",
+        "URUGUAY": "Uruguay",
+        "CHILE": "Chile",
+        "BRASIL": "Brazil",
+        "PARAGUAY": "Paraguay",
+        "BOLIVIA": "Bolivia",
+        "PERU": "Peru",
+        "OTHER": "Other"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "birth_date": "Birth date",
+      "nationality": "Nationality",
+      "document": "Document",
+      "email": "Email",
+      "phone": "Phone",
+      "actions": "Actions",
+      "dni": "ID: {{dni}}",
+      "passport": "Passport: {{passport}}",
+      "no_document": "No document",
+      "empty": "No passengers found",
+      "showing": "Showing {{from}} to {{to}} of {{total}} passengers",
+      "delete_title": "Are you sure?",
+      "delete_desc": "This action will permanently delete passenger {{name}}.",
+      "deleting": "Deleting..."
+    },
+    "dialog": {
+      "create_title": "Create passenger",
+      "view_title": "View passenger",
+      "edit_title": "Edit passenger",
+      "view_desc": "Passenger details.",
+      "edit_desc": "Enter personal information.",
+      "sections": {
+        "basic": "Basic information",
+        "contact": "Contact",
+        "documents": "Documents"
+      },
+      "fields": {
+        "full_name": "Full name *",
+        "birth_date": "Birth date *",
+        "nationality": "Nationality *",
+        "email_optional": "Email (optional)",
+        "phone_optional": "Phone (optional)",
+        "dni_number": "National ID number *",
+        "dni_expiration": "National ID expiration *",
+        "passport_number": "Passport number *",
+        "passport_expiration": "Passport expiration *"
+      },
+      "placeholders": {
+        "full_name": "John Doe",
+        "email": "example@email.com",
+        "phone": "+1 555 123 4567",
+        "dni_argentina": "Ex: 35.123.456",
+        "passport_argentina": "Ex: AAA123456",
+        "dni_uruguay": "Ex: 1.234.567-8",
+        "passport_uruguay": "Ex: AA123456",
+        "dni_chile": "Ex: 12.345.678-K",
+        "passport_chile": "Ex: 12345678",
+        "dni_brasil": "Ex: 123.456.789-00",
+        "passport_brasil": "Ex: AB123456",
+        "dni_paraguay": "Ex: 1234567",
+        "passport_paraguay": "Ex: AA012345",
+        "dni_peru": "Ex: 12345678",
+        "passport_peru": "Ex: 123456789",
+        "dni_bolivia": "Ex: 1234567",
+        "passport_bolivia": "Ex: AA12345",
+        "dni_other": "Document number",
+        "passport_other": "Passport number"
+      },
+      "saving": "Saving...",
+      "errors": {
+        "invalid_mode": "Invalid mode or missing ID",
+        "save_failed": "Failed to save.",
+        "dni_unique": "A passenger with this national ID already exists.",
+        "passport_unique": "A passenger with this passport already exists."
+      },
+      "discard": {
+        "title": "Discard changes?",
+        "desc": "The entered data will be lost.",
+        "keep_editing": "Keep editing",
+        "discard": "Discard"
+      }
+    }
+  },
+  "entities": {
+    "table": {
+      "empty": "No data",
+      "actions": "Actions",
+      "confirm_delete": {
+        "title": "Are you sure?",
+        "description": "This action cannot be undone. It will permanently delete the selected record."
+      },
+      "aria": {
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete"
+      }
+    },
+    "common": {
+      "confirm_title": "Are you sure?",
+      "discard_title": "Discard changes?",
+      "keep_editing": "Keep editing",
+      "discard_desc": "You have unsaved changes. If you leave now, the entered data will be lost.",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "hotel": {
+      "title_view": "View hotel",
+      "title_edit": "Edit hotel",
+      "title_create": "Create hotel",
+      "fields": {
+        "hotel_name": "Hotel name *",
+        "city": "City *",
+        "room_type_optional": "Room type (optional)",
+        "provider": "Provider *",
+        "booking_reference": "Booking reference *",
+        "stay_period": "Stay period *",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "hotel_name": "Ex: Fontainebleau",
+        "select_period": "Select period",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "save_failed": "Failed to save hotel.",
+        "delete_failed": "Failed to delete.",
+        "amount_paid_gt_total": "Paid amount is greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action is irreversible."
+      },
+      "discard": {
+        "description": "The data will be lost."
+      }
+    },
+    "plane": {
+      "title_view": "View flight",
+      "title_edit": "Edit flight",
+      "title_create": "Create flight",
+      "create_button": "Create flight",
+      "fields": {
+        "booking_reference": "Reference *",
+        "provider_optional": "Provider (optional)",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *",
+        "notes_optional": "Notes (optional)",
+        "segments": "Flight segments *"
+      },
+      "placeholders": {
+        "booking_reference": "Ex: PNR-XYZ123",
+        "provider": "Ex: Expedia / Airline",
+        "notes": "Ex: Request vegetarian meal, aisle seat...",
+        "add_segment": "+ Add segment",
+        "segment_title": "Segment #{{index}}",
+        "origin_iata": "Origin (IATA)",
+        "destination_iata": "Destination (IATA)",
+        "origin_example": "Ex: EZE",
+        "destination_example": "Ex: MIA",
+        "departure": "Departure",
+        "arrival": "Arrival",
+        "airline_optional": "Airline (optional)",
+        "flight_number_optional": "Flight no. (optional)",
+        "airline_example": "Ex: Aerolíneas Argentinas",
+        "flight_number_example": "Ex: AR1302",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 500.00"
+      },
+      "errors": {
+        "no_changes": "No changes detected to save.",
+        "save_failed": "Failed to save flight.",
+        "delete_failed": "Failed to delete flight.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total.",
+        "departure_required": "Departure date is required",
+        "arrival_required": "Arrival date is required"
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the flight."
+      }
+    },
+    "cruise": {
+      "title_view": "View cruise",
+      "title_edit": "Edit cruise",
+      "title_create": "Create cruise",
+      "fields": {
+        "provider": "Provider *",
+        "embarkation_port": "Embarkation port *",
+        "arrival_port": "Arrival port",
+        "booking_reference": "Reference",
+        "start_date": "Departure date *",
+        "end_date": "Arrival date",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "select": "Select",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "start_date_required": "Departure date is required.",
+        "save_failed": "An error occurred while saving the cruise.",
+        "delete_failed": "Failed to delete.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the cruise."
+      }
+    },
+    "excursion": {
+      "title_view": "View excursion",
+      "title_edit": "Edit excursion",
+      "title_create": "Create excursion",
+      "fields": {
+        "name": "Excursion name *",
+        "origin": "Origin / Starting point *",
+        "provider": "Provider *",
+        "booking_reference": "Reference",
+        "date_time": "Date and time *",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "select": "Select",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "date_required": "Date and time are required.",
+        "save_failed": "An error occurred while saving the excursion.",
+        "delete_failed": "Failed to delete excursion.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the excursion."
+      }
+    },
+    "transfer": {
+      "title_view": "View transfer",
+      "title_edit": "Edit transfer",
+      "title_create": "Create transfer",
+      "fields": {
+        "origin": "Origin *",
+        "destination": "Destination",
+        "provider": "Provider *",
+        "booking_reference": "Reference",
+        "departure_date": "Departure date *",
+        "arrival_date": "Arrival date *",
+        "transport_type": "Transport type *",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "select": "Select",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "save_failed": "An error occurred while saving the transfer.",
+        "delete_failed": "Failed to delete transfer.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the transfer."
+      }
+    },
+    "medical_assist": {
+      "title_view": "View medical assistance",
+      "title_edit": "Edit medical assistance",
+      "title_create": "Create medical assistance",
+      "fields": {
+        "provider": "Provider *",
+        "booking_reference": "Booking reference *",
+        "assist_type": "Assistance type",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "provider": "Assist Card",
+        "booking_reference": "ASST-00123",
+        "assist_type": "International medical emergency",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "save_failed": "An error occurred while saving medical assistance.",
+        "delete_failed": "Failed to delete medical assistance.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the medical assistance."
+      }
+    },
+    "car_rental": {
+      "title_view": "View car rental",
+      "title_edit": "Edit car rental",
+      "title_create": "New car rental",
+      "fields": {
+        "pickup_location": "Pick-up location *",
+        "dropoff_location": "Drop-off location *",
+        "provider": "Provider *",
+        "booking_reference": "Reference",
+        "category": "Category *",
+        "model_optional": "Model (optional)",
+        "pickup_date_time": "Pick-up date/time *",
+        "dropoff_date_time": "Drop-off date/time *",
+        "currency": "Currency *",
+        "total_price": "Total price *",
+        "amount_paid": "Amount paid *"
+      },
+      "placeholders": {
+        "select": "Select",
+        "total_price": "Ex: 1500.00",
+        "amount_paid": "Ex: 0"
+      },
+      "errors": {
+        "save_failed": "Failed to save car rental.",
+        "delete_failed": "Failed to delete.",
+        "amount_paid_gt_total": "Paid amount cannot be greater than total."
+      },
+      "confirm_delete": {
+        "description": "This action cannot be undone. It will permanently delete the record."
+      }
+    }
+  },
+  "api": {
+    "session_expired": "Session expired. Please sign in again.",
+    "http": {
+      "400": "Invalid request.",
+      "401": "Incorrect email or password.",
+      "403": "You do not have permission to access.",
+      "404": "Resource not found.",
+      "422": "Incomplete or invalid data.",
+      "500": "A server error occurred. Please try later."
+    },
+    "auth": {
+      "invalid_credentials": "Invalid credentials",
+      "token_missing": "Token not received"
+    },
+    "passengers": {
+      "delete": {
+        "unexpected_server": "Unexpected server error.",
+        "only_passenger_active_reservation": "Cannot delete: the only passenger in an active reservation.",
+        "has_related_records": "Cannot delete: has related records."
+      }
+    }
+  },
+  "language": {
+    "toggle_title": "Change language"
+  },
+  "ui": {
+    "pagination": {
+      "go_to_previous_page": "Go to previous page",
+      "go_to_next_page": "Go to next page",
+      "previous": "Previous",
+      "next": "Next",
+      "more_pages": "More pages"
+    },
+    "carousel": {
+      "previous_slide": "Previous slide",
+      "next_slide": "Next slide"
+    },
+    "command": {
+      "palette": "Command Palette",
+      "search_placeholder": "Search for a command to run...",
+      "more": "More"
+    },
+    "sidebar": {
+      "toggle": "Toggle sidebar",
+      "title": "Sidebar",
+      "mobile_description": "Displays the mobile sidebar."
+    }
+  },
+  "validation": {
+    "login": {
+      "password_strength": "Password must have at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 symbol.",
+      "email_required": "Email is required.",
+      "email_invalid": "Please enter a valid email.",
+      "password_required": "Password is required.",
+      "password_too_long": "Password is too long.",
+      "token_invalid": "Invalid token.",
+      "min_8_chars": "Minimum 8 characters.",
+      "passwords_mismatch": "Passwords do not match."
+    },
+    "reservation": {
+      "name_required": "Reservation name is required",
+      "name_too_long": "Name is too long (max 100 characters)"
+    },
+    "common": {
+      "currency_invalid": "Invalid currency",
+      "reservation_id_invalid": "Invalid reservation ID",
+      "reservation_id_invalid_lower": "Invalid reservationId",
+      "reservation_id_invalid_plane": "Invalid ReservationId",
+      "must_change_one": "You must modify at least one field",
+      "date_invalid": "Invalid date",
+      "amount_paid_non_negative": "Paid amount must be positive",
+      "total_price_non_negative": "Price cannot be negative",
+      "total_price_non_negative_alt": "Total price cannot be negative",
+      "amount_paid_non_negative_alt": "Paid amount cannot be negative",
+      "amount_paid_gt_total": "Paid amount cannot be greater than total.",
+      "reference_max_255": "Reference cannot exceed 255 characters",
+      "reference_max_128": "Reference cannot exceed 128 characters"
+    },
+    "date": {
+      "end_before_start": "Check-out date cannot be earlier than check-in date",
+      "dropoff_before_pickup": "Drop-off date cannot be earlier than pick-up date",
+      "arrival_before_departure": "Arrival date cannot be earlier than departure date",
+      "dropoff_min_1h": "There must be at least 1 hour difference for drop-off",
+      "arrival_min_1h": "There must be at least 1 hour difference between departure and arrival"
+    },
+    "pax": {
+      "name_required": "Name cannot be empty",
+      "birthdate_required": "Birth date is required",
+      "birthdate_too_recent": "Birth date cannot be later than 9 months from today.",
+      "phone_min": "Phone number must have at least 8 digits",
+      "email_invalid": "Email format is incorrect",
+      "nationality_required": "Nationality is required",
+      "passport_length": "Passport must have 6 to 9 alphanumeric characters.",
+      "expiration_not_before_today": "Expiration date cannot be earlier than today.",
+      "dni_exp_required_if_num": "If you enter a national ID number, expiration date is required.",
+      "dni_num_required_if_exp": "If you enter an expiration date, national ID number is required.",
+      "passport_exp_required_if_num": "If you enter a passport number, expiration date is required.",
+      "passport_num_required_if_exp": "If you enter an expiration date, passport number is required.",
+      "at_least_one_doc": "You must provide at least one document (National ID or Passport)."
+    },
+    "hotel": {
+      "start_required": "Check-in date is required",
+      "end_required": "Check-out date is required",
+      "city_required": "City is required",
+      "city_max": "City cannot exceed 128 characters",
+      "hotel_name_required": "Hotel name is required",
+      "hotel_name_max": "Hotel name cannot exceed 255 characters",
+      "booking_ref_required": "Booking reference is required",
+      "booking_ref_max": "Booking reference cannot exceed 255 characters",
+      "room_type_required": "Room type is required",
+      "room_type_max": "Room type cannot exceed 255 characters",
+      "provider_required": "Provider is required",
+      "provider_max": "Provider cannot exceed 128 characters"
+    },
+    "cruise": {
+      "embarkation_required": "Embarkation port is required",
+      "port_max": "Port cannot exceed 128 characters",
+      "start_required": "Departure date is required",
+      "start_invalid": "Departure date is invalid",
+      "end_invalid": "Arrival date is invalid",
+      "provider_required": "Cruise line (provider) is required",
+      "provider_max": "Provider cannot exceed 128 characters"
+    },
+    "excursion": {
+      "name_required": "Excursion name is required",
+      "name_max": "Name cannot exceed 255 characters",
+      "origin_required": "Origin is required",
+      "origin_max": "Origin cannot exceed 128 characters",
+      "provider_required": "Provider is required",
+      "provider_max": "Provider cannot exceed 128 characters",
+      "date_required": "Excursion date is required",
+      "date_invalid": "Excursion date is invalid"
+    },
+    "transfer": {
+      "origin_required": "Origin is required",
+      "origin_max": "Origin cannot exceed 128 characters",
+      "destination_max": "Destination cannot exceed 128 characters",
+      "departure_required": "Departure date is required",
+      "departure_invalid": "Departure date is invalid",
+      "arrival_required": "Arrival date is required",
+      "arrival_invalid": "Arrival date is invalid",
+      "provider_required": "Provider is required",
+      "provider_max": "Provider cannot exceed 128 characters",
+      "transport_type_invalid": "Invalid transport type"
+    },
+    "medical_assist": {
+      "booking_ref_required": "Booking reference is required",
+      "booking_ref_max": "Booking reference cannot exceed 255 characters",
+      "assist_type_max": "Assistance type cannot exceed 128 characters",
+      "provider_required": "Provider is required",
+      "provider_max": "Provider cannot exceed 128 characters",
+      "must_change_one": "You must modify at least one field"
+    },
+    "plane": {
+      "booking_ref_required": "Booking reference is required",
+      "booking_ref_max": "Booking reference cannot exceed 255 characters",
+      "provider_max": "Provider cannot exceed 128 characters",
+      "segment_order_min": "Order must start at 1",
+      "iata_len": "Code must have 3 letters",
+      "airline_max": "Airline cannot exceed 128 characters",
+      "flight_number_max": "Flight number cannot exceed 64 characters",
+      "origin_destination_equal": "Origin and destination cannot be the same",
+      "segments_min": "At least 1 segment is required"
+    },
+    "car_rental": {
+      "provider_required": "Provider is required",
+      "provider_max": "Provider cannot exceed 128 characters",
+      "pickup_location_required": "Pick-up location is required",
+      "pickup_location_max": "Pick-up location cannot exceed 128 characters",
+      "dropoff_location_required": "Drop-off location is required",
+      "dropoff_location_max": "Drop-off location cannot exceed 128 characters",
+      "pickup_date_required": "Pick-up date is required",
+      "pickup_date_invalid": "Pick-up date is invalid",
+      "dropoff_date_required": "Drop-off date is required",
+      "dropoff_date_invalid": "Drop-off date is invalid",
+      "car_category_required": "Car category is required",
+      "car_category_max": "Category cannot exceed 128 characters",
+      "car_model_max": "Model cannot exceed 255 characters"
+    }
   }
 }
